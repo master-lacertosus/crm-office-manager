@@ -2,9 +2,12 @@
 
 import { CalendarClock, CircleCheck, Inbox } from "lucide-react";
 
+import { buildAnalytics } from "@/lib/analytics";
 import { addDaysIso, todayIso } from "@/lib/format";
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
+import { Sparkline } from "@/components/charts/sparkline";
+import { StatTile } from "@/components/charts/stat-tile";
 import { EmptyState } from "@/components/empty-state";
 import { TaskRow } from "@/components/task-row";
 
@@ -38,9 +41,10 @@ function Section({
 }
 
 export function DashboardContent() {
-  const { tasks, currentUser } = useAppStore();
+  const { tasks, profiles, projects, currentUser } = useAppStore();
   const today = todayIso();
   const weekEnd = addDaysIso(7);
+  const analytics = buildAnalytics(tasks, profiles, projects);
 
   const open = tasks.filter((t) => t.status !== "done");
   const overdue = open
@@ -58,6 +62,22 @@ export function DashboardContent() {
       <p className="text-sm text-ink-secondary">
         Ciao {currentUser.full_name.split(" ")[0]} — ecco il quadro di oggi.
       </p>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatTile label="Task aperti" value={analytics.open} />
+        <StatTile label="In ritardo" value={analytics.overdue} tone="danger" />
+        <StatTile label="In revisione" value={analytics.inReview} tone="brand" />
+        <StatTile
+          label="Completati · 7 giorni"
+          value={analytics.done7}
+          delta={analytics.done7Delta}
+        >
+          <Sparkline
+            values={analytics.trend.map((p) => p.value)}
+            ariaLabel="Andamento completamenti, ultime due settimane"
+          />
+        </StatTile>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="In ritardo" count={overdue.length}>

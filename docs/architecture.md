@@ -11,6 +11,13 @@ stati fissi, due ruoli, cinque sezioni di navigazione, una sola vista board con
 pannello laterale. Tutto il resto è rimandato, e la §5 elenca per nome le
 trappole di complessità.
 
+> **Emendamento (30/07/2026, richiesta esplicita del committente):** aggiunto
+> un modulo **Report** (sesta voce di navigazione) — KPI, trend dei
+> completamenti, carico per persona, distribuzione per progetto — con
+> grafici SVG fatti in casa (regole in `design-system.md` §8b). Il
+> drag-and-drop della board (M4) è stato anticipato in versione artigianale
+> senza dipendenze. La §5 resta il riferimento per tutto il resto.
+
 ---
 
 ## 1. Architettura dell'informazione

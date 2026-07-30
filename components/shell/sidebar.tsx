@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  ChartNoAxesColumn,
   Folder,
   LayoutDashboard,
   ListTodo,
@@ -24,6 +25,7 @@ const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tasks", label: "Task", icon: ListTodo },
   { href: "/projects", label: "Progetti", icon: Folder },
+  { href: "/reports", label: "Report", icon: ChartNoAxesColumn },
   { href: "/team", label: "Team", icon: Users },
   { href: "/settings/profile", label: "Impostazioni", icon: Settings },
 ];

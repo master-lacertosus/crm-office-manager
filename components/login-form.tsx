@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 
+import { TiltCard } from "@/components/tilt-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,7 @@ export function LoginForm() {
   };
 
   return (
+    <TiltCard>
     <form
       onSubmit={submit}
       className="space-y-4 rounded-xl border border-border bg-card p-5 shadow-xs"
@@ -69,5 +71,6 @@ export function LoginForm() {
         L&rsquo;autenticazione arriverà con Supabase.
       </p>
     </form>
+    </TiltCard>
   );
 }

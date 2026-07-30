@@ -35,6 +35,8 @@ interface AppStore {
     id: string,
     patch: Partial<Omit<Task, "id" | "created_by" | "created_at">>,
   ) => Promise<void>;
+  /** Spostamento da board (drag): sincrono, l'interazione deve essere istantanea. */
+  moveTask: (id: string, status: Task["status"], position: number) => void;
   addComment: (taskId: string, body: string) => Promise<void>;
   updateProfileName: (id: string, fullName: string) => Promise<void>;
 }
@@ -92,6 +94,26 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             }
           }
           return next;
+        }),
+      );
+    },
+
+    moveTask(id, status, position) {
+      setTasks((prev) =>
+        prev.map((task) => {
+          if (task.id !== id) return task;
+          return {
+            ...task,
+            status,
+            position,
+            // Stessa regola del trigger tasks_set_completed_at
+            completed_at:
+              status === "done"
+                ? task.status !== "done"
+                  ? new Date().toISOString()
+                  : task.completed_at
+                : null,
+          };
         }),
       );
     },

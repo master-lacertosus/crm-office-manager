@@ -257,6 +257,32 @@ animare `width/height` (solo transform/opacity); **`prefers-reduced-motion`
 → tutto diventa fade 80ms** (via `MotionConfig reducedMotion="user"` +
 media query CSS). Un solo momento orchestrato per vista.
 
+## 8b. Grafici (modulo Report)
+
+Grafici SVG/HTML fatti in casa (nessuna libreria), metodo della skill
+dataviz: prima la forma, poi il colore, palette **validata a script**.
+
+- **Palette di stato dei grafici** (variante scura delle tacche, coppia
+  arancio/verde verificata per CVD — ΔE protan 14.7): backlog `#A9AFB8`
+  **tratteggiato a 45°** (eco della tacca tratteggiata), todo `#71767F`,
+  in corso `#3E434B`, in revisione `#D97706`, fatto `#166534`.
+  È monocromatica **per scelta**: l'identità dei segmenti è garantita da
+  ordine fisso del flusso, legenda con le tacche (forma + colore), gap di
+  2px, etichette dirette e tabella sr-only — le "relief" richieste dal
+  metodo. Deviazioni accettate e documentate: croma nulla sui grigi
+  (identità di prodotto) e contrasto del backlog < 3:1 (compensato da
+  tratteggio + etichette).
+- **Serie singole**: un solo colore (trend completamenti = verde `#166534`;
+  barre per progetto = grafite `ink-secondary`), niente legenda — la nomina
+  il titolo. Mai due assi y.
+- **Marks**: linee 2px, estremo-dati arrotondato 4px ancorato alla baseline,
+  griglia recessiva `border-soft`, testo sempre nei token ink (mai nel
+  colore della serie), valori in mono.
+- **Interazione**: tooltip su hover (crosshair sul trend, per-segmento sulle
+  barre), mai informazione solo-hover: i valori chiave sono etichettati.
+- **Numeri-titolo**: stat tile con count-up (rispetta reduced-motion) e
+  delta vs periodo precedente.
+
 ## 9. Regole responsive
 
 Breakpoint Tailwind standard; progettazione **desktop-first** (target
