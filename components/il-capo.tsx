@@ -16,7 +16,7 @@ import { useAppStore } from "@/lib/store";
  */
 
 const STORAGE_KEY = "ilcapo-off-until";
-const FIRST_DELAY = () => 25_000 + Math.random() * 20_000;
+const FIRST_DELAY = () => 2_000 + Math.random() * 2_000;
 const NEXT_DELAY = () => 240_000 + Math.random() * 180_000;
 const SHOW_MS = 13_000;
 

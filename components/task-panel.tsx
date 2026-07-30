@@ -5,6 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
   BellRing,
+  ChevronLeft,
+  ChevronRight,
   Link2,
   LoaderCircle,
   Maximize2,
@@ -27,7 +29,7 @@ import {
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
-import { TASK_STATUSES } from "@/components/status-pip";
+import { StatusLabel, TASK_STATUSES } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -46,9 +48,32 @@ export function TaskPanelHost() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const taskParam = searchParams.get("task");
+  // Default: vista GRANDE (richiesta cliente). ?tv=peek forza il pannello;
+  // la preferenza dell'utente viene ricordata (localStorage).
   const [expanded, setExpanded] = React.useState(
-    searchParams.get("tv") === "full",
+    searchParams.get("tv") !== "peek",
   );
+  React.useEffect(() => {
+    if (searchParams.get("tv")) return;
+    queueMicrotask(() => {
+      try {
+        if (localStorage.getItem("task-view") === "peek") setExpanded(false);
+      } catch {
+        /* senza storage va bene il default */
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const toggleExpanded = React.useCallback(() => {
+    setExpanded((v) => {
+      try {
+        localStorage.setItem("task-view", v ? "peek" : "full");
+      } catch {
+        /* ignora */
+      }
+      return !v;
+    });
+  }, []);
 
   const close = React.useCallback(() => {
     const params = new URLSearchParams(searchParams);
@@ -94,7 +119,7 @@ export function TaskPanelHost() {
             className={cn(
               "glass-strong absolute flex flex-col",
               expanded
-                ? "inset-0 m-auto h-[min(90dvh,840px)] w-[min(1080px,95vw)] rounded-3xl"
+                ? "inset-0 m-auto h-[min(90dvh,840px)] w-[min(1080px,95vw)] overflow-hidden rounded-3xl"
                 : "inset-y-0 right-0 w-full sm:w-[460px] sm:rounded-l-2xl",
             )}
           >
@@ -102,7 +127,7 @@ export function TaskPanelHost() {
               key={taskParam}
               taskParam={taskParam}
               expanded={expanded}
-              onToggleExpanded={() => setExpanded((v) => !v)}
+              onToggleExpanded={toggleExpanded}
               onClose={close}
             />
           </motion.aside>
@@ -127,23 +152,111 @@ function PanelBody({
   onToggleExpanded: () => void;
   onClose: () => void;
 }) {
-  const { tasks } = useAppStore();
+  const { tasks, projects } = useAppStore();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isNew = taskParam === "new";
   const task = isNew ? null : tasks.find((t) => t.id === taskParam);
+  const project = task
+    ? projects.find((p) => p.id === task.project_id)
+    : null;
+
+  /* Navigazione ‹ › tra i task, nello stesso ordine di board/elenco,
+     rispettando i filtri owner/progetto attivi. */
+  const ownerFilter = searchParams.get("owner");
+  const projectFilter = searchParams.get("project");
+  const ordered = React.useMemo(() => {
+    const visible = tasks.filter(
+      (t) =>
+        (!ownerFilter || t.owner_id === ownerFilter) &&
+        (!projectFilter || t.project_id === projectFilter),
+    );
+    return STATUS_ORDER.flatMap((s) =>
+      visible
+        .filter((t) => t.status === s)
+        .sort((a, b) => a.position - b.position),
+    ).map((t) => t.id);
+  }, [tasks, ownerFilter, projectFilter]);
+  const index = task ? ordered.indexOf(task.id) : -1;
+
+  const goTo = React.useCallback(
+    (id: string) => {
+      const params = new URLSearchParams(searchParams);
+      params.set("task", id);
+      params.delete("due");
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [router, pathname, searchParams],
+  );
+
+  React.useEffect(() => {
+    if (isNew || index < 0) return;
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (document.activeElement?.tagName ?? "").toLowerCase();
+      if (["input", "textarea", "select"].includes(tag)) return;
+      if (e.key === "ArrowLeft" && index > 0) {
+        e.preventDefault();
+        goTo(ordered[index - 1]);
+      } else if (e.key === "ArrowRight" && index < ordered.length - 1) {
+        e.preventDefault();
+        goTo(ordered[index + 1]);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isNew, index, ordered, goTo]);
 
   return (
     <>
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border-soft pr-3 pl-5">
-        <p className="text-[11px] font-semibold tracking-[0.06em] text-ink-muted uppercase">
-          {isNew ? "Nuovo task" : "Dettaglio task"}
-        </p>
-        <div className="flex items-center gap-1">
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border-soft pr-3 pl-5">
+        {isNew || !task ? (
+          <p className="text-[11px] font-bold tracking-[0.06em] text-ink-muted uppercase">
+            {isNew ? "Nuovo task" : "Dettaglio task"}
+          </p>
+        ) : (
+          <div className="flex min-w-0 items-center gap-2.5">
+            <StatusLabel status={task.status} />
+            {project ? (
+              <span className="hidden truncate text-[13px] text-ink-muted sm:inline">
+                · {project.name}
+              </span>
+            ) : null}
+          </div>
+        )}
+
+        <div className="ml-auto flex items-center gap-1">
+          {!isNew && index >= 0 ? (
+            <div className="mr-1 hidden items-center gap-0.5 sm:flex">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => goTo(ordered[index - 1])}
+                disabled={index <= 0}
+                aria-label="Task precedente (freccia sinistra)"
+              >
+                <ChevronLeft />
+              </Button>
+              <span className="min-w-12 text-center font-mono text-[11px] text-ink-muted">
+                {index + 1} di {ordered.length}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => goTo(ordered[index + 1])}
+                disabled={index >= ordered.length - 1}
+                aria-label="Task successivo (freccia destra)"
+              >
+                <ChevronRight />
+              </Button>
+            </div>
+          ) : null}
           <Button
             variant="ghost"
             size="icon-sm"
             onClick={onToggleExpanded}
             aria-label={
-              expanded ? "Riduci a pannello" : "Espandi a schermo intero"
+              expanded ? "Riduci a pannello laterale" : "Espandi al centro"
             }
             className="hidden sm:inline-flex"
           >
@@ -153,7 +266,7 @@ function PanelBody({
             variant="ghost"
             size="icon-sm"
             onClick={onClose}
-            aria-label="Chiudi pannello"
+            aria-label="Chiudi (Esc)"
           >
             <X />
           </Button>
@@ -440,7 +553,7 @@ function TaskForm({
           </form>
           <div className="[&>section]:!px-0">{children}</div>
         </div>
-        <aside className="order-first space-y-4 border-b border-border-soft p-5 lg:order-none lg:border-b-0">
+        <aside className="order-first space-y-4 border-b border-border-soft bg-[#fafbfd] p-5 lg:order-none lg:border-b-0">
           {fieldsGrid}
           {saveRow}
           {task ? <TaskMeta task={task} /> : null}
