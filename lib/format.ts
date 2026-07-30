@@ -61,6 +61,21 @@ export function dueTone(iso: string): DueTone {
   return "future";
 }
 
+/**
+ * Modello di urgenza delle scadenze — UNICA fonte per tutta l'app
+ * (docs/design-system.md §6b): in ritardo, scade oggi, imminente (≤2 g),
+ * altrimenti neutra. `days` è la distanza assoluta in giorni.
+ */
+export type DueUrgencyLevel = "overdue" | "today" | "soon" | "later";
+
+export function dueUrgency(iso: string): { level: DueUrgencyLevel; days: number } {
+  const days = diffIsoDays(todayIso(), iso);
+  if (days < 0) return { level: "overdue", days: -days };
+  if (days === 0) return { level: "today", days: 0 };
+  if (days <= 2) return { level: "soon", days };
+  return { level: "later", days };
+}
+
 /** Tempo relativo breve per i commenti: "adesso", "35 min fa", "2 h fa", "3 g fa". */
 export function timeAgo(isoDateTime: string): string {
   const minutes = Math.floor((Date.now() - new Date(isoDateTime).getTime()) / 60_000);

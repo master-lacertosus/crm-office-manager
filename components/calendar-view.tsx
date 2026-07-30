@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import { todayIso } from "@/lib/format";
+import { dueUrgency, todayIso } from "@/lib/format";
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -179,6 +179,10 @@ export function CalendarView() {
       className={cn(
         "flex cursor-grab items-center gap-1.5 rounded-md bg-white/75 px-1.5 py-1 outline-none backdrop-blur-sm transition-transform hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-ring",
         task.status === "done" && "opacity-55",
+        task.status !== "done" &&
+          task.due_date &&
+          dueUrgency(task.due_date).level === "overdue" &&
+          "ring-1 ring-destructive/50",
         drag?.task.id === task.id && "opacity-30",
       )}
     >

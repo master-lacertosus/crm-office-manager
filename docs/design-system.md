@@ -214,6 +214,20 @@ nessuna eccezione.
 
 Un solo `primary` visibile per vista. Dimensioni: sm 32 / md 36 / lg 40.
 
+## 6b. Linguaggio delle scadenze (sistematico)
+
+Un solo modello di urgenza per tutta l'app (`dueUrgency` in `lib/format.ts`
++ componente `DueChip`): **in ritardo** (rosso, «N g di ritardo»),
+**scade oggi** (arancio), **imminente ≤2 giorni** (ambra, «domani/tra N
+giorni»), altrimenti data neutra in mono. I task Fatti mostrano solo la
+data. Applicazione: chip su card della board (che in più prendono un bordo
+rosso tenue se urgenti), righe di dashboard ed elenco, campo Scadenza nel
+pannello; anello rosso sui chip del calendario in ritardo; data rossa
+sulle barre della timeline; **indicatore personale in topbar** (visibile
+ovunque) con il conteggio delle proprie task in ritardo o in scadenza
+oggi, che porta all'elenco filtrato. Mai il colore da solo: icona + testo
+sempre presenti.
+
 ## 7. Pattern di navigazione
 
 ```

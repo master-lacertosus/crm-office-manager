@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight, Repeat } from "lucide-react";
 
-import { dueTone, formatDue } from "@/lib/format";
 import { useAppStore } from "@/lib/store";
 import { STATUS_ORDER, type Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
+import { DueChip } from "@/components/due-chip";
 import { StatusPip, TASK_STATUSES } from "@/components/status-pip";
 import { Badge } from "@/components/ui/badge";
 
@@ -18,7 +18,6 @@ function Row({ task }: { task: Task }) {
   const searchParams = useSearchParams();
   const owner = profiles.find((p) => p.id === task.owner_id);
   const project = projects.find((p) => p.id === task.project_id);
-  const tone = task.due_date ? dueTone(task.due_date) : null;
 
   const params = new URLSearchParams(searchParams);
   params.set("task", task.id);
@@ -48,22 +47,9 @@ function Row({ task }: { task: Task }) {
         <Badge className="hidden md:inline-flex">{project.name}</Badge>
       ) : null}
       {task.due_date ? (
-        <span
-          className={cn(
-            "w-14 text-right font-mono text-xs",
-            tone === "overdue" && task.status !== "done"
-              ? "font-medium text-danger-text"
-              : tone === "today"
-                ? "font-medium text-brand-600"
-                : "text-ink-muted",
-          )}
-        >
-          {formatDue(task.due_date)}
-        </span>
+        <DueChip iso={task.due_date} status={task.status} />
       ) : (
-        <span className="w-14 text-right font-mono text-xs text-ink-faint">
-          —
-        </span>
+        <span className="font-mono text-xs text-ink-faint">—</span>
       )}
       <span className="hidden w-32 items-center gap-1.5 truncate lg:flex">
         {owner ? (

@@ -25,6 +25,7 @@ import {
   type TaskStatus,
 } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
+import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { TASK_STATUSES } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
@@ -373,6 +374,9 @@ function TaskForm({
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
           />
+          {dueDate ? (
+            <DueChip iso={dueDate} status={status} />
+          ) : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor="task-project">Progetto</Label>

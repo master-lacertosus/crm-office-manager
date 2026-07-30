@@ -208,7 +208,14 @@ export function ProjectTimeline({ projectId }: { projectId: string }) {
                           borderLeftColor: BAR_EDGE[task.status],
                         }}
                       >
-                        <span className="truncate text-[11px] font-medium text-ink">
+                        <span
+                          className={cn(
+                            "truncate text-[11px] font-medium",
+                            task.status !== "done" && shownDue < today
+                              ? "text-danger-text"
+                              : "text-ink",
+                          )}
+                        >
                           {formatDue(shownDue)}
                         </span>
                       </button>

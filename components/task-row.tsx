@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Star } from "lucide-react";
 
-import { dueTone, formatDue } from "@/lib/format";
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
+import { DueChip } from "@/components/due-chip";
 import { StatusPip } from "@/components/status-pip";
 import { Badge } from "@/components/ui/badge";
 
@@ -29,7 +29,6 @@ export function TaskRow({
 
   const owner = profiles.find((p) => p.id === task.owner_id);
   const project = projects.find((p) => p.id === task.project_id);
-  const tone = task.due_date ? dueTone(task.due_date) : null;
 
   const params = new URLSearchParams(searchParams);
   params.set("task", task.id);
@@ -47,20 +46,7 @@ export function TaskRow({
       {project ? (
         <Badge className="hidden sm:inline-flex">{project.name}</Badge>
       ) : null}
-      {task.due_date ? (
-        <span
-          className={cn(
-            "font-mono text-xs",
-            tone === "overdue" && task.status !== "done"
-              ? "font-medium text-danger-text"
-              : tone === "today"
-                ? "font-medium text-brand-700"
-                : "text-ink-muted",
-          )}
-        >
-          {formatDue(task.due_date)}
-        </span>
-      ) : null}
+      <DueChip iso={task.due_date} status={task.status} />
       {showOwner && owner ? (
         <AvatarInitials name={owner.full_name} size="sm" />
       ) : null}
