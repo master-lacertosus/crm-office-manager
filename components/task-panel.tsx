@@ -4,6 +4,7 @@ import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  AlarmClockOff,
   BellRing,
   ChevronLeft,
   ChevronRight,
@@ -14,16 +15,25 @@ import {
   Plus,
   Quote,
   Trash2,
+  TriangleAlert,
   X,
 } from "lucide-react";
 
 import {
+  addDaysIso,
   dayLabel,
+  diffIsoDays,
   formatDue,
   formatFullDateTime,
   formatTime,
+  todayIso,
 } from "@/lib/format";
-import { splitMentions } from "@/lib/mentions";
+import { TASK_TEMPLATES } from "@/lib/templates";
+import {
+  CommentActions,
+  CommentBody,
+  DecisionBadge,
+} from "@/components/comment-bits";
 import { panel, scrim } from "@/lib/motion";
 import { useAppStore } from "@/lib/store";
 import type { Task, TaskRepeat } from "@/lib/types";
@@ -327,8 +337,26 @@ function TaskForm({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { profiles, projects, currentUser, createTask, updateTask, statuses } =
-    useAppStore();
+  const {
+    profiles,
+    projects,
+    currentUser,
+    createTask,
+    updateTask,
+    statuses,
+    createTaskFromTemplate,
+  } = useAppStore();
+  const toast = useToast();
+
+  const applyTemplate = async (templateId: string) => {
+    const created = await createTaskFromTemplate(templateId);
+    if (!created) return;
+    toast("Task creato dal template: completa il titolo");
+    const params = new URLSearchParams(searchParams);
+    params.set("task", created.id);
+    params.delete("due");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   const [title, setTitle] = React.useState(task?.title ?? "");
   const [description, setDescription] = React.useState(task?.description ?? "");
@@ -382,6 +410,25 @@ function TaskForm({
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }
   };
+
+  const templatePicker = !task ? (
+    <div className="space-y-2">
+      <Label>Parti da un template</Label>
+      <div className="flex flex-wrap gap-1.5">
+        {TASK_TEMPLATES.map((tpl) => (
+          <Button
+            key={tpl.id}
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => applyTemplate(tpl.id)}
+          >
+            {tpl.name}
+          </Button>
+        ))}
+      </div>
+    </div>
+  ) : null;
 
   const titleField = (
     <div className="space-y-2">
@@ -558,6 +605,7 @@ function TaskForm({
             noValidate
             className="space-y-4"
           >
+            {templatePicker}
             {titleField}
             {descriptionField}
           </form>
@@ -582,6 +630,7 @@ function TaskForm({
         noValidate
         className="space-y-4 p-5"
       >
+        {templatePicker}
         {titleField}
         {fieldsGrid}
         {descriptionField}
@@ -594,13 +643,30 @@ function TaskForm({
 }
 
 function TaskMeta({ task }: { task: Task }) {
-  const { profiles, currentUser, sendNotification } = useAppStore();
+  const {
+    profiles,
+    currentUser,
+    sendNotification,
+    snoozes,
+    snoozeTask,
+    unsnoozeTask,
+    reportProblem,
+    resolveProblem,
+  } = useAppStore();
   const toast = useToast();
   const [sending, setSending] = React.useState(false);
+  const [problemOpen, setProblemOpen] = React.useState(false);
+  const [reason, setReason] = React.useState("");
+  const [reporting, setReporting] = React.useState(false);
+
   const creator = profiles.find((p) => p.id === task.created_by);
   const owner = profiles.find((p) => p.id === task.owner_id);
   const canRemind =
     owner && owner.id !== currentUser.id && task.status !== "done";
+  const snoozedUntil = snoozes[task.id];
+  const blockedDays = task.problem_since
+    ? Math.max(0, diffIsoDays(task.problem_since.slice(0, 10), todayIso()))
+    : 0;
 
   const remind = async () => {
     if (!owner) return;
@@ -614,8 +680,131 @@ function TaskMeta({ task }: { task: Task }) {
     toast(`Promemoria inviato a ${owner.full_name.split(" ")[0]}`);
   };
 
+  const submitProblem = async () => {
+    setReporting(true);
+    await reportProblem(task.id, reason);
+    setReporting(false);
+    setProblemOpen(false);
+    setReason("");
+    toast("Problema segnalato: admin e responsabile avvisati");
+  };
+
   return (
-    <div className="space-y-2 pt-1">
+    <div className="space-y-3 pt-1">
+      {/* Flusso problemi */}
+      {task.status === "alert" ? (
+        <div className="space-y-2 rounded-xl border border-destructive/30 bg-danger-soft p-3">
+          <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.05em] text-danger-text uppercase">
+            <TriangleAlert className="size-3.5" />
+            Problema · bloccato da{" "}
+            {blockedDays === 0 ? "oggi" : `${blockedDays} g`}
+          </p>
+          <p className="text-[13px]/[18px] text-ink">
+            {task.problem_reason ?? "Motivo non indicato."}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              resolveProblem(task.id);
+              toast("Sbloccato: il task torna In corso");
+            }}
+          >
+            Sblocca (torna In corso)
+          </Button>
+        </div>
+      ) : task.status !== "done" ? (
+        problemOpen ? (
+          <div className="space-y-2 rounded-xl border border-border p-3">
+            <Label htmlFor="problem-reason">Cosa blocca questo task?</Label>
+            <Textarea
+              id="problem-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Es. mancano le misure dal fornitore"
+              className="min-h-16"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={submitProblem}
+                disabled={reporting}
+                aria-busy={reporting}
+              >
+                {reporting ? <LoaderCircle className="animate-spin" /> : null}
+                Segnala
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setProblemOpen(false)}
+              >
+                Annulla
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setProblemOpen(true)}
+            className="border-destructive/40 text-danger-text hover:bg-danger-soft"
+          >
+            <TriangleAlert data-icon="inline-start" />
+            Segnala problema
+          </Button>
+        )
+      ) : null}
+
+      {/* Snooze personale */}
+      {task.status !== "done" ? (
+        snoozedUntil ? (
+          <p className="flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
+            <AlarmClockOff className="size-3.5" />
+            Posticipato fino al {formatDue(snoozedUntil)}
+            <button
+              type="button"
+              onClick={() => unsnoozeTask(task.id)}
+              className="rounded-sm font-medium text-brand-600 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Annulla
+            </button>
+          </p>
+        ) : (
+          <p className="flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
+            <AlarmClockOff className="size-3.5" />
+            Posticipa:
+            <button
+              type="button"
+              onClick={() => {
+                snoozeTask(task.id, addDaysIso(1));
+                toast("Posticipato a domani (solo per te)");
+              }}
+              className="rounded-sm font-medium text-brand-600 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Domani
+            </button>
+            ·
+            <button
+              type="button"
+              onClick={() => {
+                snoozeTask(task.id, addDaysIso(3));
+                toast("Posticipato di 3 giorni (solo per te)");
+              }}
+              className="rounded-sm font-medium text-brand-600 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              +3 giorni
+            </button>
+          </p>
+        )
+      ) : null}
+
       <p className="font-mono text-xs text-ink-muted">
         Creato da {creator?.full_name ?? "—"}
       </p>
@@ -792,54 +981,6 @@ function LinksSection({ taskId }: { taskId: string }) {
 /* Commenti                                                            */
 /* ------------------------------------------------------------------ */
 
-/** Testo con menzioni evidenziate. */
-function MentionText({ text }: { text: string }) {
-  const { profiles } = useAppStore();
-  return (
-    <>
-      {splitMentions(text, profiles).map((part, i) =>
-        part.mention ? (
-          <span
-            key={i}
-            className="rounded-sm bg-brand-50 px-0.5 font-semibold text-brand-700"
-          >
-            {part.text}
-          </span>
-        ) : (
-          <React.Fragment key={i}>{part.text}</React.Fragment>
-        ),
-      )}
-    </>
-  );
-}
-
-/** Corpo del commento: righe iniziali «> …» rese come blocco citazione. */
-function CommentBody({ body }: { body: string }) {
-  const lines = body.split("\n");
-  const quote: string[] = [];
-  let i = 0;
-  while (i < lines.length && lines[i].startsWith("> ")) {
-    quote.push(lines[i].slice(2));
-    i += 1;
-  }
-  const rest = lines.slice(i).join("\n").trim();
-
-  return (
-    <div className="mt-0.5 space-y-1.5">
-      {quote.length > 0 ? (
-        <blockquote className="rounded-r-lg border-l-2 border-brand-300 bg-muted/70 px-2.5 py-1.5 text-[12px]/[17px] text-ink-muted">
-          <MentionText text={quote.join(" ")} />
-        </blockquote>
-      ) : null}
-      {rest ? (
-        <p className="text-[13px]/[19px] whitespace-pre-line text-ink-secondary">
-          <MentionText text={rest} />
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
 function CommentSection({ taskId }: { taskId: string }) {
   const { comments, profiles, addComment } = useAppStore();
   const [body, setBody] = React.useState("");
@@ -916,6 +1057,7 @@ function CommentSection({ taskId }: { taskId: string }) {
                         >
                           {formatTime(comment.created_at)}
                         </span>
+                        {comment.is_decision ? <DecisionBadge /> : null}
                         <button
                           type="button"
                           onClick={() =>
@@ -931,6 +1073,13 @@ function CommentSection({ taskId }: { taskId: string }) {
                         </button>
                       </p>
                       <CommentBody body={comment.body} />
+                      <CommentActions
+                        scope="task"
+                        commentId={comment.id}
+                        authorId={comment.author_id}
+                        reactions={comment.reactions}
+                        isDecision={comment.is_decision}
+                      />
                     </div>
                   </div>
                 </React.Fragment>

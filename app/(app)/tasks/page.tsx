@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Board } from "@/components/board/board";
 import { BoardFilters } from "@/components/board/filters";
 import { NewTaskButton } from "@/components/new-task-button";
+import { SavedViews } from "@/components/saved-views";
 import { Topbar } from "@/components/shell/topbar";
 import { TaskList } from "@/components/task-list";
 import { TasksViewToggle } from "@/components/tasks-view-toggle";
@@ -30,6 +31,9 @@ export default async function TasksPage({
           </Suspense>
         }
       />
+      <Suspense>
+        <SavedViews />
+      </Suspense>
       <Suspense>{isList ? <TaskList /> : <Board />}</Suspense>
     </>
   );

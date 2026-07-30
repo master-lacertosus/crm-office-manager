@@ -26,6 +26,7 @@ export function mentionTargets(
       id: p.id,
     }));
   return [
+    { insert: "@Team", label: "Team — avvisa tutto l'ufficio", id: "team" },
     { insert: "@Admin", label: "Admin — avvisa gli amministratori", id: "admins" },
     ...people,
   ];
@@ -55,6 +56,11 @@ export function extractMentionIds(
       }
     }
   }
+  if (low.includes("@team")) {
+    for (const p of profiles) {
+      if (p.is_active && p.id !== authorId) ids.add(p.id);
+    }
+  }
   return [...ids];
 }
 
@@ -65,6 +71,7 @@ export function splitMentions(
 ): { text: string; mention: boolean }[] {
   const tokens = [
     "@admin",
+    "@team",
     ...profiles.flatMap((p) => [
       `@${p.full_name.toLowerCase()}`,
       `@${p.full_name.split(" ")[0].toLowerCase()}`,

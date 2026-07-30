@@ -36,6 +36,17 @@ trappole di complessità.
 > Aggiunti inoltre: board a corsie, pagina Progetti operativa
 > (avanzamento/composizione/team/prossima scadenza), «Polso del team» in
 > dashboard e tour introduttivo per i nuovi utenti (?tour=1 per rivederlo).
+>
+> **Quarto emendamento (30/07/2026):** pacchetto collaborazione e problemi
+> su richiesta — template di task, viste salvate (localStorage), snooze
+> personale con risveglio notificato, bacheca di progetto con registro
+> decisioni, reazioni rapide e marcatura «Decisione» sui commenti,
+> menzione di gruppo @Team, flusso «Segnala problema» (motivo +
+> avviso automatico ad admin e responsabile), pagina «Problemi» (ottava
+> voce di navigazione) con tempo-in-fase, escalation automatica oltre le
+> 48h. Con Supabase: colonne additive su tasks (problem_reason/since),
+> tabelle project_comments, saved_views, task_snoozes; reazioni/decisioni
+> come colonne su comments.
 
 ---
 

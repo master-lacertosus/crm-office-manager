@@ -66,6 +66,10 @@ export interface Task {
   project_id: string | null;
   /** Fase: una delle core (TaskStatus) o la chiave di una fase custom. */
   status: string;
+  /** Motivo del blocco quando status === "alert". */
+  problem_reason?: string | null;
+  /** In fase Problema da (ISO datetime): tempo-in-fase ed escalation. */
+  problem_since?: string | null;
   /** ISO date (YYYY-MM-DD), senza orario. */
   due_date: string | null;
   position: number;
@@ -88,7 +92,25 @@ export interface TaskComment {
   author_id: string;
   body: string;
   created_at: string;
+  /** Marcato come decisione (finisce nel registro del progetto). */
+  is_decision?: boolean;
+  /** Reazioni rapide: emoji → id degli utenti. */
+  reactions?: Record<string, string[]>;
 }
+
+/** Messaggio della bacheca di progetto (stessa forma dei commenti task). */
+export interface ProjectComment {
+  id: string;
+  project_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  is_decision?: boolean;
+  reactions?: Record<string, string[]>;
+}
+
+/** Emoji ammesse per le reazioni rapide. */
+export const REACTION_EMOJIS = ["👍", "✅", "⚠️"] as const;
 
 /** Avviso interno: un responsabile lo invia a un singolo membro. */
 export interface AppNotification {

@@ -25,6 +25,7 @@ interface CapoContext {
   worstLateDays: number;
   inReview: number;
   myOpen: number;
+  staleProblems: number;
   hour: number;
   minute: number;
 }
@@ -50,6 +51,9 @@ function pickMessage(ctx: CapoContext): string {
     );
     add("IL RITARDO NON È UN'OPINIONE. È UN FATTO. VOSTRO.", 2);
     add("LE FERIE SONO UN CONCETTO. LE SCADENZE SONO REALTÀ.", 2);
+  }
+  if (ctx.staleProblems > 0) {
+    add("UN PROBLEMA DI DUE GIORNI NON È UN PROBLEMA. È UNA SCELTA.", 3);
   }
   if (ctx.inReview >= 2) {
     add(
@@ -280,6 +284,12 @@ export function IlCapo() {
         : 0,
       inReview: open.filter((t) => t.status === "in_review").length,
       myOpen: open.filter((t) => t.owner_id === userRef.current.id).length,
+      staleProblems: open.filter(
+        (t) =>
+          t.status === "alert" &&
+          t.problem_since &&
+          Date.now() - new Date(t.problem_since).getTime() > 48 * 3600_000,
+      ).length,
       hour: new Date().getHours(),
       minute: new Date().getMinutes(),
     };

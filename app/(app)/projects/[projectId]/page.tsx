@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Board } from "@/components/board/board";
 import { BoardFilters } from "@/components/board/filters";
 import { NewTaskButton } from "@/components/new-task-button";
+import { ProjectBacheca } from "@/components/project-bacheca";
 import { ProjectTimeline } from "@/components/project-timeline";
 import { Topbar } from "@/components/shell/topbar";
 import { Button } from "@/components/ui/button";
@@ -19,34 +20,26 @@ function ViewToggle({
   view,
 }: {
   projectId: string;
-  view: "board" | "timeline";
+  view: "board" | "timeline" | "bacheca";
 }) {
   const base =
     "rounded-md px-2.5 py-1 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring";
+  const tab = (target: string, label: string, active: boolean) => (
+    <Link
+      href={`/projects/${projectId}${target ? `?view=${target}` : ""}`}
+      className={cn(
+        base,
+        active ? "bg-brand-50 text-brand-700" : "text-ink-secondary hover:text-ink",
+      )}
+    >
+      {label}
+    </Link>
+  );
   return (
     <div className="flex gap-0.5 rounded-xl border border-border bg-white p-0.5 shadow-xs">
-      <Link
-        href={`/projects/${projectId}`}
-        className={cn(
-          base,
-          view === "board"
-            ? "bg-brand-50 text-brand-700"
-            : "text-ink-secondary hover:text-ink",
-        )}
-      >
-        Board
-      </Link>
-      <Link
-        href={`/projects/${projectId}?view=timeline`}
-        className={cn(
-          base,
-          view === "timeline"
-            ? "bg-brand-50 text-brand-700"
-            : "text-ink-secondary hover:text-ink",
-        )}
-      >
-        Timeline
-      </Link>
+      {tab("", "Board", view === "board")}
+      {tab("timeline", "Timeline", view === "timeline")}
+      {tab("bacheca", "Bacheca", view === "bacheca")}
     </div>
   );
 }
@@ -61,7 +54,8 @@ export default async function ProjectPage({
   const { projectId } = await params;
   const { view } = await searchParams;
   const project = MOCK_PROJECTS.find((p) => p.id === projectId);
-  const activeView = view === "timeline" ? "timeline" : "board";
+  const activeView =
+    view === "timeline" ? "timeline" : view === "bacheca" ? "bacheca" : "board";
 
   if (!project) {
     return (
@@ -102,6 +96,8 @@ export default async function ProjectPage({
       <Suspense>
         {activeView === "timeline" ? (
           <ProjectTimeline projectId={project.id} />
+        ) : activeView === "bacheca" ? (
+          <ProjectBacheca projectId={project.id} />
         ) : (
           <Board projectId={project.id} />
         )}

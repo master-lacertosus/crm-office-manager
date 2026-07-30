@@ -3,6 +3,7 @@ import type {
   AppNotification,
   Profile,
   Project,
+  ProjectComment,
   Task,
   TaskComment,
 } from "@/lib/types";
@@ -163,6 +164,8 @@ export const MOCK_TASKS: Task[] = [
     description:
       "Nuove misure, tabella compatibilità accessori, video di montaggio.",
     status: "alert",
+    problem_reason: "Mancano le misure aggiornate dal fornitore.",
+    problem_since: t(60 * 24 * 3),
     priority: "normal",
     owner_id: U.giulia,
     created_by: U.alessia,
@@ -232,6 +235,26 @@ export const MOCK_TASKS: Task[] = [
     repeat: "none",
     completed_at: t(60 * 24 * 2),
     created_at: t(60 * 24 * 10),
+  },
+];
+
+export const MOCK_PROJECT_COMMENTS: ProjectComment[] = [
+  {
+    id: "00000000-0000-4000-8000-000000000601",
+    project_id: P.blackFriday,
+    author_id: U.alessia,
+    body: "Direzione confermata con la proprietà: si parte col configuratore in homepage per il Black Friday.",
+    created_at: t(60 * 27),
+    is_decision: true,
+    reactions: { "👍": [U.marco, U.giulia] },
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000602",
+    project_id: P.blackFriday,
+    author_id: U.marco,
+    body: "@Team caricate le vostre proposte di visual entro venerdì nella cartella condivisa.",
+    created_at: t(60 * 4),
+    reactions: { "✅": [U.giulia] },
   },
 ];
 

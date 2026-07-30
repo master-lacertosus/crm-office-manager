@@ -2,8 +2,9 @@
 
 import * as React from "react";
 
-import { shiftIsoDays, shiftIsoMonths } from "@/lib/format";
+import { addDaysIso, shiftIsoDays, shiftIsoMonths, todayIso } from "@/lib/format";
 import { extractMentionIds } from "@/lib/mentions";
+import { TASK_TEMPLATES } from "@/lib/templates";
 import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
 import {
   CURRENT_USER_ID,
@@ -11,6 +12,7 @@ import {
   MOCK_NOTIFICATIONS,
   MOCK_PROFILES,
   MOCK_PROJECTS,
+  MOCK_PROJECT_COMMENTS,
   MOCK_TASKS,
   MOCK_TASK_LINKS,
 } from "@/lib/mock-data";
@@ -19,11 +21,21 @@ import type {
   CustomStatus,
   Profile,
   Project,
+  ProjectComment,
   StatusMeta,
   Task,
   TaskComment,
   TaskLink,
 } from "@/lib/types";
+
+/** Vista salvata dei task (querystring di filtri+vista), persistita in locale. */
+export interface SavedView {
+  id: string;
+  name: string;
+  params: string;
+}
+
+export type CommentScope = "task" | "project";
 
 /** Metadati delle fasi core (specchiano i token CSS --status-*). */
 export const CORE_STATUS_META: Record<
@@ -101,6 +113,25 @@ interface AppStore {
   customStatuses: CustomStatus[];
   addCustomStatus: (label: string, presetIndex: number) => boolean;
   removeCustomStatus: (key: string) => void;
+  /** Bacheca di progetto. */
+  projectComments: ProjectComment[];
+  addProjectComment: (projectId: string, body: string) => Promise<void>;
+  /** Reazioni rapide e decisioni sui commenti (task o bacheca). */
+  toggleReaction: (scope: CommentScope, commentId: string, emoji: string) => void;
+  toggleDecision: (scope: CommentScope, commentId: string) => void;
+  /** Snooze personale: il task sparisce dalle TUE viste fino alla data. */
+  snoozes: Record<string, string>;
+  snoozeTask: (taskId: string, untilIso: string) => void;
+  unsnoozeTask: (taskId: string) => void;
+  /** Flusso problemi. */
+  reportProblem: (taskId: string, reason: string) => Promise<void>;
+  resolveProblem: (taskId: string) => void;
+  /** Template di task: crea un task pronto (con link) e lo restituisce. */
+  createTaskFromTemplate: (templateId: string) => Promise<Task | null>;
+  /** Viste salvate (filtri della pagina Task), persistite in locale. */
+  savedViews: SavedView[];
+  addSavedView: (name: string, params: string) => void;
+  removeSavedView: (id: string) => void;
   addComment: (taskId: string, body: string) => Promise<void>;
   updateProfileName: (id: string, fullName: string) => Promise<void>;
   notifications: AppNotification[];
@@ -127,6 +158,92 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     React.useState<TaskLink[]>(MOCK_TASK_LINKS);
   const [focusIds, setFocusIds] = React.useState<string[]>([]);
   const [customStatuses, setCustomStatuses] = React.useState<CustomStatus[]>([]);
+  const [projectComments, setProjectComments] = React.useState<
+    ProjectComment[]
+  >(MOCK_PROJECT_COMMENTS);
+  const [snoozes, setSnoozes] = React.useState<Record<string, string>>({});
+  const [savedViews, setSavedViews] = React.useState<SavedView[]>([]);
+  const escalatedRef = React.useRef(new Set<string>());
+
+  /* Viste salvate: carica e persisti in localStorage */
+  React.useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const raw = localStorage.getItem("saved-views");
+        if (raw) setSavedViews(JSON.parse(raw));
+      } catch {
+        /* ignora */
+      }
+    });
+  }, []);
+  React.useEffect(() => {
+    try {
+      localStorage.setItem("saved-views", JSON.stringify(savedViews));
+    } catch {
+      /* ignora */
+    }
+  }, [savedViews]);
+
+  /* Risveglio degli snooze scaduti: il task torna con un avviso */
+  React.useEffect(() => {
+    const today = todayIso();
+    const expired = Object.entries(snoozes).filter(([, until]) => until <= today);
+    if (expired.length === 0) return;
+    queueMicrotask(() => {
+      setSnoozes((prev) => {
+        const next = { ...prev };
+        for (const [id] of expired) delete next[id];
+        return next;
+      });
+      setNotifications((prev) => [
+        ...prev,
+        ...expired.map(([taskId]) => ({
+          id: crypto.randomUUID(),
+          to_user_id: CURRENT_USER_ID,
+          from_user_id: CURRENT_USER_ID,
+          message: `«${tasks.find((t) => t.id === taskId)?.title ?? "Task"}» è tornato dal posticipo.`,
+          task_id: taskId,
+          created_at: new Date().toISOString(),
+          read_at: null,
+        })),
+      ]);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snoozes]);
+
+  /* Escalation: problemi fermi da più di 48h → avviso agli admin */
+  React.useEffect(() => {
+    const now = Date.now();
+    const stale = tasks.filter(
+      (t) =>
+        t.status === "alert" &&
+        t.problem_since &&
+        now - new Date(t.problem_since).getTime() > 48 * 3600_000 &&
+        !escalatedRef.current.has(t.id),
+    );
+    if (stale.length === 0) return;
+    queueMicrotask(() => {
+      const admins = MOCK_PROFILES.filter((p) => p.is_active && p.role === "admin");
+      setNotifications((prev) => [
+        ...prev,
+        ...stale.flatMap((task) => {
+          const days = Math.floor(
+            (now - new Date(task.problem_since as string).getTime()) / 86_400_000,
+          );
+          return admins.map((admin) => ({
+            id: crypto.randomUUID(),
+            to_user_id: admin.id,
+            from_user_id: task.owner_id,
+            message: `⛔ Problema fermo da ${days} g: «${task.title}»${task.problem_reason ? ` — ${task.problem_reason}` : ""}`,
+            task_id: task.id,
+            created_at: new Date().toISOString(),
+            read_at: null,
+          }));
+        }),
+      ]);
+      for (const t of stale) escalatedRef.current.add(t.id);
+    });
+  }, [tasks]);
 
   const statuses: StatusMeta[] = [
     ...(["backlog", "todo", "in_progress"] as const).map((key) => ({
@@ -191,6 +308,14 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             } else if (patch.status !== "done") {
               next.completed_at = null;
             }
+            // Ingresso/uscita dalla fase Problema
+            if (patch.status === "alert" && task.status !== "alert") {
+              next.problem_since =
+                next.problem_since ?? new Date().toISOString();
+            } else if (patch.status !== "alert") {
+              next.problem_reason = null;
+              next.problem_since = null;
+            }
           }
           return next;
         });
@@ -218,6 +343,12 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           if (status === "done" && task.status !== "done") {
             const following = nextOccurrence(next);
             if (following) spawned.push(following);
+          }
+          if (status === "alert" && task.status !== "alert") {
+            next.problem_since = next.problem_since ?? new Date().toISOString();
+          } else if (status !== "alert") {
+            next.problem_reason = null;
+            next.problem_since = null;
           }
           return next;
         });
@@ -284,6 +415,187 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       setTasks((prev) =>
         prev.map((t) => (t.status === key ? { ...t, status: "todo" } : t)),
       );
+    },
+
+    projectComments,
+
+    async addProjectComment(projectId, body) {
+      await wait();
+      const trimmed = body.trim();
+      setProjectComments((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          project_id: projectId,
+          author_id: currentUser.id,
+          body: trimmed,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      const mentioned = extractMentionIds(trimmed, profiles, currentUser.id);
+      if (mentioned.length > 0) {
+        const project = projects.find((p) => p.id === projectId);
+        const excerpt =
+          trimmed.length > 70 ? `${trimmed.slice(0, 70)}…` : trimmed;
+        setNotifications((prev) => [
+          ...prev,
+          ...mentioned.map((toId) => ({
+            id: crypto.randomUUID(),
+            to_user_id: toId,
+            from_user_id: currentUser.id,
+            message: `Ti ha menzionato nella bacheca di «${project?.name ?? "un progetto"}»: “${excerpt}”`,
+            task_id: null,
+            created_at: new Date().toISOString(),
+            read_at: null,
+          })),
+        ]);
+      }
+    },
+
+    toggleReaction(scope, commentId, emoji) {
+      const apply = <T extends { id: string; reactions?: Record<string, string[]> }>(
+        list: T[],
+      ): T[] =>
+        list.map((c) => {
+          if (c.id !== commentId) return c;
+          const reactions = { ...(c.reactions ?? {}) };
+          const users = reactions[emoji] ?? [];
+          reactions[emoji] = users.includes(currentUser.id)
+            ? users.filter((u) => u !== currentUser.id)
+            : [...users, currentUser.id];
+          if (reactions[emoji].length === 0) delete reactions[emoji];
+          return { ...c, reactions };
+        });
+      if (scope === "task") setComments((prev) => apply(prev));
+      else setProjectComments((prev) => apply(prev));
+    },
+
+    toggleDecision(scope, commentId) {
+      const apply = <T extends { id: string; is_decision?: boolean }>(
+        list: T[],
+      ): T[] =>
+        list.map((c) =>
+          c.id === commentId ? { ...c, is_decision: !c.is_decision } : c,
+        );
+      if (scope === "task") setComments((prev) => apply(prev));
+      else setProjectComments((prev) => apply(prev));
+    },
+
+    snoozes,
+
+    snoozeTask(taskId, untilIso) {
+      setSnoozes((prev) => ({ ...prev, [taskId]: untilIso }));
+    },
+
+    unsnoozeTask(taskId) {
+      setSnoozes((prev) => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
+    },
+
+    async reportProblem(taskId, reason) {
+      await wait();
+      const trimmed = reason.trim();
+      let title = "";
+      let ownerId = "";
+      setTasks((prev) =>
+        prev.map((t) => {
+          if (t.id !== taskId) return t;
+          title = t.title;
+          ownerId = t.owner_id;
+          return {
+            ...t,
+            status: "alert",
+            problem_reason: trimmed || null,
+            problem_since: t.problem_since ?? new Date().toISOString(),
+            completed_at: null,
+          };
+        }),
+      );
+      const recipients = new Set(
+        profiles
+          .filter((p) => p.is_active && p.role === "admin")
+          .map((p) => p.id),
+      );
+      if (ownerId) recipients.add(ownerId);
+      recipients.delete(currentUser.id);
+      setNotifications((prev) => [
+        ...prev,
+        ...[...recipients].map((toId) => ({
+          id: crypto.randomUUID(),
+          to_user_id: toId,
+          from_user_id: currentUser.id,
+          message: `⚠️ Problema segnalato su «${title}»${trimmed ? `: ${trimmed}` : ""}`,
+          task_id: taskId,
+          created_at: new Date().toISOString(),
+          read_at: null,
+        })),
+      ]);
+    },
+
+    resolveProblem(taskId) {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                status: "in_progress",
+                problem_reason: null,
+                problem_since: null,
+              }
+            : t,
+        ),
+      );
+    },
+
+    async createTaskFromTemplate(templateId) {
+      const tpl = TASK_TEMPLATES.find((t) => t.id === templateId);
+      if (!tpl) return null;
+      await wait();
+      const task: Task = {
+        id: crypto.randomUUID(),
+        title: tpl.title,
+        description: tpl.description,
+        status: "todo",
+        priority: tpl.priority,
+        owner_id: currentUser.id,
+        created_by: currentUser.id,
+        project_id: null,
+        due_date:
+          tpl.dueOffsetDays !== null ? addDaysIso(tpl.dueOffsetDays) : null,
+        position: Date.now(),
+        repeat: tpl.repeat,
+        completed_at: null,
+        created_at: new Date().toISOString(),
+      };
+      setTasks((prev) => [...prev, task]);
+      if (tpl.links.length > 0) {
+        setTaskLinks((prev) => [
+          ...prev,
+          ...tpl.links.map((l) => ({
+            id: crypto.randomUUID(),
+            task_id: task.id,
+            url: l.url,
+            label: l.label,
+          })),
+        ]);
+      }
+      return task;
+    },
+
+    savedViews,
+
+    addSavedView(name, params) {
+      setSavedViews((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), name: name.trim(), params },
+      ]);
+    },
+
+    removeSavedView(id) {
+      setSavedViews((prev) => prev.filter((v) => v.id !== id));
     },
 
     focusIds,

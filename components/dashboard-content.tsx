@@ -163,7 +163,7 @@ function Section({
 }
 
 export function DashboardContent() {
-  const { tasks, profiles, projects, currentUser, notifications, focusIds, statuses } =
+  const { tasks, profiles, projects, currentUser, notifications, focusIds, statuses, snoozes } =
     useAppStore();
   const searchParams = useSearchParams();
   const [standup, setStandup] = React.useState(
@@ -180,7 +180,9 @@ export function DashboardContent() {
   const thisWeek = open
     .filter((t) => t.due_date && t.due_date >= today && t.due_date <= weekEnd)
     .sort(byDue);
-  const mine = open.filter((t) => t.owner_id === currentUser.id).sort(byDue);
+  const mine = open
+    .filter((t) => t.owner_id === currentUser.id && !snoozes[t.id])
+    .sort(byDue);
   const mineDone = tasks.filter(
     (t) => t.owner_id === currentUser.id && t.status === "done",
   ).length;
@@ -191,7 +193,9 @@ export function DashboardContent() {
   const latestAlerts = notifications.slice(0, 3);
   const focusTasks = focusIds
     .map((id) => tasks.find((t) => t.id === id))
-    .filter((t): t is Task => Boolean(t) && t!.status !== "done");
+    .filter(
+      (t): t is Task => Boolean(t) && t!.status !== "done" && !snoozes[t!.id],
+    );
 
   return (
     <div className="flex-1 space-y-4 px-4 py-4 sm:px-6">

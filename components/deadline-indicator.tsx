@@ -12,12 +12,17 @@ import { cn } from "@/lib/utils";
  * TUE task sono in ritardo o scadono oggi. Sparisce quando sei in pari.
  */
 export function DeadlineIndicator() {
-  const { tasks, currentUser } = useAppStore();
+  const { tasks, currentUser, snoozes } = useAppStore();
 
   let overdue = 0;
   let today = 0;
   for (const t of tasks) {
-    if (t.owner_id !== currentUser.id || t.status === "done" || !t.due_date) {
+    if (
+      t.owner_id !== currentUser.id ||
+      t.status === "done" ||
+      !t.due_date ||
+      snoozes[t.id]
+    ) {
       continue;
     }
     const { level } = dueUrgency(t.due_date);
