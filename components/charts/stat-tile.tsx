@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { animate, motion, useReducedMotion } from "motion/react";
-import { MoveDown, MoveUp } from "lucide-react";
+import { ChevronRight, MoveDown, MoveUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -29,71 +30,72 @@ function useCountUp(value: number): number {
 }
 
 /**
- * Numero-titolo con count-up e leggera profondità 3D all'hover.
- * `delta`: variazione vs periodo precedente (verde se il segno "buono"
- * coincide, rosso altrimenti).
+ * KPI in stile mockup: icona in quadrato soft, etichetta uppercase, numero
+ * con count-up, sottotitolo operativo; chevron (se naviga) o contenuto
+ * extra (sparkline) sulla destra. Alone «aurora» via --aurora.
  */
 export function StatTile({
   label,
   value,
+  sublabel,
   delta,
   deltaPositiveIsGood = true,
   tone = "default",
   icon,
   aurora,
+  href,
   children,
   className,
 }: {
   label: string;
   value: number;
+  sublabel?: string;
   delta?: number;
   deltaPositiveIsGood?: boolean;
   tone?: "default" | "danger" | "brand";
   icon?: React.ReactNode;
-  /** Alone colorato in alto a destra (es. "rgb(2 132 199 / 0.14)"). */
+  /** Alone colorato in alto a destra (es. "rgb(59 130 246 / 0.10)"). */
   aurora?: string;
+  href?: string;
   children?: React.ReactNode;
   className?: string;
 }) {
   const display = useCountUp(value);
   const good = delta !== undefined && (delta >= 0) === deltaPositiveIsGood;
 
-  return (
+  const body = (
     <motion.div
-      whileHover={{ y: -2, rotateX: 3 }}
+      whileHover={href ? { y: -2 } : undefined}
       transition={{ type: "spring", stiffness: 320, damping: 26 }}
-      style={
-        {
-          transformPerspective: 700,
-          ...(aurora ? { "--aurora": aurora } : {}),
-        } as React.CSSProperties
-      }
+      style={aurora ? ({ "--aurora": aurora } as React.CSSProperties) : undefined}
       className={cn(
-        "glass rounded-xl p-4 transition-shadow",
+        "card-soft flex items-center gap-3.5 p-4",
         aurora && "tile-aurora",
+        href && "transition-shadow hover:shadow-sm",
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold tracking-[0.06em] text-ink-muted uppercase">
+      {icon}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[11px] font-semibold tracking-[0.05em] text-ink-muted uppercase">
           {label}
         </p>
-        {icon}
-      </div>
-      <div className="mt-1.5 flex items-end justify-between gap-2">
         <p
           className={cn(
-            "font-mono text-[28px]/8 font-medium tabular-nums",
+            "mt-0.5 text-[30px]/9 font-bold tabular-nums tracking-[-0.01em]",
             tone === "danger" && value > 0 ? "text-danger-text" : "text-ink",
             tone === "brand" && value > 0 && "text-status-review-text",
           )}
         >
           {display}
         </p>
+        {sublabel ? (
+          <p className="truncate text-xs text-ink-muted">{sublabel}</p>
+        ) : null}
         {delta !== undefined ? (
           <p
             className={cn(
-              "flex items-center gap-0.5 pb-1 font-mono text-xs",
+              "mt-0.5 flex items-center gap-0.5 font-mono text-xs",
               delta === 0
                 ? "text-ink-muted"
                 : good
@@ -106,12 +108,27 @@ export function StatTile({
             ) : delta < 0 ? (
               <MoveDown aria-hidden className="size-3" />
             ) : null}
-            {delta > 0 ? `+${delta}` : delta}
-            <span className="sr-only"> rispetto ai 7 giorni precedenti</span>
+            {delta > 0 ? `+${delta}` : delta} vs sett.
           </p>
         ) : null}
       </div>
-      {children}
+      {children ? (
+        <div className="w-24 shrink-0 self-center">{children}</div>
+      ) : href ? (
+        <ChevronRight aria-hidden className="size-4 shrink-0 text-ink-faint" />
+      ) : null}
     </motion.div>
   );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block rounded-[20px] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+      >
+        {body}
+      </Link>
+    );
+  }
+  return body;
 }

@@ -108,7 +108,7 @@ export function ProjectTimeline({ projectId }: { projectId: string }) {
 
   return (
     <div className="flex-1 space-y-4 px-4 py-4 sm:px-6">
-      <div className="glass overflow-x-auto rounded-2xl">
+      <div className="card-soft overflow-x-auto">
         <div style={{ minWidth: 180 + totalDays * DAY_W }}>
           {/* intestazione giorni */}
           <div className="flex border-b border-border-soft">
@@ -236,7 +236,7 @@ export function ProjectTimeline({ projectId }: { projectId: string }) {
       )}
 
       {unscheduled.length > 0 ? (
-        <div className="glass rounded-xl p-3">
+        <div className="card-soft rounded-2xl p-3">
           <p className="text-[11px] font-semibold tracking-[0.06em] text-ink-muted uppercase">
             Senza scadenza · {unscheduled.length}
           </p>

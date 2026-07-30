@@ -51,37 +51,31 @@ const DATE_FMT = new Intl.DateTimeFormat("it-IT", {
   month: "long",
 });
 
-/** Anello di avanzamento personale, stile activity ring. */
-function ProgressRing({ percent }: { percent: number }) {
+/** Anello di avanzamento personale (mockup: arancio pieno su traccia chiara). */
+function ProgressRing({ percent, delta }: { percent: number; delta: number }) {
   const reduced = useReducedMotion();
-  const R = 42;
+  const R = 50;
   const C = 2 * Math.PI * R;
   const target = C * (1 - percent / 100);
 
   return (
-    <div className="relative size-28 shrink-0">
-      <svg viewBox="0 0 112 112" className="size-28 -rotate-90">
-        <defs>
-          <linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#F09226" />
-            <stop offset="100%" stopColor="#059669" />
-          </linearGradient>
-        </defs>
+    <div className="relative size-[132px] shrink-0 rounded-full bg-white shadow-[0_10px_30px_rgb(15_23_42/0.08)]">
+      <svg viewBox="0 0 132 132" className="size-[132px] -rotate-90">
         <circle
-          cx="56"
-          cy="56"
+          cx="66"
+          cy="66"
           r={R}
           fill="none"
-          stroke="rgb(23 24 28 / 0.07)"
-          strokeWidth="10"
+          stroke="#f1f5f9"
+          strokeWidth="11"
         />
         <motion.circle
-          cx="56"
-          cy="56"
+          cx="66"
+          cy="66"
           r={R}
           fill="none"
-          stroke="url(#ring-grad)"
-          strokeWidth="10"
+          stroke="var(--brand-500)"
+          strokeWidth="11"
           strokeLinecap="round"
           strokeDasharray={C}
           initial={{ strokeDashoffset: reduced ? target : C }}
@@ -90,11 +84,23 @@ function ProgressRing({ percent }: { percent: number }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <p className="font-mono text-[22px]/6 font-semibold text-ink">
+        <p className="text-[26px]/7 font-bold tracking-[-0.01em] text-ink">
           {percent}%
         </p>
-        <p className="text-[10px] font-medium tracking-[0.06em] text-ink-muted uppercase">
+        <p className="text-[10px] font-semibold tracking-[0.08em] text-ink-muted uppercase">
           chiusi
+        </p>
+        <p
+          className={cn(
+            "mt-0.5 font-mono text-[10px]",
+            delta > 0
+              ? "text-success-text"
+              : delta < 0
+                ? "text-danger-text"
+                : "text-ink-muted",
+          )}
+        >
+          {delta > 0 ? `+${delta}` : delta} vs sett.
         </p>
       </div>
     </div>
@@ -112,11 +118,11 @@ function KpiIcon({
     <span
       aria-hidden
       className={cn(
-        "flex size-8 items-center justify-center rounded-lg",
+        "flex size-11 shrink-0 items-center justify-center rounded-xl",
         className,
       )}
     >
-      <Icon className="size-4" strokeWidth={2} />
+      <Icon className="size-5" strokeWidth={2} />
     </span>
   );
 }
@@ -124,19 +130,31 @@ function KpiIcon({
 function Section({
   title,
   count,
+  seeAllHref,
   children,
 }: {
   title: string;
   count: number;
+  seeAllHref?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="glass hairline-gradient rounded-xl p-4">
-      <header className="flex items-center gap-2 pb-2">
-        <h2 className="text-[11px] font-semibold tracking-[0.06em] text-ink-secondary uppercase">
+    <section className="card-soft p-4">
+      <header className="flex items-center gap-2 pb-2.5">
+        <h2 className="text-[11px] font-semibold tracking-[0.05em] text-ink-secondary uppercase">
           {title}
         </h2>
-        <span className="font-mono text-xs text-ink-muted">{count}</span>
+        <span className="inline-flex min-w-5 items-center justify-center rounded-full border border-border px-1.5 font-mono text-[11px] text-ink-muted">
+          {count}
+        </span>
+        {seeAllHref ? (
+          <Link
+            href={seeAllHref}
+            className="ml-auto rounded-sm text-[12px] font-medium text-brand-600 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Vedi tutti
+          </Link>
+        ) : null}
       </header>
       {children}
     </section>
@@ -178,17 +196,18 @@ export function DashboardContent() {
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.2, 0, 0, 1] }}
-        className="glass-hero flex flex-col justify-between gap-4 rounded-2xl p-5 sm:flex-row sm:items-center"
+        className="glass-hero flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center"
       >
-        <div>
-          <p className="font-mono text-xs text-ink-muted first-letter:uppercase">
+        <div className="relative">
+          <p className="text-[13px] text-ink-muted first-letter:uppercase">
             {DATE_FMT.format(new Date())}
           </p>
-          <h2 className="mt-1 text-[28px]/9 font-semibold tracking-[-0.015em] text-ink">
+          <h2 className="mt-1 text-[30px]/10 font-bold tracking-[-0.018em] text-ink sm:text-[38px]/12">
             {greeting()},{" "}
             <span className="gradient-text">
               {currentUser.full_name.split(" ")[0]}
-            </span>
+            </span>{" "}
+            <span aria-hidden>👋</span>
           </h2>
           <p className="mt-1.5 max-w-md text-sm text-ink-secondary">
             {overdue.length > 0 ? (
@@ -227,15 +246,7 @@ export function DashboardContent() {
           </Button>
         </div>
         <div className="relative">
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 rounded-full opacity-60 blur-2xl"
-            style={{
-              background:
-                "conic-gradient(from 180deg, rgb(240 146 38 / 0.35), rgb(5 150 105 / 0.3), rgb(240 146 38 / 0.35))",
-            }}
-          />
-          <ProgressRing percent={percent} />
+          <ProgressRing percent={percent} delta={analytics.done7Delta} />
         </div>
       </motion.section>
 
@@ -244,7 +255,9 @@ export function DashboardContent() {
         <StatTile
           label="Task aperti"
           value={analytics.open}
-          aurora="rgb(2 132 199 / 0.14)"
+          sublabel="Totali"
+          href="/tasks"
+          aurora="rgb(59 130 246 / 0.10)"
           icon={
             <KpiIcon
               icon={FolderOpen}
@@ -255,8 +268,10 @@ export function DashboardContent() {
         <StatTile
           label="In ritardo"
           value={analytics.overdue}
+          sublabel="Da gestire"
           tone="danger"
-          aurora="rgb(217 45 32 / 0.11)"
+          href="/tasks"
+          aurora="rgb(239 68 68 / 0.10)"
           icon={
             <KpiIcon
               icon={AlarmClockMinus}
@@ -267,8 +282,10 @@ export function DashboardContent() {
         <StatTile
           label="In revisione"
           value={analytics.inReview}
+          sublabel="In attesa"
           tone="brand"
-          aurora="rgb(240 146 38 / 0.16)"
+          href="/tasks"
+          aurora="rgb(255 107 0 / 0.12)"
           icon={
             <KpiIcon
               icon={Eye}
@@ -277,10 +294,10 @@ export function DashboardContent() {
           }
         />
         <StatTile
-          label="Completati · 7 giorni"
+          label="Completati · 7g"
           value={analytics.done7}
           delta={analytics.done7Delta}
-          aurora="rgb(5 150 105 / 0.13)"
+          aurora="rgb(22 163 101 / 0.11)"
           icon={
             <KpiIcon
               icon={CheckCheck}
@@ -290,7 +307,7 @@ export function DashboardContent() {
         >
           <Sparkline
             values={analytics.trend.map((p) => p.value)}
-            color="#047857"
+            color="#0E7A4A"
             ariaLabel="Andamento completamenti, ultime due settimane"
           />
         </StatTile>
@@ -387,7 +404,7 @@ export function DashboardContent() {
         </Section>
 
         {/* I miei task */}
-        <Section title="I miei task aperti" count={mine.length}>
+        <Section title="I miei task aperti" count={mine.length} seeAllHref="/tasks">
           {mine.length === 0 ? (
             <EmptyState
               icon={CircleCheck}
@@ -413,7 +430,7 @@ export function DashboardContent() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Section title="In ritardo" count={overdue.length}>
+        <Section title="In ritardo" count={overdue.length} seeAllHref="/tasks">
           {overdue.length === 0 ? (
             <EmptyState
               icon={CircleCheck}
@@ -430,7 +447,11 @@ export function DashboardContent() {
           )}
         </Section>
 
-        <Section title="In scadenza questa settimana" count={thisWeek.length}>
+        <Section
+          title="In scadenza questa settimana"
+          count={thisWeek.length}
+          seeAllHref="/calendar"
+        >
           {thisWeek.length === 0 ? (
             <EmptyState
               icon={CalendarClock}

@@ -24,13 +24,13 @@ function ViewToggle({
   const base =
     "rounded-md px-2.5 py-1 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring";
   return (
-    <div className="glass flex gap-0.5 rounded-lg p-0.5">
+    <div className="flex gap-0.5 rounded-xl border border-border bg-white p-0.5 shadow-xs">
       <Link
         href={`/projects/${projectId}`}
         className={cn(
           base,
           view === "board"
-            ? "bg-white text-ink shadow-xs"
+            ? "bg-brand-50 text-brand-700"
             : "text-ink-secondary hover:text-ink",
         )}
       >
@@ -41,7 +41,7 @@ function ViewToggle({
         className={cn(
           base,
           view === "timeline"
-            ? "bg-white text-ink shadow-xs"
+            ? "bg-brand-50 text-brand-700"
             : "text-ink-secondary hover:text-ink",
         )}
       >

@@ -62,7 +62,7 @@ export function NotificationsBell() {
         {unreadCount > 0 ? (
           <span
             aria-hidden
-            className="btn-glow absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full font-mono text-[10px] font-semibold text-primary-foreground"
+            className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive font-mono text-[10px] font-semibold text-white ring-2 ring-white"
           >
             {unreadCount}
           </span>

@@ -88,7 +88,7 @@ export function TeamContent() {
 
   return (
     <div className="flex-1 px-4 py-4 sm:px-6">
-      <div className="glass overflow-hidden rounded-xl">
+      <div className="card-soft overflow-hidden">
         {profiles.map((profile, index) => {
           const openCount = tasks.filter(
             (t) => t.owner_id === profile.id && t.status !== "done",

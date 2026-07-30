@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   CalendarDays,
   ChartNoAxesColumn,
+  ChevronDown,
   Folder,
   LayoutDashboard,
   ListTodo,
@@ -60,7 +61,7 @@ function NavLink({
         "relative flex h-9 items-center gap-3 rounded-lg px-2.5 text-sm outline-none transition-colors",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         active
-          ? "font-medium text-ink"
+          ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
           : "text-ink-secondary hover:bg-accent hover:text-ink",
         labelVisibility === "lg" && "md:justify-center lg:justify-start",
       )}
@@ -85,20 +86,38 @@ function NavLink({
 function UserFooter({ compact = false }: { compact?: boolean }) {
   const { currentUser } = useAppStore();
   return (
-    <div
-      className={cn(
-        "flex items-center gap-2.5 border-t border-border-soft px-3 py-3",
-        compact && "md:justify-center lg:justify-start",
-      )}
-    >
-      <AvatarInitials name={currentUser.full_name} />
-      <div className={cn("min-w-0", compact && "md:hidden lg:block")}>
-        <p className="truncate text-[13px] font-medium text-ink">
-          {currentUser.full_name}
-        </p>
-        <p className="text-xs text-ink-muted">
-          {currentUser.role === "admin" ? "Admin" : "Member"}
-        </p>
+    <div className="px-2.5 pb-3">
+      <div
+        className={cn(
+          "flex items-center gap-2.5 rounded-2xl border border-border bg-white px-2.5 py-2 shadow-xs",
+          compact && "md:justify-center lg:justify-start",
+        )}
+      >
+        <span className="relative shrink-0">
+          <AvatarInitials
+            name={currentUser.full_name}
+            className="bg-brand-100 text-brand-700"
+          />
+          <span
+            aria-hidden
+            className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-success ring-2 ring-white"
+          />
+        </span>
+        <div className={cn("min-w-0 flex-1", compact && "md:hidden lg:block")}>
+          <p className="truncate text-[13px] font-semibold text-ink">
+            {currentUser.full_name}
+          </p>
+          <p className="text-xs text-ink-muted">
+            {currentUser.role === "admin" ? "Admin" : "Member"}
+          </p>
+        </div>
+        <ChevronDown
+          aria-hidden
+          className={cn(
+            "size-4 shrink-0 text-ink-faint",
+            compact && "md:hidden lg:block",
+          )}
+        />
       </div>
     </div>
   );
@@ -131,7 +150,7 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
 /** Sidebar fissa: 240px da lg, rail icone 64px su md, assente sotto md. */
 export function Sidebar() {
   return (
-    <aside className="glass sticky top-0 hidden h-dvh shrink-0 flex-col !border-t-0 !border-r-white/60 !border-b-0 !border-l-0 md:flex md:w-16 lg:w-60">
+    <aside className="sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex md:w-16 lg:w-60">
       <Wordmark compact />
       <nav
         aria-label="Navigazione principale"

@@ -32,7 +32,7 @@ export function ProjectsContent() {
               <Link
                 key={project.id}
                 href={`/projects/${project.id}`}
-                className="glass rounded-xl p-4 outline-none transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+                className="card-soft p-4 outline-none transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
               >
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="text-[15px]/[22px] font-semibold text-ink">

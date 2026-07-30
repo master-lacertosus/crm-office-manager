@@ -22,7 +22,7 @@ function Card({
   className?: string;
 }) {
   return (
-    <section className={`glass rounded-xl p-4 ${className}`}>
+    <section className={`card-soft p-4 ${className}`}>
       <header className="mb-3">
         <h2 className="text-[11px] font-semibold tracking-[0.06em] text-ink-secondary uppercase">
           {title}
@@ -74,10 +74,10 @@ export function ReportsContent() {
           aurora="rgb(240 146 38 / 0.16)"
         />
         <StatTile
-          label="Completati · 7 giorni"
+          label="Completati · 7g"
           value={a.done7}
           delta={a.done7Delta}
-          aurora="rgb(5 150 105 / 0.13)"
+          aurora="rgb(22 163 101 / 0.11)"
         >
           <Sparkline
             values={a.trend.map((p) => p.value)}

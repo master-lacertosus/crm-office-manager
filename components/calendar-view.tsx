@@ -240,7 +240,7 @@ export function CalendarView() {
       </div>
 
       {/* Griglia mensile */}
-      <div className="glass overflow-hidden rounded-2xl">
+      <div className="card-soft overflow-hidden">
         <div className="grid grid-cols-7 border-b border-border-soft">
           {WEEKDAYS.map((d) => (
             <p
@@ -308,7 +308,7 @@ export function CalendarView() {
       <div
         ref={stripRef}
         className={cn(
-          "glass rounded-xl p-3 transition-colors",
+          "card-soft rounded-2xl p-3 transition-colors",
           drag?.target === "none" && "bg-brand-50/80",
         )}
       >

@@ -51,7 +51,7 @@ export function CardVisual({
   const project = projects.find((p) => p.id === task.project_id);
 
   return (
-    <div className={cn("glass relative rounded-xl p-3 pl-4", className)}>
+    <div className={cn("card-soft relative rounded-2xl p-3 pl-4", className)}>
       <span
         aria-hidden
         className="absolute inset-y-2.5 left-1.5 w-[3px] rounded-full"

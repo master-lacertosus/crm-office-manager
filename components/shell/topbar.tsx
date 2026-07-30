@@ -17,7 +17,7 @@ export function Topbar({
   const { openDrawer } = useShell();
 
   return (
-    <header className="glass sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 !rounded-none !border-x-0 !border-t-0 !border-b-white/60 px-4 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 bg-canvas/85 px-4 backdrop-blur-md sm:px-6">
       <Button
         variant="ghost"
         size="icon-sm"
@@ -27,7 +27,7 @@ export function Topbar({
       >
         <Menu />
       </Button>
-      <h1 className="min-w-0 flex-1 truncate text-[22px]/7 font-semibold tracking-[-0.012em] text-ink">
+      <h1 className="min-w-0 flex-1 truncate text-[26px]/8 font-bold tracking-[-0.015em] text-ink">
         {title}
       </h1>
       <div className="flex shrink-0 items-center gap-2">

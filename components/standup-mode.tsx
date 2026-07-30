@@ -103,7 +103,7 @@ export function StandupMode({
                 <section
                   key={profile.id}
                   aria-label={profile.full_name}
-                  className="glass rounded-2xl p-5"
+                  className="card-soft rounded-3xl p-5"
                 >
                   <header className="flex items-center gap-3">
                     <AvatarInitials name={profile.full_name} size="lg" />

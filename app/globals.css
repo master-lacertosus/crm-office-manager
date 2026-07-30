@@ -121,92 +121,94 @@
 :root {
   --radius: 0.5rem;
 
-  /* Superfici */
+  /* Superfici — revisione mockup: fondo freddo, card bianche solide */
   --background: #ffffff;
-  --canvas: #f7f7f8;
+  --canvas: #f6f8fc;
   --card: #ffffff;
-  --card-foreground: #212327;
+  --card-foreground: #111827;
   --popover: #ffffff;
-  --popover-foreground: #212327;
-  --scrim: rgb(23 24 28 / 0.32);
+  --popover-foreground: #111827;
+  --scrim: rgb(15 23 42 / 0.32);
 
-  /* Grafite */
-  --foreground: #212327;
-  --ink: #212327;
-  --ink-secondary: #5a5e66;
-  --ink-muted: #696e76;
-  --ink-faint: #9ca1a9;
-  --border: #e3e5e8;
-  --border-soft: #eeeff1;
-  --input: #c9cdd3;
+  /* Inchiostro (palette mockup) */
+  --foreground: #111827;
+  --ink: #111827;
+  --ink-secondary: #475569;
+  --ink-muted: #64748b;
+  --ink-faint: #9aa7b8;
+  --border: #e8edf3;
+  --border-soft: #eef2f7;
+  --input: #cbd5e1;
 
-  /* Arancio Lacertosus (#F09226 dal sito di produzione) */
-  --brand-50: #fdf6ec;
-  --brand-100: #fae9cf;
-  --brand-200: #f6d19e;
-  --brand-300: #f3b968;
-  --brand-400: #f1a346;
-  --brand-500: #f09226;
-  --brand-550: #e28110;
-  --brand-600: #d97706;
-  --brand-700: #b45309;
-  --brand-800: #92400e;
-  --brand-900: #78350f;
+  /* Arancio Lacertosus (mockup: #FF6B00) */
+  --brand-50: #fff1e8;
+  --brand-100: #ffe3d1;
+  --brand-200: #ffc399;
+  --brand-300: #ffa25c;
+  --brand-400: #ff8a1f;
+  --brand-500: #ff6b00;
+  --brand-550: #f05a00;
+  --brand-600: #e05300;
+  --brand-700: #b34503;
+  --brand-800: #8f3a06;
+  --brand-900: #753008;
 
-  /* Semantica shadcn */
+  /* Semantica shadcn — mockup: bottoni arancio con testo bianco
+     (deviazione consapevole: ~3.2:1, documentata) */
   --primary: var(--brand-500);
-  --primary-foreground: #212327; /* grafite su arancio: 6.4:1 (bianco: 2.4:1) */
+  --primary-foreground: #ffffff;
   --primary-hover: var(--brand-550);
-  --secondary: #f1f1f3;
-  --secondary-foreground: #212327;
-  --muted: #f1f1f3;
-  --muted-foreground: #696e76;
-  --accent: #f2f2f4;
-  --accent-foreground: #212327;
-  --destructive: #d92d20;
+  --secondary: #eef2f7;
+  --secondary-foreground: #111827;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f3f6fa;
+  --accent-foreground: #111827;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --destructive-hover: #c2271b;
-  --ring: var(--brand-600); /* 3.2:1 su bianco */
+  --destructive-hover: #dc2626;
+  --ring: var(--brand-600);
   --selected: var(--brand-50);
 
-  /* Semantici */
-  --success: #16a34a;
-  --success-soft: #eaf7ef;
-  --success-text: #15803d;
-  --danger-soft: #fdebe9;
-  --danger-text: #b42318;
-  --warning: #f5c33b;
-  --warning-soft: #fbf3d9;
-  --warning-text: #8a6a0b;
-  --info: #2563eb;
-  --info-soft: #eff4ff;
-  --info-text: #2563eb;
+  /* Semantici (palette mockup) */
+  --success: #16a365;
+  --success-soft: #e7f6ef;
+  --success-text: #0e7a4a;
+  --danger-soft: #feecec;
+  --danger-text: #d92d20;
+  --warning: #f59e0b;
+  --warning-soft: #fdf1dc;
+  --warning-text: #92600a;
+  --info: #3b82f6;
+  --info-soft: #ebf2fe;
+  --info-text: #1d4ed8;
 
-  /* Stati del task — color-coded (revisione "Vetro", palette validata CVD) */
-  --status-backlog: #8a9098;
-  --status-backlog-soft: #f1f2f4;
-  --status-backlog-text: #5a5e66;
-  --status-todo: #0284c7;
-  --status-todo-soft: #e0f2fe;
-  --status-todo-text: #0369a1;
-  --status-progress: #6d28d9;
-  --status-progress-soft: #ede9fe;
-  --status-progress-text: #6d28d9;
-  --status-review: #f09226;
-  --status-review-soft: #fdf6ec;
-  --status-review-text: #b45309;
-  --status-done: #059669;
-  --status-done-soft: #ecfdf5;
-  --status-done-text: #047857;
+  /* Stati del task — mappati sulla palette mockup (forme+etichette sempre
+     presenti; per i GRAFICI resta la palette validata CVD in analytics.ts) */
+  --status-backlog: #8a94a3;
+  --status-backlog-soft: #f1f4f8;
+  --status-backlog-text: #64748b;
+  --status-todo: #3b82f6;
+  --status-todo-soft: #ebf2fe;
+  --status-todo-text: #1d4ed8;
+  --status-progress: #6d5dfb;
+  --status-progress-soft: #eeecfe;
+  --status-progress-text: #5240e8;
+  --status-review: #ff6b00;
+  --status-review-soft: #fff1e8;
+  --status-review-text: #b34503;
+  --status-done: #16a365;
+  --status-done-soft: #e7f6ef;
+  --status-done-text: #0e7a4a;
 
   /* Sidebar */
   --sidebar: #ffffff;
-  --sidebar-foreground: #212327;
+  --sidebar-foreground: #111827;
   --sidebar-primary: var(--brand-500);
-  --sidebar-primary-foreground: #212327;
-  --sidebar-accent: #f2f2f4;
-  --sidebar-accent-foreground: #212327;
-  --sidebar-border: #eeeff1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--brand-50);
+  --sidebar-accent-foreground: var(--brand-700);
+  --sidebar-border: #eef2f7;
   --sidebar-ring: var(--brand-600);
 }
 
@@ -237,10 +239,20 @@
     inset: 0;
     z-index: -1;
     background:
-      radial-gradient(560px 420px at 12% -6%, rgb(240 146 38 / 0.16), transparent 62%),
-      radial-gradient(640px 480px at 96% 12%, rgb(2 132 199 / 0.13), transparent 64%),
-      radial-gradient(720px 560px at 55% 108%, rgb(109 40 217 / 0.1), transparent 66%),
-      linear-gradient(180deg, #f8f8fa 0%, #f4f4f7 100%);
+      radial-gradient(680px 420px at 90% -8%, rgb(255 107 0 / 0.06), transparent 60%),
+      radial-gradient(720px 520px at 6% 108%, rgb(109 93 251 / 0.05), transparent 64%),
+      linear-gradient(180deg, #f7f9fc 0%, #f4f6fb 100%);
+  }
+
+  /* Card solida premium (revisione mockup): bianco pieno, raggio ampio,
+     ombra morbidissima. Il vetro resta per gli overlay. */
+  .card-soft {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 0.02),
+      0 10px 30px rgb(15 23 42 / 0.06);
   }
 
   .glass {
@@ -300,36 +312,44 @@
     }
   }
 
-  /* Blocco-vetrina: vetro forte + bordo a gradiente + lavaggi di colore */
+  /* Blocco-vetrina hero (revisione mockup): card bianca con onde seriche
+     arancio sul lato destro, niente blur. */
   .glass-hero {
     position: relative;
-    border: 1px solid transparent;
+    overflow: hidden;
     background:
-      radial-gradient(420px 220px at 88% -10%, rgb(240 146 38 / 0.14), transparent 62%),
-      radial-gradient(360px 200px at 4% 110%, rgb(2 132 199 / 0.1), transparent 60%),
-      linear-gradient(rgb(255 255 255 / 0.74), rgb(255 255 255 / 0.66)) padding-box,
-      linear-gradient(120deg, rgb(240 146 38 / 0.55), rgb(255 255 255 / 0.4) 38%, rgb(2 132 199 / 0.35) 68%, rgb(109 40 217 / 0.45)) border-box;
-    backdrop-filter: blur(28px) saturate(1.6);
-    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+      radial-gradient(560px 300px at 96% 20%, rgb(255 107 0 / 0.12), transparent 62%),
+      radial-gradient(420px 260px at 70% -30%, rgb(255 138 31 / 0.1), transparent 60%),
+      #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 24px;
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.9),
-      0 2px 6px rgb(23 24 28 / 0.05),
-      0 20px 60px rgb(23 24 28 / 0.1);
+      0 1px 2px rgb(15 23 42 / 0.02),
+      0 12px 36px rgb(15 23 42 / 0.07);
+  }
+  .glass-hero::before {
+    content: "";
+    position: absolute;
+    inset: -40% -12% -40% 45%;
+    background:
+      repeating-radial-gradient(
+        140% 100% at 115% 50%,
+        rgb(255 107 0 / 0.09) 0 1.5px,
+        transparent 1.5px 26px
+      );
+    pointer-events: none;
   }
 
-  /* Testo in gradiente (solo display brevi: ogni stop resta ≥4.5:1) */
+  /* Testo display arancio pieno (mockup) */
   .gradient-text {
-    background-image: linear-gradient(100deg, #b45309 0%, #c2410c 34%, #6d28d9 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: var(--brand-500);
   }
 
   /* Aurora delle stat tile: alone colorato dal token --aurora */
   .tile-aurora {
     background:
-      radial-gradient(150px 110px at 85% 0%, var(--aurora, transparent), transparent 70%),
-      rgb(255 255 255 / 0.6);
+      radial-gradient(160px 120px at 90% 0%, var(--aurora, transparent), transparent 72%),
+      #ffffff;
   }
 
   /* Hairline superiore a gradiente per le card sezione */
@@ -345,15 +365,15 @@
     background: linear-gradient(90deg, transparent, rgb(240 146 38 / 0.5) 30%, rgb(109 40 217 / 0.35) 70%, transparent);
   }
 
-  /* Bottone primario "Vetro": gradiente arancio + glow morbido */
+  /* Bottone primario (mockup): gradiente arancio, testo bianco, glow */
   .btn-glow {
-    background-image: linear-gradient(180deg, #f4a851 0%, var(--brand-500) 55%, #e28110 100%);
+    background-image: linear-gradient(180deg, #ff8a1f 0%, var(--brand-500) 55%, #f05a00 100%);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.45),
-      0 8px 20px -6px rgb(240 146 38 / 0.55);
+      inset 0 1px 0 rgb(255 255 255 / 0.35),
+      0 10px 24px -8px rgb(255 107 0 / 0.55);
   }
   .btn-glow:hover {
-    background-image: linear-gradient(180deg, #f29d3d 0%, var(--brand-550) 55%, #d67909 100%);
+    background-image: linear-gradient(180deg, #ff7f0d 0%, var(--brand-550) 55%, #e05300 100%);
   }
 
 
