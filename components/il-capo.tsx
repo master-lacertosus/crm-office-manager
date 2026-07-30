@@ -286,20 +286,36 @@ export function IlCapo() {
     show(pickMessage(ctx));
   }, [show]);
 
-  /* Apparizioni programmate (random), rispettando il silenzio giornaliero */
+  /* Apparizioni programmate (random), rispettando il silenzio giornaliero.
+     Se c'è un dialog aperto (tour, dettaglio task, palette, standup) NON
+     spreca l'entrata: riprova poco dopo. */
   React.useEffect(() => {
     if (offUntilToday()) return;
     let timer: ReturnType<typeof setTimeout>;
     const schedule = (delay: number) => {
       timer = setTimeout(() => {
-        if (!offUntilToday() && document.visibilityState === "visible") {
+        const busy =
+          document.visibilityState !== "visible" ||
+          document.querySelector('[role="dialog"]') !== null;
+        if (offUntilToday()) {
+          schedule(NEXT_DELAY());
+        } else if (busy) {
+          schedule(20_000 + Math.random() * 15_000);
+        } else {
           summon();
+          schedule(NEXT_DELAY());
         }
-        schedule(NEXT_DELAY());
       }, delay);
     };
     schedule(FIRST_DELAY());
     return () => clearTimeout(timer);
+  }, [summon]);
+
+  /* Evocazione manuale dalla palette (ignora anche il silenzio) */
+  React.useEffect(() => {
+    const onSummon = () => summon();
+    window.addEventListener("capo:summon", onSummon);
+    return () => window.removeEventListener("capo:summon", onSummon);
   }, [summon]);
 
   /* Elogio (a modo suo) quando un task viene completato */

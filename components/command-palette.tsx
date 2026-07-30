@@ -12,6 +12,7 @@ import {
   Plus,
   Search,
   Settings,
+  Shield,
   User,
   Users,
   type LucideIcon,
@@ -68,6 +69,17 @@ export function CommandPalette() {
   const items = React.useMemo<Item[]>(() => {
     const nav: Item[] = [
       { id: "new", group: "Azioni", label: "Nuovo task", icon: Plus, run: () => go("/tasks?task=new") },
+      {
+        id: "capo",
+        group: "Azioni",
+        label: "Evoca il Capo",
+        hint: "a tuo rischio",
+        icon: Shield,
+        run: () => {
+          setOpen(false);
+          window.dispatchEvent(new Event("capo:summon"));
+        },
+      },
       { id: "d", group: "Vai a", label: "Dashboard", icon: LayoutDashboard, run: () => go("/dashboard") },
       { id: "t", group: "Vai a", label: "Task", icon: ListTodo, run: () => go("/tasks") },
       { id: "c", group: "Vai a", label: "Calendario", icon: CalendarDays, run: () => go("/calendar") },
