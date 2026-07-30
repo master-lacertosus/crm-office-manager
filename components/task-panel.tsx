@@ -213,7 +213,10 @@ function TaskForm({
   const [priority, setPriority] = React.useState(task?.priority ?? "normal");
   const [ownerId, setOwnerId] = React.useState(task?.owner_id ?? currentUser.id);
   const [projectId, setProjectId] = React.useState(task?.project_id ?? "");
-  const [dueDate, setDueDate] = React.useState(task?.due_date ?? "");
+  // «+» dal calendario: la scadenza arriva precompilata via ?due=
+  const [dueDate, setDueDate] = React.useState(
+    task?.due_date ?? searchParams.get("due") ?? "",
+  );
   const [repeat, setRepeat] = React.useState<TaskRepeat>(task?.repeat ?? "none");
 
   const [saving, setSaving] = React.useState(false);

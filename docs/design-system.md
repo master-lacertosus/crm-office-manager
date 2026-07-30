@@ -120,7 +120,7 @@ chiede attenzione altrui, il verde chiude. Nessun chip colorato arcobaleno.
 
 | Ruolo | Font | Perché |
 |---|---|---|
-| UI e titoli | **Archivo** (variabile) | Grotesca solida, "industriale" senza essere fredda; regge dai 12px ai titoli. Il sito e-commerce usa Bebas Neue per i display: qui sarebbe urlato — Archivo SemiBold con tracking stretto ne conserva la solidità in tono da ufficio. |
+| UI e titoli | **Manrope** (variabile) — dal 30/07/2026, su richiesta cliente (prima: Archivo) | Geometrico-umanista, caldo e leggibilissimo alle taglie UI, numeri eccellenti; tono SaaS premium coerente col mockup. Tracking leggermente negativo sui display. |
 | Dati | **IBM Plex Mono** (400/500) | Date, numeri, contatori, ID, kbd. Cifre allineate, voce tecnica. |
 
 Niente Inter/Geist di default: la coppia Archivo + Plex Mono è la scelta

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Archivo, IBM_Plex_Mono } from "next/font/google";
+import { IBM_Plex_Mono, Manrope } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const archivo = Archivo({
-  variable: "--font-archivo",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
   display: "swap",
 });
@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html
       lang="it"
-      className={`${archivo.variable} ${plexMono.variable} h-full`}
+      className={`${manrope.variable} ${plexMono.variable} h-full`}
     >
       <body className="flex min-h-full flex-col">
         <div aria-hidden className="aura-layer" />
