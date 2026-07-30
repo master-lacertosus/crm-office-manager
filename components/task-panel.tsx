@@ -20,16 +20,11 @@ import { formatDue, timeAgo } from "@/lib/format";
 import { splitMentions } from "@/lib/mentions";
 import { panel, scrim } from "@/lib/motion";
 import { useAppStore } from "@/lib/store";
-import {
-  STATUS_ORDER,
-  type Task,
-  type TaskRepeat,
-  type TaskStatus,
-} from "@/lib/types";
+import type { Task, TaskRepeat } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
-import { StatusLabel, TASK_STATUSES } from "@/components/status-pip";
+import { StatusLabel } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -152,7 +147,7 @@ function PanelBody({
   onToggleExpanded: () => void;
   onClose: () => void;
 }) {
-  const { tasks, projects } = useAppStore();
+  const { tasks, projects, statuses } = useAppStore();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -172,12 +167,14 @@ function PanelBody({
         (!ownerFilter || t.owner_id === ownerFilter) &&
         (!projectFilter || t.project_id === projectFilter),
     );
-    return STATUS_ORDER.flatMap((s) =>
-      visible
-        .filter((t) => t.status === s)
-        .sort((a, b) => a.position - b.position),
-    ).map((t) => t.id);
-  }, [tasks, ownerFilter, projectFilter]);
+    return statuses
+      .flatMap((s) =>
+        visible
+          .filter((t) => t.status === s.key)
+          .sort((a, b) => a.position - b.position),
+      )
+      .map((t) => t.id);
+  }, [tasks, statuses, ownerFilter, projectFilter]);
   const index = task ? ordered.indexOf(task.id) : -1;
 
   const goTo = React.useCallback(
@@ -322,12 +319,12 @@ function TaskForm({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { profiles, projects, currentUser, createTask, updateTask } =
+  const { profiles, projects, currentUser, createTask, updateTask, statuses } =
     useAppStore();
 
   const [title, setTitle] = React.useState(task?.title ?? "");
   const [description, setDescription] = React.useState(task?.description ?? "");
-  const [status, setStatus] = React.useState<TaskStatus>(task?.status ?? "todo");
+  const [status, setStatus] = React.useState<string>(task?.status ?? "todo");
   const [priority, setPriority] = React.useState(task?.priority ?? "normal");
   const [ownerId, setOwnerId] = React.useState(task?.owner_id ?? currentUser.id);
   const [projectId, setProjectId] = React.useState(task?.project_id ?? "");
@@ -448,11 +445,11 @@ function TaskForm({
           <NativeSelect
             id="task-status"
             value={status}
-            onChange={(e) => setStatus(e.target.value as TaskStatus)}
+            onChange={(e) => setStatus(e.target.value)}
           >
-            {STATUS_ORDER.map((s) => (
-              <option key={s} value={s}>
-                {TASK_STATUSES[s].label}
+            {statuses.map((s) => (
+              <option key={s.key} value={s.key}>
+                {s.label}
               </option>
             ))}
           </NativeSelect>

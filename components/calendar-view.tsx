@@ -19,13 +19,6 @@ const DAY_TITLE_FMT = new Intl.DateTimeFormat("it-IT", {
 });
 const WEEKDAYS = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
-const STATUS_BAR: Record<Task["status"], string> = {
-  backlog: "var(--status-backlog)",
-  todo: "var(--status-todo)",
-  in_progress: "var(--status-progress)",
-  in_review: "var(--status-review)",
-  done: "var(--status-done)",
-};
 
 interface Cell {
   iso: string;
@@ -61,7 +54,10 @@ interface DragState {
  * (crea un task già datato). Le scadenze si spostano trascinando.
  */
 export function CalendarView() {
-  const { tasks, rescheduleTask } = useAppStore();
+  const { tasks, rescheduleTask, statuses } = useAppStore();
+  const metaByKey = new Map(statuses.map((m) => [m.key, m]));
+  const statusColor = (key: string) =>
+    metaByKey.get(key)?.color ?? "#64748B";
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -205,7 +201,7 @@ export function CalendarView() {
         <span
           aria-hidden
           className="h-3.5 w-[3px] shrink-0 rounded-full"
-          style={{ background: STATUS_BAR[task.status] }}
+          style={{ background: statusColor(task.status) }}
         />
         <span
           className={cn(
@@ -385,7 +381,7 @@ export function CalendarView() {
             <span
               aria-hidden
               className="h-3.5 w-[3px] shrink-0 rounded-full"
-              style={{ background: STATUS_BAR[drag.task.status] }}
+              style={{ background: statusColor(drag.task.status) }}
             />
             <span className="truncate text-[12px] font-semibold text-ink">
               {drag.task.title}

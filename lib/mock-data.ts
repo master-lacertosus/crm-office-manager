@@ -162,7 +162,7 @@ export const MOCK_TASKS: Task[] = [
     title: "Aggiornare schede prodotto power rack PRO",
     description:
       "Nuove misure, tabella compatibilità accessori, video di montaggio.",
-    status: "in_progress",
+    status: "alert",
     priority: "normal",
     owner_id: U.giulia,
     created_by: U.alessia,

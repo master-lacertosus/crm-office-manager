@@ -9,7 +9,28 @@ export type TaskStatus =
   | "todo"
   | "in_progress"
   | "in_review"
+  | "alert"
   | "done";
+
+/** Fase personalizzata del flusso (aggiunta dagli admin, max 3). */
+export interface CustomStatus {
+  key: string;
+  label: string;
+  /** colore pieno, soft e testo — da preset pre-approvati */
+  color: string;
+  soft: string;
+  text: string;
+}
+
+/** Metadati risolti di una fase (core, alert o custom). */
+export interface StatusMeta {
+  key: string;
+  label: string;
+  color: string;
+  soft: string;
+  text: string;
+  kind: "core" | "alert" | "custom";
+}
 
 export type TaskPriority = "low" | "normal" | "high";
 
@@ -39,11 +60,12 @@ export interface Task {
   id: string;
   title: string;
   description: string | null;
-  status: TaskStatus;
   priority: TaskPriority;
   owner_id: string;
   created_by: string;
   project_id: string | null;
+  /** Fase: una delle core (TaskStatus) o la chiave di una fase custom. */
+  status: string;
   /** ISO date (YYYY-MM-DD), senza orario. */
   due_date: string | null;
   position: number;
@@ -79,10 +101,27 @@ export interface AppNotification {
   read_at: string | null;
 }
 
+/** Ordine delle fasi core; le custom si inseriscono prima di in_review. */
 export const STATUS_ORDER: TaskStatus[] = [
   "backlog",
   "todo",
   "in_progress",
   "in_review",
+  "alert",
   "done",
+];
+
+/** Preset colore per le fasi custom (già verificati su superficie chiara). */
+export const CUSTOM_STATUS_PRESETS: {
+  name: string;
+  color: string;
+  soft: string;
+  text: string;
+}[] = [
+  { name: "Teal", color: "#0D9488", soft: "#CCFBF1", text: "#0F766E" },
+  { name: "Rosa", color: "#DB2777", soft: "#FCE7F3", text: "#BE185D" },
+  { name: "Indaco", color: "#4F46E5", soft: "#E0E7FF", text: "#4338CA" },
+  { name: "Ciano", color: "#0891B2", soft: "#CFFAFE", text: "#0E7490" },
+  { name: "Lime", color: "#65A30D", soft: "#ECFCCB", text: "#4D7C0F" },
+  { name: "Grigio", color: "#64748B", soft: "#F1F5F9", text: "#475569" },
 ];

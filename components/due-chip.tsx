@@ -3,7 +3,6 @@
 import { AlarmClockMinus, Clock } from "lucide-react";
 
 import { dueUrgency, formatDue } from "@/lib/format";
-import type { TaskStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
@@ -17,7 +16,7 @@ export function DueChip({
   className,
 }: {
   iso: string | null;
-  status: TaskStatus;
+  status: string;
   className?: string;
 }) {
   if (!iso) return null;
@@ -78,7 +77,7 @@ export function DueChip({
 }
 
 /** True se il task merita enfasi visiva extra (bordo, anello…). */
-export function isUrgent(iso: string | null, status: TaskStatus): boolean {
+export function isUrgent(iso: string | null, status: string): boolean {
   if (!iso || status === "done") return false;
   const { level } = dueUrgency(iso);
   return level === "overdue" || level === "today";

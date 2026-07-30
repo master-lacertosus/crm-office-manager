@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { CommandPalette } from "@/components/command-palette";
 import { IlCapo } from "@/components/il-capo";
+import { OnboardingTour } from "@/components/onboarding-tour";
 import { AppShell } from "@/components/shell/app-shell";
 import { TaskPanelHost } from "@/components/task-panel";
 import { ToastProvider } from "@/components/toaster";
@@ -28,6 +29,9 @@ export default function AppLayout({
           <CommandPalette />
           <Suspense>
             <IlCapo />
+          </Suspense>
+          <Suspense>
+            <OnboardingTour />
           </Suspense>
         </AppShell>
       </ToastProvider>

@@ -5,11 +5,10 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight, Repeat } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
-import { STATUS_ORDER, type Task } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import type { Task } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
-import { StatusPip, TASK_STATUSES } from "@/components/status-pip";
+import { StatusPip } from "@/components/status-pip";
 import { Badge } from "@/components/ui/badge";
 
 function Row({ task }: { task: Task }) {
@@ -72,7 +71,7 @@ function Row({ task }: { task: Task }) {
  * dell'URL valgono anche qui.
  */
 export function TaskList() {
-  const { tasks } = useAppStore();
+  const { tasks, statuses } = useAppStore();
   const searchParams = useSearchParams();
   const ownerFilter = searchParams.get("owner");
   const projectFilter = searchParams.get("project");
@@ -85,32 +84,27 @@ export function TaskList() {
 
   return (
     <div className="flex-1 space-y-4 px-4 py-4 sm:px-6">
-      {STATUS_ORDER.map((status) => {
+      {statuses.map((meta) => {
         const rows = visible
-          .filter((t) => t.status === status)
+          .filter((t) => t.status === meta.key)
           .sort((a, b) => {
             if (!a.due_date && !b.due_date) return a.position - b.position;
             if (!a.due_date) return 1;
             if (!b.due_date) return -1;
             return a.due_date.localeCompare(b.due_date);
           });
-        const meta = TASK_STATUSES[status];
         if (rows.length === 0) return null;
         return (
-          <section key={status} aria-label={meta.label}>
+          <section key={meta.key} aria-label={meta.label}>
             <header className="mb-2 flex items-center gap-2">
               <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg py-1 pr-2.5 pl-2",
-                  meta.softClass,
-                )}
+                className="inline-flex items-center gap-1.5 rounded-lg py-1 pr-2.5 pl-2"
+                style={{ background: meta.soft }}
               >
-                <StatusPip status={status} className="size-3.5" />
+                <StatusPip status={meta.key} className="size-3.5" />
                 <h2
-                  className={cn(
-                    "text-[11px] font-semibold tracking-[0.05em] uppercase",
-                    meta.textClass,
-                  )}
+                  className="text-[11px] font-bold tracking-[0.05em] uppercase"
+                  style={{ color: meta.text }}
                 >
                   {meta.label}
                 </h2>

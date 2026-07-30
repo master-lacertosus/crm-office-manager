@@ -11,15 +11,8 @@ import { cn } from "@/lib/utils";
 import { dueUrgency } from "@/lib/format";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
+import { useStatusMeta } from "@/components/status-pip";
 import { Badge } from "@/components/ui/badge";
-
-const ACCENT_VAR: Record<Task["status"], string> = {
-  backlog: "var(--status-backlog)",
-  todo: "var(--status-todo)",
-  in_progress: "var(--status-progress)",
-  in_review: "var(--status-review)",
-  done: "var(--status-done)",
-};
 
 /** Contenuto visuale puro della card: usato dalla card reale e dal ghost del drag. */
 export function CardVisual({
@@ -30,6 +23,7 @@ export function CardVisual({
   className?: string;
 }) {
   const { profiles, projects } = useAppStore();
+  const statusMeta = useStatusMeta(task.status);
   const owner = profiles.find((p) => p.id === task.owner_id);
   const project = projects.find((p) => p.id === task.project_id);
 
@@ -50,7 +44,7 @@ export function CardVisual({
       <span
         aria-hidden
         className="absolute inset-y-2.5 left-1.5 w-[3px] rounded-full"
-        style={{ background: ACCENT_VAR[task.status] }}
+        style={{ background: statusMeta.color }}
       />
       <p className="text-sm/5 font-medium text-ink">{task.title}</p>
       {(project || task.priority === "high") && (

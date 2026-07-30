@@ -38,9 +38,14 @@ function Card({
 const PROJECT_HUES = ["#F09226", "#0284C7", "#6D28D9"];
 
 export function ReportsContent() {
-  const { tasks, profiles, projects } = useAppStore();
+  const { tasks, profiles, projects, statuses } = useAppStore();
   const reduced = useReducedMotion();
-  const a = buildAnalytics(tasks, profiles, projects);
+  const a = buildAnalytics(
+    tasks,
+    profiles,
+    projects,
+    statuses.map((s) => s.key),
+  );
   const projectColors = new Map<string, string>(
     projects.map((p, i) => [p.id, PROJECT_HUES[i % PROJECT_HUES.length]]),
   );
@@ -161,7 +166,11 @@ export function ReportsContent() {
             title="Carico di lavoro"
             hint="Task per persona e stato — il backlog è tratteggiato"
           >
-            <WorkloadChart people={a.people} max={a.maxPersonTotal} />
+            <WorkloadChart
+              people={a.people}
+              max={a.maxPersonTotal}
+              statuses={statuses}
+            />
           </Card>
         </motion.div>
 

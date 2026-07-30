@@ -25,6 +25,17 @@ trappole di complessità.
 > (`tasks.repeat`: al completamento il task si ricrea — da aggiungere allo
 > schema con migrazione additiva), timeline di progetto (mini-Gantt) e
 > Focus di oggi + modalità standup in dashboard.
+>
+> **Terzo emendamento (30/07/2026, richiesta esplicita):** il vincolo
+> «massimo 6 stati» è superato PER SCELTA DEL COMMITTENTE: aggiunta la
+> fase core **«Problema»** (alert, triangolo rosso) e le **fasi custom**
+> (max 3, colori pre-approvati, solo admin, gestite da Impostazioni →
+> Workspace o dal «+» in coda alla board; alla rimozione i task tornano
+> in «Da fare»). Con Supabase serviranno una tabella additiva
+> `workspace_statuses` e l'allentamento del CHECK su `tasks.status`.
+> Aggiunti inoltre: board a corsie, pagina Progetti operativa
+> (avanzamento/composizione/team/prossima scadenza), «Polso del team» in
+> dashboard e tour introduttivo per i nuovi utenti (?tour=1 per rivederlo).
 
 ---
 

@@ -8,21 +8,23 @@ import {
   type PersonLoad,
   type StatusCounts,
 } from "@/lib/analytics";
-import { STATUS_ORDER, type TaskStatus } from "@/lib/types";
-import { StatusPip, TASK_STATUSES } from "@/components/status-pip";
+import type { StatusMeta } from "@/lib/types";
+import { StatusPip } from "@/components/status-pip";
 import { ChartTip, type TipState } from "@/components/charts/chart-tip";
 
+function segColor(key: string, meta: StatusMeta): string {
+  return CHART_STATUS_COLORS[key] ?? meta.color;
+}
+
 function Segment({
-  status,
+  meta,
   count,
-  total,
   onHover,
   onLeave,
 }: {
-  status: TaskStatus;
+  meta: StatusMeta;
   count: number;
-  total: number;
-  onHover: (e: React.PointerEvent, status: TaskStatus, count: number) => void;
+  onHover: (e: React.PointerEvent, meta: StatusMeta, count: number) => void;
   onLeave: () => void;
 }) {
   if (count === 0) return null;
@@ -33,12 +35,11 @@ function Segment({
         flexGrow: count,
         flexBasis: 0,
         background:
-          status === "backlog" ? BACKLOG_HATCH : CHART_STATUS_COLORS[status],
+          meta.key === "backlog" ? BACKLOG_HATCH : segColor(meta.key, meta),
       }}
-      onPointerEnter={(e) => onHover(e, status, count)}
+      onPointerEnter={(e) => onHover(e, meta, count)}
       onPointerLeave={onLeave}
       aria-hidden
-      data-total={total}
     />
   );
 }
@@ -48,6 +49,7 @@ function BarRow({
   counts,
   total,
   widthPct,
+  statuses,
   onHover,
   onLeave,
 }: {
@@ -55,7 +57,8 @@ function BarRow({
   counts: StatusCounts;
   total: number;
   widthPct: number;
-  onHover: (e: React.PointerEvent, status: TaskStatus, count: number) => void;
+  statuses: StatusMeta[];
+  onHover: (e: React.PointerEvent, meta: StatusMeta, count: number) => void;
   onLeave: () => void;
 }) {
   return (
@@ -67,12 +70,11 @@ function BarRow({
             className="flex h-full gap-[2px] overflow-hidden rounded-r-[4px]"
             style={{ width: `${widthPct}%` }}
           >
-            {STATUS_ORDER.map((status) => (
+            {statuses.map((meta) => (
               <Segment
-                key={status}
-                status={status}
-                count={counts[status]}
-                total={total}
+                key={meta.key}
+                meta={meta}
+                count={counts[meta.key] ?? 0}
                 onHover={onHover}
                 onLeave={onLeave}
               />
@@ -88,23 +90,25 @@ function BarRow({
 }
 
 /**
- * Carico di lavoro: barre orizzontali impilate per persona, palette di
- * stato validata (backlog tratteggiato = codifica secondaria), gap 2px,
- * estremo dati arrotondato 4px, legenda con le tacche (forma + colore).
+ * Carico di lavoro: barre impilate per persona sull'ordine dinamico delle
+ * fasi (core validate CVD + Problema + custom col loro colore). Backlog
+ * tratteggiato, gap 2px, legenda con le tacche.
  */
 export function WorkloadChart({
   people,
   max,
+  statuses,
 }: {
   people: PersonLoad[];
   max: number;
+  statuses: StatusMeta[];
 }) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [tip, setTip] = React.useState<TipState | null>(null);
 
   const onHover = (
     e: React.PointerEvent,
-    status: TaskStatus,
+    meta: StatusMeta,
     count: number,
   ) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -113,7 +117,7 @@ export function WorkloadChart({
     setTip({
       x: target.left + target.width / 2 - rect.left,
       y: target.top - rect.top,
-      title: TASK_STATUSES[status].label,
+      title: meta.label,
       value: `${count} task`,
     });
   };
@@ -127,18 +131,17 @@ export function WorkloadChart({
           counts={person.counts}
           total={person.total}
           widthPct={(person.total / max) * 100}
+          statuses={statuses}
           onHover={onHover}
           onLeave={() => setTip(null)}
         />
       ))}
 
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-2">
-        {STATUS_ORDER.map((status) => (
-          <span key={status} className="inline-flex items-center gap-1.5">
-            <StatusPip status={status} className="size-3.5" />
-            <span className="text-xs text-ink-secondary">
-              {TASK_STATUSES[status].label}
-            </span>
+        {statuses.map((meta) => (
+          <span key={meta.key} className="inline-flex items-center gap-1.5">
+            <StatusPip status={meta.key} className="size-3.5" />
+            <span className="text-xs text-ink-secondary">{meta.label}</span>
           </span>
         ))}
       </div>
@@ -146,12 +149,12 @@ export function WorkloadChart({
       <ChartTip tip={tip} />
 
       <table className="sr-only">
-        <caption>Carico di lavoro per persona e stato</caption>
+        <caption>Carico di lavoro per persona e fase</caption>
         <thead>
           <tr>
             <th>Persona</th>
-            {STATUS_ORDER.map((s) => (
-              <th key={s}>{TASK_STATUSES[s].label}</th>
+            {statuses.map((s) => (
+              <th key={s.key}>{s.label}</th>
             ))}
           </tr>
         </thead>
@@ -159,8 +162,8 @@ export function WorkloadChart({
           {people.map((p) => (
             <tr key={p.profile.id}>
               <td>{p.profile.full_name}</td>
-              {STATUS_ORDER.map((s) => (
-                <td key={s}>{p.counts[s]}</td>
+              {statuses.map((s) => (
+                <td key={s.key}>{p.counts[s.key] ?? 0}</td>
               ))}
             </tr>
           ))}

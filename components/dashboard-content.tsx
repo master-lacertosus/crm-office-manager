@@ -163,7 +163,7 @@ function Section({
 }
 
 export function DashboardContent() {
-  const { tasks, profiles, projects, currentUser, notifications, focusIds } =
+  const { tasks, profiles, projects, currentUser, notifications, focusIds, statuses } =
     useAppStore();
   const searchParams = useSearchParams();
   const [standup, setStandup] = React.useState(
@@ -433,7 +433,54 @@ export function DashboardContent() {
         </Section>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* Polso del team */}
+        <Section title="Polso del team" count={profiles.filter((p) => p.is_active).length}>
+          <ul className="space-y-2">
+            {profiles
+              .filter((p) => p.is_active)
+              .map((person) => {
+                const personTasks = tasks.filter(
+                  (t) => t.owner_id === person.id,
+                );
+                const personOpen = personTasks.filter(
+                  (t) => t.status !== "done",
+                ).length;
+                return (
+                  <li key={person.id}>
+                    <Link
+                      href={`/tasks?owner=${person.id}`}
+                      className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 outline-none transition-colors hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <AvatarInitials name={person.full_name} size="sm" />
+                      <span className="w-16 truncate text-[13px] font-medium text-ink">
+                        {person.full_name.split(" ")[0]}
+                      </span>
+                      <span className="flex h-[7px] flex-1 gap-[2px] overflow-hidden rounded-full bg-[#EDF1F7]">
+                        {statuses.map((meta) => {
+                          const count = personTasks.filter(
+                            (t) => t.status === meta.key,
+                          ).length;
+                          if (count === 0) return null;
+                          return (
+                            <span
+                              key={meta.key}
+                              title={`${meta.label}: ${count}`}
+                              style={{ flexGrow: count, background: meta.color }}
+                            />
+                          );
+                        })}
+                      </span>
+                      <span className="w-14 text-right font-mono text-xs text-ink-muted">
+                        {personOpen} aperti
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+          </ul>
+        </Section>
+
         <Section title="In ritardo" count={overdue.length} seeAllHref="/tasks">
           {overdue.length === 0 ? (
             <EmptyState

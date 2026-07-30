@@ -13,20 +13,6 @@ const DAY_W = 28;
 const PAST_DAYS = 10;
 const FUTURE_DAYS = 25;
 
-const BAR_BG: Record<Task["status"], string> = {
-  backlog: "var(--status-backlog-soft)",
-  todo: "var(--status-todo-soft)",
-  in_progress: "var(--status-progress-soft)",
-  in_review: "var(--status-review-soft)",
-  done: "var(--status-done-soft)",
-};
-const BAR_EDGE: Record<Task["status"], string> = {
-  backlog: "var(--status-backlog)",
-  todo: "var(--status-todo)",
-  in_progress: "var(--status-progress)",
-  in_review: "var(--status-review)",
-  done: "var(--status-done)",
-};
 
 interface DragState {
   taskId: string;
@@ -39,7 +25,8 @@ interface DragState {
  * trascinala in orizzontale per spostare la scadenza (snap sul giorno).
  */
 export function ProjectTimeline({ projectId }: { projectId: string }) {
-  const { tasks, rescheduleTask } = useAppStore();
+  const { tasks, rescheduleTask, statuses } = useAppStore();
+  const metaByKey = new Map(statuses.map((m) => [m.key, m]));
   const router = useRouter();
   const today = todayIso();
   const start = addDaysIso(-PAST_DAYS);
@@ -204,8 +191,9 @@ export function ProjectTimeline({ projectId }: { projectId: string }) {
                         style={{
                           left: startIdx * DAY_W + 2,
                           width: Math.max(DAY_W, (endIdx - startIdx + 1) * DAY_W - 4),
-                          background: BAR_BG[task.status],
-                          borderLeftColor: BAR_EDGE[task.status],
+                          background: metaByKey.get(task.status)?.soft ?? "#F1F5F9",
+                          borderLeftColor:
+                            metaByKey.get(task.status)?.color ?? "#64748B",
                         }}
                       >
                         <span

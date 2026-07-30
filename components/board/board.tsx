@@ -3,20 +3,23 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { LayoutGroup, motion } from "motion/react";
+import { Check, Plus, X } from "lucide-react";
 
-import { useAppStore } from "@/lib/store";
-import { STATUS_ORDER, type Task, type TaskStatus } from "@/lib/types";
+import { MAX_CUSTOM_STATUSES, useAppStore } from "@/lib/store";
+import {
+  CUSTOM_STATUS_PRESETS,
+  type StatusMeta,
+  type Task,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { StatusPip, TASK_STATUSES } from "@/components/status-pip";
+import { StatusPip } from "@/components/status-pip";
 import { CardVisual, TaskCard } from "@/components/board/task-card";
+import { Button } from "@/components/ui/button";
 
 /**
- * Board con drag-and-drop artigianale (pointer events, zero dipendenze):
- * ghost che segue il puntatore con rotazione di 1.5° (docs/design-system §5),
- * indicatore arancio di inserimento, colonna bersaglio evidenziata, reflow
- * animato via Motion layout. Il drag è attivo per mouse e penna; da touch e
- * tastiera lo stato si cambia dal pannello del task (percorso accessibile).
- * Scorciatoia: «/» porta al filtro responsabile.
+ * Board a corsie: ogni fase è una lane con fondo proprio (chiarezza),
+ * fasi core + «Problema» + fino a 3 fasi custom aggiungibili in coda.
+ * Drag-and-drop artigianale invariato; «/» va al filtro responsabile.
  */
 
 interface DragState {
@@ -26,14 +29,21 @@ interface DragState {
   y: number;
   offsetX: number;
   offsetY: number;
-  target: TaskStatus;
+  target: string;
   insertIndex: number;
 }
 
 const DRAG_THRESHOLD = 6;
 
 export function Board({ projectId }: { projectId?: string }) {
-  const { tasks, moveTask } = useAppStore();
+  const {
+    tasks,
+    moveTask,
+    statuses,
+    customStatuses,
+    addCustomStatus,
+    currentUser,
+  } = useAppStore();
   const searchParams = useSearchParams();
 
   const ownerFilter = searchParams.get("owner");
@@ -46,19 +56,19 @@ export function Board({ projectId }: { projectId?: string }) {
   });
 
   const byStatus = React.useMemo(() => {
-    const map = new Map<TaskStatus, Task[]>();
-    for (const status of STATUS_ORDER) {
+    const map = new Map<string, Task[]>();
+    for (const meta of statuses) {
       map.set(
-        status,
+        meta.key,
         visible
-          .filter((t) => t.status === status)
+          .filter((t) => t.status === meta.key)
           .sort((a, b) => a.position - b.position),
       );
     }
     return map;
-  }, [visible]);
+  }, [visible, statuses]);
 
-  const columnRefs = React.useRef(new Map<TaskStatus, HTMLElement>());
+  const columnRefs = React.useRef(new Map<string, HTMLElement>());
   const suppressClickRef = React.useRef(false);
   const [drag, setDrag] = React.useState<DragState | null>(null);
   const dragRef = React.useRef<DragState | null>(null);
@@ -81,7 +91,7 @@ export function Board({ projectId }: { projectId?: string }) {
 
   const hitTest = React.useCallback(
     (clientX: number, clientY: number, dragged: Task) => {
-      let target: TaskStatus = dragged.status;
+      let target: string = dragged.status;
       for (const [status, el] of columnRefs.current) {
         const rect = el.getBoundingClientRect();
         if (clientX >= rect.left && clientX <= rect.right) {
@@ -108,6 +118,11 @@ export function Board({ projectId }: { projectId?: string }) {
     },
     [],
   );
+
+  const byStatusRef = React.useRef(byStatus);
+  React.useEffect(() => {
+    byStatusRef.current = byStatus;
+  }, [byStatus]);
 
   const onCardPointerDown = (e: React.PointerEvent, task: Task) => {
     if (e.button !== 0 || e.pointerType === "touch") return;
@@ -149,9 +164,9 @@ export function Board({ projectId }: { projectId?: string }) {
 
       const current = dragRef.current;
       if (commit && started && current) {
-        const targetTasks = (byStatusRef.current.get(current.target) ?? []).filter(
-          (t) => t.id !== current.task.id,
-        );
+        const targetTasks = (
+          byStatusRef.current.get(current.target) ?? []
+        ).filter((t) => t.id !== current.task.id);
         let position: number;
         if (targetTasks.length === 0) {
           position = current.task.position;
@@ -168,7 +183,6 @@ export function Board({ projectId }: { projectId?: string }) {
         moveTask(current.task.id, current.target, position);
       }
       setDrag(null);
-      // il click parte dopo il pointerup: si libera al tick successivo
       setTimeout(() => {
         suppressClickRef.current = false;
       }, 0);
@@ -184,31 +198,30 @@ export function Board({ projectId }: { projectId?: string }) {
     window.addEventListener("keydown", onKey);
   };
 
-  /* snapshot per il calcolo della posizione al rilascio */
-  const byStatusRef = React.useRef(byStatus);
-  React.useEffect(() => {
-    byStatusRef.current = byStatus;
-  }, [byStatus]);
+  const canAddPhase =
+    currentUser.role === "admin" && customStatuses.length < MAX_CUSTOM_STATUSES;
 
   return (
     <LayoutGroup>
-      <div className="relative flex flex-1 snap-x snap-mandatory gap-4 overflow-x-auto px-4 py-4 sm:px-6">
-        {STATUS_ORDER.map((status) => (
+      <div className="relative flex flex-1 snap-x snap-mandatory gap-3 overflow-x-auto px-4 py-4 sm:px-6">
+        {statuses.map((meta) => (
           <Column
-            key={status}
-            status={status}
-            tasks={byStatus.get(status) ?? []}
+            key={meta.key}
+            meta={meta}
+            tasks={byStatus.get(meta.key) ?? []}
             drag={drag}
             registerRef={(el) => {
-              if (el) columnRefs.current.set(status, el);
-              else columnRefs.current.delete(status);
+              if (el) columnRefs.current.set(meta.key, el);
+              else columnRefs.current.delete(meta.key);
             }}
             onCardPointerDown={onCardPointerDown}
             suppressClickRef={suppressClickRef}
           />
         ))}
 
-        {/* ghost del drag: segue il puntatore, ruotato di 1.5° */}
+        {canAddPhase ? <AddPhaseLane onAdd={addCustomStatus} /> : null}
+
+        {/* ghost del drag */}
         {drag ? (
           <div
             className="pointer-events-none fixed z-50"
@@ -233,22 +246,21 @@ export function Board({ projectId }: { projectId?: string }) {
 }
 
 function Column({
-  status,
+  meta,
   tasks,
   drag,
   registerRef,
   onCardPointerDown,
   suppressClickRef,
 }: {
-  status: TaskStatus;
+  meta: StatusMeta;
   tasks: Task[];
   drag: DragState | null;
   registerRef: (el: HTMLElement | null) => void;
   onCardPointerDown: (e: React.PointerEvent, task: Task) => void;
   suppressClickRef: React.RefObject<boolean>;
 }) {
-  const meta = TASK_STATUSES[status];
-  const isTarget = drag?.target === status;
+  const isTarget = drag?.target === meta.key;
   const display = drag ? tasks.filter((t) => t.id !== drag.task.id) : tasks;
 
   const items: React.ReactNode[] = [];
@@ -278,35 +290,31 @@ function Column({
     <section
       ref={registerRef}
       aria-label={meta.label}
-      className="flex w-[280px] shrink-0 snap-start flex-col lg:w-auto lg:flex-1 lg:basis-0"
+      className={cn(
+        "flex w-[290px] shrink-0 snap-start flex-col rounded-2xl p-2 transition-colors",
+        meta.kind === "alert" ? "bg-[#FEF2F2]/80" : "bg-[#EDF1F7]/70",
+        isTarget && "bg-brand-50 ring-1 ring-brand-300/70",
+        "lg:w-auto lg:flex-1 lg:basis-0",
+      )}
     >
-      <header className="flex items-center gap-2 px-1 pb-2.5">
+      <header className="flex items-center gap-2 px-1.5 pt-1 pb-2.5">
         <span
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-lg py-1 pr-2.5 pl-2",
-            meta.softClass,
-          )}
+          className="inline-flex items-center gap-1.5 rounded-lg py-1 pr-2.5 pl-2"
+          style={{ background: meta.soft }}
         >
-          <StatusPip status={status} className="size-3.5" />
+          <StatusPip status={meta.key} className="size-3.5" />
           <h2
-            className={cn(
-              "text-[11px] font-semibold tracking-[0.06em] uppercase",
-              meta.textClass,
-            )}
+            className="text-[11px] font-bold tracking-[0.05em] uppercase"
+            style={{ color: meta.text }}
           >
             {meta.label}
           </h2>
         </span>
         <span className="font-mono text-xs text-ink-muted">{tasks.length}</span>
       </header>
-      <div
-        className={cn(
-          "flex flex-1 flex-col gap-2 rounded-xl p-1 transition-colors",
-          isTarget && "bg-brand-50/60 outline-1 outline-brand-300/70",
-        )}
-      >
+      <div className="flex flex-1 flex-col gap-2">
         {items.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-[13px] text-ink-faint">
+          <p className="rounded-xl border border-dashed border-border bg-white/40 px-3 py-6 text-center text-[13px] text-ink-faint">
             Nessun task
           </p>
         ) : (
@@ -325,5 +333,87 @@ function InsertLine() {
       animate={{ opacity: 1 }}
       className="mx-1 h-0.5 rounded-full bg-brand-500"
     />
+  );
+}
+
+/** Coda della board: aggiunta di una fase custom (solo admin, max 3). */
+function AddPhaseLane({
+  onAdd,
+}: {
+  onAdd: (label: string, presetIndex: number) => boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [label, setLabel] = React.useState("");
+  const [preset, setPreset] = React.useState(0);
+
+  const submit = () => {
+    if (label.trim().length === 0) return;
+    if (onAdd(label, preset)) {
+      setLabel("");
+      setPreset(0);
+      setOpen(false);
+    }
+  };
+
+  return (
+    <section className="flex w-[220px] shrink-0 snap-start flex-col rounded-2xl border border-dashed border-border p-2">
+      {open ? (
+        <div className="space-y-2.5 p-1.5">
+          <p className="text-[11px] font-bold tracking-[0.05em] text-ink-secondary uppercase">
+            Nuova fase
+          </p>
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+              if (e.key === "Escape") setOpen(false);
+            }}
+            placeholder="Es. In stampa"
+            autoFocus
+            className="h-9 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          <div className="flex items-center gap-1.5">
+            {CUSTOM_STATUS_PRESETS.map((p, i) => (
+              <button
+                key={p.name}
+                type="button"
+                onClick={() => setPreset(i)}
+                aria-label={`Colore ${p.name}`}
+                className={cn(
+                  "flex size-6 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                )}
+                style={{ background: p.color }}
+              >
+                {preset === i ? (
+                  <Check className="size-3.5 text-white" />
+                ) : null}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1.5">
+            <Button size="sm" onClick={submit} disabled={!label.trim()}>
+              Aggiungi
+            </Button>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              onClick={() => setOpen(false)}
+              aria-label="Annulla"
+            >
+              <X />
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          className="flex flex-1 flex-col items-center justify-center gap-1.5 rounded-xl py-8 text-ink-muted outline-none transition-colors hover:bg-accent hover:text-ink focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Plus className="size-4" />
+          <span className="text-[12px] font-semibold">Nuova fase</span>
+        </button>
+      )}
+    </section>
   );
 }

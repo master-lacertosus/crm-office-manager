@@ -1,5 +1,5 @@
 import { addDaysIso, todayIso } from "@/lib/format";
-import type { Profile, Project, Task, TaskStatus } from "@/lib/types";
+import type { Profile, Project, Task } from "@/lib/types";
 import { STATUS_ORDER } from "@/lib/types";
 
 /**
@@ -10,7 +10,7 @@ import { STATUS_ORDER } from "@/lib/types";
  * dai dati veri: completare un task oggi muove il grafico.
  */
 
-export type StatusCounts = Record<TaskStatus, number>;
+export type StatusCounts = Record<string, number>;
 
 export interface PersonLoad {
   profile: Profile;
@@ -46,13 +46,8 @@ export interface Analytics {
   busiest: PersonLoad | null;
 }
 
-const emptyCounts = (): StatusCounts => ({
-  backlog: 0,
-  todo: 0,
-  in_progress: 0,
-  in_review: 0,
-  done: 0,
-});
+const emptyCounts = (keys: string[]): StatusCounts =>
+  Object.fromEntries(keys.map((k) => [k, 0]));
 
 /** Completamenti/giorno dei 13 giorni passati (fissi, fase placeholder). */
 const PAST_SERIES = [1, 2, 0, 3, 1, 2, 4, 2, 1, 3, 2, 0, 1];
@@ -61,6 +56,7 @@ export function buildAnalytics(
   tasks: Task[],
   profiles: Profile[],
   projects: Project[],
+  statusKeys: string[] = STATUS_ORDER,
 ): Analytics {
   const today = todayIso();
 
@@ -85,18 +81,22 @@ export function buildAnalytics(
   const last7 = trend.slice(-7).reduce((sum, p) => sum + p.value, 0);
   const prev7 = trend.slice(0, 7).reduce((sum, p) => sum + p.value, 0);
 
-  const statusTotals = emptyCounts();
-  for (const task of tasks) statusTotals[task.status] += 1;
+  const statusTotals = emptyCounts(statusKeys);
+  for (const task of tasks) {
+    if (statusTotals[task.status] !== undefined) statusTotals[task.status] += 1;
+  }
 
   const people: PersonLoad[] = profiles
     .filter((p) => p.is_active)
     .map((profile) => {
-      const counts = emptyCounts();
+      const counts = emptyCounts(statusKeys);
       for (const task of tasks) {
-        if (task.owner_id === profile.id) counts[task.status] += 1;
+        if (task.owner_id === profile.id && counts[task.status] !== undefined) {
+          counts[task.status] += 1;
+        }
       }
-      const total = STATUS_ORDER.reduce((sum, s) => sum + counts[s], 0);
-      return { profile, counts, total, open: total - counts.done };
+      const total = statusKeys.reduce((sum, s) => sum + counts[s], 0);
+      return { profile, counts, total, open: total - (counts.done ?? 0) };
     })
     .sort((a, b) => b.total - a.total);
 
@@ -153,11 +153,12 @@ export function buildAnalytics(
  * 15.9). Il backlog resta grigio tratteggiato (codifica secondaria);
  * legenda con tacche sagomate, gap 2px, etichette dirette.
  */
-export const CHART_STATUS_COLORS: Record<TaskStatus, string> = {
+export const CHART_STATUS_COLORS: Record<string, string> = {
   backlog: "#A9AFB8",
   todo: "#0284C7",
   in_progress: "#6D28D9",
   in_review: "#D97706",
+  alert: "#B91C1C",
   done: "#047857",
 };
 

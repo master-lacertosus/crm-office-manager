@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
-import { KeyRound, MailPlus, UserX } from "lucide-react";
+import Link from "next/link";
+import { Compass, KeyRound, MailPlus, UserX } from "lucide-react";
+
+import { PhaseManager } from "@/components/phase-manager";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Workspace" };
 
@@ -29,7 +33,15 @@ export default function WorkspaceSettingsPage() {
         <p className="mt-1 text-sm font-medium text-ink">
           Lacertosus — Marketing &amp; E-commerce
         </p>
+        <Button asChild variant="outline" size="sm" className="mt-3">
+          <Link href="/dashboard?tour=1">
+            <Compass data-icon="inline-start" />
+            Rivedi il tour introduttivo
+          </Link>
+        </Button>
       </div>
+
+      <PhaseManager />
 
       <div className="rounded-xl border border-dashed border-border p-4">
         <p className="text-[13px] font-medium text-ink-secondary">

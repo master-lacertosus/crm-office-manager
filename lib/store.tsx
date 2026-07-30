@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { shiftIsoDays, shiftIsoMonths } from "@/lib/format";
 import { extractMentionIds } from "@/lib/mentions";
+import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
 import {
   CURRENT_USER_ID,
   MOCK_COMMENTS,
@@ -15,12 +16,29 @@ import {
 } from "@/lib/mock-data";
 import type {
   AppNotification,
+  CustomStatus,
   Profile,
   Project,
+  StatusMeta,
   Task,
   TaskComment,
   TaskLink,
 } from "@/lib/types";
+
+/** Metadati delle fasi core (specchiano i token CSS --status-*). */
+export const CORE_STATUS_META: Record<
+  string,
+  { label: string; color: string; soft: string; text: string; kind: "core" | "alert" }
+> = {
+  backlog: { label: "Backlog", color: "#8A94A3", soft: "#F1F4F8", text: "#64748B", kind: "core" },
+  todo: { label: "Da fare", color: "#3B82F6", soft: "#EBF2FE", text: "#1D4ED8", kind: "core" },
+  in_progress: { label: "In corso", color: "#6D5DFB", soft: "#EEECFE", text: "#5240E8", kind: "core" },
+  in_review: { label: "In revisione", color: "#FF6B00", soft: "#FFF1E8", text: "#B34503", kind: "core" },
+  alert: { label: "Problema", color: "#DC2626", soft: "#FEE2E2", text: "#B91C1C", kind: "alert" },
+  done: { label: "Fatto", color: "#16A365", soft: "#E7F6EF", text: "#0E7A4A", kind: "core" },
+};
+
+export const MAX_CUSTOM_STATUSES = 3;
 
 /**
  * Store placeholder in memoria: fa da contratto per lo strato dati vero.
@@ -78,6 +96,11 @@ interface AppStore {
   /** Focus di oggi: fino a 3 task scelti dall'utente corrente. */
   focusIds: string[];
   toggleFocus: (taskId: string) => void;
+  /** Fasi del flusso: core + Problema + custom, nell'ordine della board. */
+  statuses: StatusMeta[];
+  customStatuses: CustomStatus[];
+  addCustomStatus: (label: string, presetIndex: number) => boolean;
+  removeCustomStatus: (key: string) => void;
   addComment: (taskId: string, body: string) => Promise<void>;
   updateProfileName: (id: string, fullName: string) => Promise<void>;
   notifications: AppNotification[];
@@ -103,6 +126,19 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [taskLinks, setTaskLinks] =
     React.useState<TaskLink[]>(MOCK_TASK_LINKS);
   const [focusIds, setFocusIds] = React.useState<string[]>([]);
+  const [customStatuses, setCustomStatuses] = React.useState<CustomStatus[]>([]);
+
+  const statuses: StatusMeta[] = [
+    ...(["backlog", "todo", "in_progress"] as const).map((key) => ({
+      key,
+      ...CORE_STATUS_META[key],
+    })),
+    ...customStatuses.map((c) => ({ ...c, kind: "custom" as const })),
+    ...(["in_review", "alert", "done"] as const).map((key) => ({
+      key,
+      ...CORE_STATUS_META[key],
+    })),
+  ];
 
   const currentUser =
     profiles.find((p) => p.id === CURRENT_USER_ID) ?? profiles[0];
@@ -216,6 +252,40 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       setTaskLinks((prev) => prev.filter((l) => l.id !== id));
     },
 
+    statuses,
+    customStatuses,
+
+    addCustomStatus(label, presetIndex) {
+      if (customStatuses.length >= MAX_CUSTOM_STATUSES) return false;
+      const preset =
+        CUSTOM_STATUS_PRESETS[presetIndex] ?? CUSTOM_STATUS_PRESETS[0];
+      const base = label
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+      const key = `custom_${base || "fase"}_${customStatuses.length + 1}`;
+      setCustomStatuses((prev) => [
+        ...prev,
+        {
+          key,
+          label: label.trim(),
+          color: preset.color,
+          soft: preset.soft,
+          text: preset.text,
+        },
+      ]);
+      return true;
+    },
+
+    removeCustomStatus(key) {
+      setCustomStatuses((prev) => prev.filter((c) => c.key !== key));
+      // i task nella fase rimossa tornano in "Da fare"
+      setTasks((prev) =>
+        prev.map((t) => (t.status === key ? { ...t, status: "todo" } : t)),
+      );
+    },
+
     focusIds,
 
     toggleFocus(taskId) {
@@ -316,4 +386,9 @@ export function useAppStore(): AppStore {
     throw new Error("useAppStore va usato dentro AppStoreProvider");
   }
   return ctx;
+}
+
+/** Variante tollerante: null fuori dal provider (es. styleguide). */
+export function useAppStoreOptional(): AppStore | null {
+  return React.useContext(StoreContext);
 }
