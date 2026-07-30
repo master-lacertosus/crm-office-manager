@@ -104,7 +104,7 @@ export function TaskPanelHost() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="absolute inset-0 bg-scrim"
+            className="absolute inset-0 bg-scrim backdrop-blur-[3px]"
             onClick={close}
             aria-hidden
           />
@@ -117,10 +117,10 @@ export function TaskPanelHost() {
             aria-modal="true"
             aria-label={taskParam === "new" ? "Nuovo task" : "Dettaglio task"}
             className={cn(
-              "glass-strong absolute flex flex-col",
+              "absolute flex flex-col bg-white",
               expanded
-                ? "inset-0 m-auto h-[min(90dvh,840px)] w-[min(1080px,95vw)] overflow-hidden rounded-3xl"
-                : "inset-y-0 right-0 w-full sm:w-[460px] sm:rounded-l-2xl",
+                ? "inset-0 m-auto h-[min(90dvh,840px)] w-[min(1080px,95vw)] overflow-hidden rounded-3xl border border-border shadow-[0_28px_90px_rgb(15_23_42/0.24)]"
+                : "inset-y-0 right-0 w-full border-l border-border shadow-[-16px_0_56px_rgb(15_23_42/0.18)] sm:w-[460px] sm:rounded-l-2xl",
             )}
           >
             <PanelBody
@@ -286,7 +286,12 @@ function PanelBody({
           </Button>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto">
+        <div
+          className={cn(
+            "flex-1",
+            expanded ? "min-h-0 overflow-hidden" : "overflow-y-auto",
+          )}
+        >
           <TaskForm task={task ?? undefined} expanded={expanded}>
             {task ? (
               <>
@@ -540,8 +545,8 @@ function TaskForm({
 
   if (expanded) {
     return (
-      <div className="grid min-h-full lg:grid-cols-[1fr_320px]">
-        <div className="space-y-5 p-6 lg:border-r lg:border-border-soft">
+      <div className="grid h-full min-h-0 lg:grid-cols-[1fr_320px]">
+        <div className="min-h-0 space-y-6 overflow-y-auto p-6">
           <form
             id="task-form"
             onSubmit={submit}
@@ -553,10 +558,12 @@ function TaskForm({
           </form>
           <div className="[&>section]:!px-0">{children}</div>
         </div>
-        <aside className="order-first space-y-4 border-b border-border-soft bg-[#fafbfd] p-5 lg:order-none lg:border-b-0">
-          {fieldsGrid}
-          {saveRow}
-          {task ? <TaskMeta task={task} /> : null}
+        <aside className="order-first flex min-h-0 flex-col overflow-y-auto border-b border-border-soft bg-[#fafbfd] p-5 lg:order-none lg:border-b-0 lg:border-l">
+          <div className="space-y-4">{fieldsGrid}</div>
+          <div className="sticky bottom-0 mt-auto -mx-5 space-y-3 bg-gradient-to-t from-[#fafbfd] from-75% to-transparent px-5 pt-6 pb-1">
+            {saveRow}
+            {task ? <TaskMeta task={task} /> : null}
+          </div>
         </aside>
       </div>
     );
@@ -665,8 +672,11 @@ function LinksSection({ taskId }: { taskId: string }) {
   return (
     <section aria-label="Allegati" className="px-5 pb-2">
       <Separator className="mb-4" />
-      <h3 className="text-[11px] font-semibold tracking-[0.06em] text-ink-muted uppercase">
-        Allegati e link · {list.length}
+      <h3 className="flex items-center gap-2 text-[11px] font-bold tracking-[0.06em] text-ink-secondary uppercase">
+        Allegati e link
+        <span className="inline-flex min-w-5 items-center justify-center rounded-full border border-border px-1.5 font-mono text-[11px] font-normal text-ink-muted">
+          {list.length}
+        </span>
       </h3>
 
       <ul className="mt-3 space-y-2">
@@ -798,8 +808,11 @@ function CommentSection({ taskId }: { taskId: string }) {
   return (
     <section aria-label="Commenti" className="px-5 pb-6">
       <Separator className="mb-4" />
-      <h3 className="text-[11px] font-semibold tracking-[0.06em] text-ink-muted uppercase">
-        Commenti · {list.length}
+      <h3 className="flex items-center gap-2 text-[11px] font-bold tracking-[0.06em] text-ink-secondary uppercase">
+        Commenti
+        <span className="inline-flex min-w-5 items-center justify-center rounded-full border border-border px-1.5 font-mono text-[11px] font-normal text-ink-muted">
+          {list.length}
+        </span>
       </h3>
 
       <div className="mt-3 space-y-4">

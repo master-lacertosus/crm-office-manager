@@ -338,7 +338,7 @@ export function IlCapo() {
           animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
           exit={reduced ? { opacity: 0 } : { opacity: 0, y: 130 }}
           transition={{ type: "spring", stiffness: 260, damping: 22 }}
-          className="fixed right-4 bottom-0 z-40 flex items-end gap-2"
+          className="fixed right-4 bottom-0 z-30 flex items-end gap-2"
         >
           {/* nuvoletta */}
           <motion.div
