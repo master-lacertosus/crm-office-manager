@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { dueUrgency } from "@/lib/format";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
+import { PriorityBadge } from "@/components/priority-badge";
 import { useStatusMeta } from "@/components/status-pip";
 import { Badge } from "@/components/ui/badge";
 
@@ -38,6 +39,10 @@ export function CardVisual({
         "card-soft relative rounded-2xl p-3 pl-4",
         urgency === "overdue" && "border-destructive/35",
         urgency === "today" && "border-brand-300",
+        urgency !== "overdue" &&
+          urgency !== "today" &&
+          task.priority === "high" &&
+          "border-[#F59E0B]/60",
         className,
       )}
     >
@@ -50,9 +55,7 @@ export function CardVisual({
       {(project || task.priority === "high") && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {project ? <Badge>{project.name}</Badge> : null}
-          {task.priority === "high" ? (
-            <Badge variant="warning">Alta</Badge>
-          ) : null}
+          {task.priority === "high" ? <PriorityBadge /> : null}
         </div>
       )}
       <div className="mt-2 flex items-center justify-between gap-2">

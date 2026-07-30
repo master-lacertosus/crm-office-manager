@@ -76,6 +76,37 @@ export function dueUrgency(iso: string): { level: DueUrgencyLevel; days: number 
   return { level: "later", days };
 }
 
+const TIME_FMT = new Intl.DateTimeFormat("it-IT", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const FULL_FMT = new Intl.DateTimeFormat("it-IT", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+/** "2026-07-30T15:42:…" → "15:42" */
+export function formatTime(isoDateTime: string): string {
+  return TIME_FMT.format(new Date(isoDateTime));
+}
+
+/** Data e ora complete leggibili (per i title/tooltip). */
+export function formatFullDateTime(isoDateTime: string): string {
+  return FULL_FMT.format(new Date(isoDateTime));
+}
+
+/** Etichetta di giorno per i separatori chat: Oggi / Ieri / "28 lug". */
+export function dayLabel(isoDateTime: string): string {
+  const day = isoDateTime.slice(0, 10);
+  const today = todayIso();
+  if (day === today) return "Oggi";
+  if (day === shiftIsoDays(today, -1)) return "Ieri";
+  return formatDue(day);
+}
+
 /** Tempo relativo breve per i commenti: "adesso", "35 min fa", "2 h fa", "3 g fa". */
 export function timeAgo(isoDateTime: string): string {
   const minutes = Math.floor((Date.now() - new Date(isoDateTime).getTime()) / 60_000);

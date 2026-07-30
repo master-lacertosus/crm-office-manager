@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { ArrowUp } from "lucide-react";
 
 import { addDaysIso, diffIsoDays, formatDue, shiftIsoDays, todayIso } from "@/lib/format";
 import { useAppStore } from "@/lib/store";
@@ -196,6 +197,13 @@ export function ProjectTimeline({ projectId }: { projectId: string }) {
                             metaByKey.get(task.status)?.color ?? "#64748B",
                         }}
                       >
+                        {task.priority === "high" ? (
+                          <ArrowUp
+                            aria-label="Priorità alta"
+                            className="mr-1 size-3 shrink-0 text-[#B45309]"
+                            strokeWidth={3}
+                          />
+                        ) : null}
                         <span
                           className={cn(
                             "truncate text-[11px] font-medium",

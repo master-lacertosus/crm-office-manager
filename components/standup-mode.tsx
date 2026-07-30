@@ -10,6 +10,7 @@ import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
+import { PriorityBadge } from "@/components/priority-badge";
 import { StatusPip } from "@/components/status-pip";
 import { Button } from "@/components/ui/button";
 
@@ -223,6 +224,9 @@ export function StandupMode({
                           <span className="min-w-0 flex-1 truncate text-[14px]/5 font-medium text-ink">
                             {task.title}
                           </span>
+                          {task.priority === "high" ? (
+                            <PriorityBadge iconOnly />
+                          ) : null}
                           <DueChip iso={task.due_date} status={task.status} />
                         </li>
                       ))

@@ -8,6 +8,7 @@ import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
+import { PriorityBadge } from "@/components/priority-badge";
 import { StatusPip } from "@/components/status-pip";
 import { Badge } from "@/components/ui/badge";
 
@@ -38,9 +39,7 @@ function Row({ task }: { task: Task }) {
         ) : null}
       </span>
       {task.priority === "high" ? (
-        <Badge variant="warning" className="hidden sm:inline-flex">
-          Alta
-        </Badge>
+        <PriorityBadge className="hidden sm:inline-flex" />
       ) : null}
       {project ? (
         <Badge className="hidden md:inline-flex">{project.name}</Badge>

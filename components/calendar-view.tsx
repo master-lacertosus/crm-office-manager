@@ -9,6 +9,7 @@ import { dueUrgency, todayIso } from "@/lib/format";
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { PriorityBadge } from "@/components/priority-badge";
 import { Button } from "@/components/ui/button";
 
 const MONTH_FMT = new Intl.DateTimeFormat("it-IT", { month: "long" });
@@ -203,6 +204,9 @@ export function CalendarView() {
           className="h-3.5 w-[3px] shrink-0 rounded-full"
           style={{ background: statusColor(task.status) }}
         />
+        {task.priority === "high" ? (
+          <PriorityBadge iconOnly className="size-3.5 rounded-[4px]" />
+        ) : null}
         <span
           className={cn(
             "truncate text-[12px]/[16px] font-semibold",

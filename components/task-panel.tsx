@@ -12,11 +12,17 @@ import {
   Maximize2,
   Minimize2,
   Plus,
+  Quote,
   Trash2,
   X,
 } from "lucide-react";
 
-import { formatDue, timeAgo } from "@/lib/format";
+import {
+  dayLabel,
+  formatDue,
+  formatFullDateTime,
+  formatTime,
+} from "@/lib/format";
 import { splitMentions } from "@/lib/mentions";
 import { panel, scrim } from "@/lib/motion";
 import { useAppStore } from "@/lib/store";
@@ -24,6 +30,7 @@ import type { Task, TaskRepeat } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
+import { PriorityBadge } from "@/components/priority-badge";
 import { StatusLabel } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
 import { cn } from "@/lib/utils";
@@ -214,6 +221,7 @@ function PanelBody({
         ) : (
           <div className="flex min-w-0 items-center gap-2.5">
             <StatusLabel status={task.status} />
+            {task.priority === "high" ? <PriorityBadge /> : null}
             {project ? (
               <span className="hidden truncate text-[13px] text-ink-muted sm:inline">
                 · {project.name}
@@ -784,10 +792,65 @@ function LinksSection({ taskId }: { taskId: string }) {
 /* Commenti                                                            */
 /* ------------------------------------------------------------------ */
 
+/** Testo con menzioni evidenziate. */
+function MentionText({ text }: { text: string }) {
+  const { profiles } = useAppStore();
+  return (
+    <>
+      {splitMentions(text, profiles).map((part, i) =>
+        part.mention ? (
+          <span
+            key={i}
+            className="rounded-sm bg-brand-50 px-0.5 font-semibold text-brand-700"
+          >
+            {part.text}
+          </span>
+        ) : (
+          <React.Fragment key={i}>{part.text}</React.Fragment>
+        ),
+      )}
+    </>
+  );
+}
+
+/** Corpo del commento: righe iniziali «> …» rese come blocco citazione. */
+function CommentBody({ body }: { body: string }) {
+  const lines = body.split("\n");
+  const quote: string[] = [];
+  let i = 0;
+  while (i < lines.length && lines[i].startsWith("> ")) {
+    quote.push(lines[i].slice(2));
+    i += 1;
+  }
+  const rest = lines.slice(i).join("\n").trim();
+
+  return (
+    <div className="mt-0.5 space-y-1.5">
+      {quote.length > 0 ? (
+        <blockquote className="rounded-r-lg border-l-2 border-brand-300 bg-muted/70 px-2.5 py-1.5 text-[12px]/[17px] text-ink-muted">
+          <MentionText text={quote.join(" ")} />
+        </blockquote>
+      ) : null}
+      {rest ? (
+        <p className="text-[13px]/[19px] whitespace-pre-line text-ink-secondary">
+          <MentionText text={rest} />
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function CommentSection({ taskId }: { taskId: string }) {
   const { comments, profiles, addComment } = useAppStore();
   const [body, setBody] = React.useState("");
   const [sending, setSending] = React.useState(false);
+
+  const quoteComment = (text: string, authorName: string) => {
+    const excerpt = text.replace(/\n+/g, " ").slice(0, 140);
+    const prefix = `> ${excerpt}${text.length > 140 ? "…" : ""} — ${authorName.split(" ")[0]}\n`;
+    setBody((prev) => prefix + (prev.startsWith("> ") ? prev.replace(/^(> .*\n)+/, "") : prev));
+    document.getElementById("comment-body")?.focus();
+  };
 
   const list = comments
     .filter((c) => c.task_id === taskId)
@@ -818,38 +881,62 @@ function CommentSection({ taskId }: { taskId: string }) {
             Nessun commento. Scrivi il primo.
           </p>
         ) : (
-          list.map((comment) => {
-            const author = profiles.find((p) => p.id === comment.author_id);
-            return (
-              <div key={comment.id} className="flex gap-2.5">
-                <AvatarInitials name={author?.full_name ?? "?"} size="sm" />
-                <div className="min-w-0">
-                  <p className="text-[13px]">
-                    <span className="font-medium text-ink">
-                      {author?.full_name ?? "—"}
-                    </span>{" "}
-                    <span className="font-mono text-xs text-ink-muted">
-                      {timeAgo(comment.created_at)}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-[13px]/[19px] text-ink-secondary">
-                    {splitMentions(comment.body, profiles).map((part, i) =>
-                      part.mention ? (
-                        <span
-                          key={i}
-                          className="rounded-sm bg-brand-50 px-0.5 font-semibold text-brand-700"
-                        >
-                          {part.text}
+          (() => {
+            let lastDay = "";
+            return list.map((comment) => {
+              const author = profiles.find((p) => p.id === comment.author_id);
+              const day = comment.created_at.slice(0, 10);
+              const showSeparator = day !== lastDay;
+              lastDay = day;
+              return (
+                <React.Fragment key={comment.id}>
+                  {showSeparator ? (
+                    <div className="flex items-center gap-3 pt-1">
+                      <span className="h-px flex-1 bg-border-soft" />
+                      <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold tracking-[0.05em] text-ink-muted uppercase">
+                        {dayLabel(comment.created_at)}
+                      </span>
+                      <span className="h-px flex-1 bg-border-soft" />
+                    </div>
+                  ) : null}
+                  <div className="group/comment flex gap-2.5">
+                    <AvatarInitials
+                      name={author?.full_name ?? "?"}
+                      size="sm"
+                      className="mt-0.5"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-baseline gap-2 text-[13px]">
+                        <span className="font-semibold text-ink">
+                          {author?.full_name ?? "—"}
                         </span>
-                      ) : (
-                        <React.Fragment key={i}>{part.text}</React.Fragment>
-                      ),
-                    )}
-                  </p>
-                </div>
-              </div>
-            );
-          })
+                        <span
+                          className="font-mono text-[11px] text-ink-muted"
+                          title={formatFullDateTime(comment.created_at)}
+                        >
+                          {formatTime(comment.created_at)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            quoteComment(
+                              comment.body,
+                              author?.full_name ?? "collega",
+                            )
+                          }
+                          className="ml-auto inline-flex items-center gap-1 rounded-sm text-[11px] font-medium text-ink-faint opacity-0 outline-none transition-opacity group-hover/comment:opacity-100 hover:text-brand-600 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <Quote className="size-3" />
+                          Cita
+                        </button>
+                      </p>
+                      <CommentBody body={comment.body} />
+                    </div>
+                  </div>
+                </React.Fragment>
+              );
+            });
+          })()
         )}
       </div>
 
