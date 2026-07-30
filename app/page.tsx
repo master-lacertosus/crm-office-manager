@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
-// Provvisorio: finché non esiste la dashboard (M6), la home porta alla
-// pagina di verifica del design system.
+// Fase placeholder: la home porta alla dashboard. Con l'autenticazione
+// reale (Supabase) il middleware smisterà tra /login e /dashboard.
 export default function Home() {
-  redirect("/styleguide");
+  redirect("/dashboard");
 }

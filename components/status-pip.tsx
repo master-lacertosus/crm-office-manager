@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import type { TaskStatus } from "@/lib/types";
 
 /**
  * La tacca di stato — firma visiva del sistema (docs/design-system.md §0).
@@ -7,12 +8,7 @@ import { cn } from "@/lib/utils";
  * Etichette provvisorie in italiano (decisioni D4/D6 in docs/architecture.md).
  */
 
-export type TaskStatus =
-  | "backlog"
-  | "todo"
-  | "in_progress"
-  | "in_review"
-  | "done";
+export type { TaskStatus };
 
 export const TASK_STATUSES: Record<
   TaskStatus,
