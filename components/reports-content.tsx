@@ -56,13 +56,28 @@ export function ReportsContent() {
     <div className="flex-1 space-y-4 px-4 py-4 sm:px-6">
       {/* KPI — reagiscono in tempo reale alla board */}
       <motion.div {...rise(0)} className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatTile label="Task aperti" value={a.open} />
-        <StatTile label="In ritardo" value={a.overdue} tone="danger" />
-        <StatTile label="In revisione" value={a.inReview} tone="brand" />
+        <StatTile
+          label="Task aperti"
+          value={a.open}
+          aurora="rgb(2 132 199 / 0.14)"
+        />
+        <StatTile
+          label="In ritardo"
+          value={a.overdue}
+          tone="danger"
+          aurora="rgb(217 45 32 / 0.11)"
+        />
+        <StatTile
+          label="In revisione"
+          value={a.inReview}
+          tone="brand"
+          aurora="rgb(240 146 38 / 0.16)"
+        />
         <StatTile
           label="Completati · 7 giorni"
           value={a.done7}
           delta={a.done7Delta}
+          aurora="rgb(5 150 105 / 0.13)"
         >
           <Sparkline
             values={a.trend.map((p) => p.value)}

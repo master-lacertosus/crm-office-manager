@@ -265,6 +265,86 @@
       0 16px 48px rgb(23 24 28 / 0.12);
   }
 
+  /* Aure che respirano: due blob extra in lentissimo movimento
+     (la media query globale reduced-motion li ferma da sola). */
+  .aura-layer::before,
+  .aura-layer::after {
+    content: "";
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+    will-change: transform;
+  }
+  .aura-layer::before {
+    width: 520px;
+    height: 520px;
+    left: -140px;
+    top: 20%;
+    background: rgb(240 146 38 / 0.1);
+    animation: aura-drift 46s ease-in-out infinite alternate;
+  }
+  .aura-layer::after {
+    width: 620px;
+    height: 620px;
+    right: -180px;
+    bottom: -10%;
+    background: rgb(109 40 217 / 0.09);
+    animation: aura-drift 58s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes aura-drift {
+    from {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    to {
+      transform: translate3d(60px, -40px, 0) scale(1.12);
+    }
+  }
+
+  /* Blocco-vetrina: vetro forte + bordo a gradiente + lavaggi di colore */
+  .glass-hero {
+    position: relative;
+    border: 1px solid transparent;
+    background:
+      radial-gradient(420px 220px at 88% -10%, rgb(240 146 38 / 0.14), transparent 62%),
+      radial-gradient(360px 200px at 4% 110%, rgb(2 132 199 / 0.1), transparent 60%),
+      linear-gradient(rgb(255 255 255 / 0.74), rgb(255 255 255 / 0.66)) padding-box,
+      linear-gradient(120deg, rgb(240 146 38 / 0.55), rgb(255 255 255 / 0.4) 38%, rgb(2 132 199 / 0.35) 68%, rgb(109 40 217 / 0.45)) border-box;
+    backdrop-filter: blur(28px) saturate(1.6);
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.9),
+      0 2px 6px rgb(23 24 28 / 0.05),
+      0 20px 60px rgb(23 24 28 / 0.1);
+  }
+
+  /* Testo in gradiente (solo display brevi: ogni stop resta ≥4.5:1) */
+  .gradient-text {
+    background-image: linear-gradient(100deg, #b45309 0%, #c2410c 34%, #6d28d9 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Aurora delle stat tile: alone colorato dal token --aurora */
+  .tile-aurora {
+    background:
+      radial-gradient(150px 110px at 85% 0%, var(--aurora, transparent), transparent 70%),
+      rgb(255 255 255 / 0.6);
+  }
+
+  /* Hairline superiore a gradiente per le card sezione */
+  .hairline-gradient {
+    position: relative;
+    overflow: hidden;
+  }
+  .hairline-gradient::before {
+    content: "";
+    position: absolute;
+    inset: 0 12% auto 12%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(240 146 38 / 0.5) 30%, rgb(109 40 217 / 0.35) 70%, transparent);
+  }
+
   /* Bottone primario "Vetro": gradiente arancio + glow morbido */
   .btn-glow {
     background-image: linear-gradient(180deg, #f4a851 0%, var(--brand-500) 55%, #e28110 100%);

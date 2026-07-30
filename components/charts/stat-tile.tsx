@@ -40,6 +40,7 @@ export function StatTile({
   deltaPositiveIsGood = true,
   tone = "default",
   icon,
+  aurora,
   children,
   className,
 }: {
@@ -49,6 +50,8 @@ export function StatTile({
   deltaPositiveIsGood?: boolean;
   tone?: "default" | "danger" | "brand";
   icon?: React.ReactNode;
+  /** Alone colorato in alto a destra (es. "rgb(2 132 199 / 0.14)"). */
+  aurora?: string;
   children?: React.ReactNode;
   className?: string;
 }) {
@@ -59,8 +62,17 @@ export function StatTile({
     <motion.div
       whileHover={{ y: -2, rotateX: 3 }}
       transition={{ type: "spring", stiffness: 320, damping: 26 }}
-      style={{ transformPerspective: 700 }}
-      className={cn("glass rounded-xl p-4 transition-shadow", className)}
+      style={
+        {
+          transformPerspective: 700,
+          ...(aurora ? { "--aurora": aurora } : {}),
+        } as React.CSSProperties
+      }
+      className={cn(
+        "glass rounded-xl p-4 transition-shadow",
+        aurora && "tile-aurora",
+        className,
+      )}
     >
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] font-semibold tracking-[0.06em] text-ink-muted uppercase">

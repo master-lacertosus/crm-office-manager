@@ -125,7 +125,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="glass rounded-xl p-4">
+    <section className="glass hairline-gradient rounded-xl p-4">
       <header className="flex items-center gap-2 pb-2">
         <h2 className="text-[11px] font-semibold tracking-[0.06em] text-ink-secondary uppercase">
           {title}
@@ -168,14 +168,17 @@ export function DashboardContent() {
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.2, 0, 0, 1] }}
-        className="glass-strong flex flex-col justify-between gap-4 rounded-2xl p-5 sm:flex-row sm:items-center"
+        className="glass-hero flex flex-col justify-between gap-4 rounded-2xl p-5 sm:flex-row sm:items-center"
       >
         <div>
           <p className="font-mono text-xs text-ink-muted first-letter:uppercase">
             {DATE_FMT.format(new Date())}
           </p>
-          <h2 className="mt-1 text-[26px]/8 font-semibold tracking-[-0.014em] text-ink">
-            {greeting()}, {currentUser.full_name.split(" ")[0]}
+          <h2 className="mt-1 text-[28px]/9 font-semibold tracking-[-0.015em] text-ink">
+            {greeting()},{" "}
+            <span className="gradient-text">
+              {currentUser.full_name.split(" ")[0]}
+            </span>
           </h2>
           <p className="mt-1.5 max-w-md text-sm text-ink-secondary">
             {overdue.length > 0 ? (
@@ -204,7 +207,17 @@ export function DashboardContent() {
             )}
           </p>
         </div>
-        <ProgressRing percent={percent} />
+        <div className="relative">
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10 rounded-full opacity-60 blur-2xl"
+            style={{
+              background:
+                "conic-gradient(from 180deg, rgb(240 146 38 / 0.35), rgb(5 150 105 / 0.3), rgb(240 146 38 / 0.35))",
+            }}
+          />
+          <ProgressRing percent={percent} />
+        </div>
       </motion.section>
 
       {/* KPI color-coded */}
@@ -212,6 +225,7 @@ export function DashboardContent() {
         <StatTile
           label="Task aperti"
           value={analytics.open}
+          aurora="rgb(2 132 199 / 0.14)"
           icon={
             <KpiIcon
               icon={FolderOpen}
@@ -223,6 +237,7 @@ export function DashboardContent() {
           label="In ritardo"
           value={analytics.overdue}
           tone="danger"
+          aurora="rgb(217 45 32 / 0.11)"
           icon={
             <KpiIcon
               icon={AlarmClockMinus}
@@ -234,6 +249,7 @@ export function DashboardContent() {
           label="In revisione"
           value={analytics.inReview}
           tone="brand"
+          aurora="rgb(240 146 38 / 0.16)"
           icon={
             <KpiIcon
               icon={Eye}
@@ -245,6 +261,7 @@ export function DashboardContent() {
           label="Completati · 7 giorni"
           value={analytics.done7}
           delta={analytics.done7Delta}
+          aurora="rgb(5 150 105 / 0.13)"
           icon={
             <KpiIcon
               icon={CheckCheck}
