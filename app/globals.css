@@ -1,26 +1,222 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Lacertosus Office OS — design tokens (light only per l'MVP).
+ * Fonte: docs/design-system.md. Arancio di marca #F09226 estratto dal CSS
+ * di produzione di lacertosus.com; i bottoni primari usano testo grafite
+ * sull'arancio (il bianco avrebbe contrasto 2.4:1).
+ */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--canvas);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-selected: var(--selected);
+  --color-scrim: var(--scrim);
+
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-550: var(--brand-550);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-text: var(--success-text);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-text: var(--danger-text);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-text: var(--warning-text);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-text: var(--info-text);
+
+  --color-status-backlog: var(--status-backlog);
+  --color-status-todo: var(--status-todo);
+  --color-status-progress: var(--status-progress);
+  --color-status-review: var(--status-review);
+  --color-status-done: var(--status-done);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+  --font-heading: var(--font-sans);
+
+  /* Raggi: precisione da officina, niente blob */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.25rem;
+  --radius-4xl: 1.5rem;
+
+  /* Ombre: tinte grafite, quasi piatte — l'elevazione la fanno i bordi */
+  --shadow-2xs: 0 1px 2px rgb(23 24 28 / 0.04);
+  --shadow-xs: 0 1px 2px rgb(23 24 28 / 0.05);
+  --shadow-sm: 0 1px 2px rgb(23 24 28 / 0.06), 0 4px 12px rgb(23 24 28 / 0.07);
+  --shadow-md: 0 2px 6px rgb(23 24 28 / 0.07), 0 12px 32px rgb(23 24 28 / 0.11);
+  --shadow-lg: var(--shadow-md);
+
+  /* Motion: micro-transizioni CSS (i preset Motion vivono in lib/motion.ts) */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.15, 1);
+  --default-transition-duration: 120ms;
+  --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --radius: 0.5rem;
+
+  /* Superfici */
+  --background: #ffffff;
+  --canvas: #f7f7f8;
+  --card: #ffffff;
+  --card-foreground: #212327;
+  --popover: #ffffff;
+  --popover-foreground: #212327;
+  --scrim: rgb(23 24 28 / 0.32);
+
+  /* Grafite */
+  --foreground: #212327;
+  --ink: #212327;
+  --ink-secondary: #5a5e66;
+  --ink-muted: #696e76;
+  --ink-faint: #9ca1a9;
+  --border: #e3e5e8;
+  --border-soft: #eeeff1;
+  --input: #c9cdd3;
+
+  /* Arancio Lacertosus (#F09226 dal sito di produzione) */
+  --brand-50: #fdf6ec;
+  --brand-100: #fae9cf;
+  --brand-200: #f6d19e;
+  --brand-300: #f3b968;
+  --brand-400: #f1a346;
+  --brand-500: #f09226;
+  --brand-550: #e28110;
+  --brand-600: #d97706;
+  --brand-700: #b45309;
+  --brand-800: #92400e;
+  --brand-900: #78350f;
+
+  /* Semantica shadcn */
+  --primary: var(--brand-500);
+  --primary-foreground: #212327; /* grafite su arancio: 6.4:1 (bianco: 2.4:1) */
+  --primary-hover: var(--brand-550);
+  --secondary: #f1f1f3;
+  --secondary-foreground: #212327;
+  --muted: #f1f1f3;
+  --muted-foreground: #696e76;
+  --accent: #f2f2f4;
+  --accent-foreground: #212327;
+  --destructive: #d92d20;
+  --destructive-foreground: #ffffff;
+  --destructive-hover: #c2271b;
+  --ring: var(--brand-600); /* 3.2:1 su bianco */
+  --selected: var(--brand-50);
+
+  /* Semantici */
+  --success: #16a34a;
+  --success-soft: #eaf7ef;
+  --success-text: #15803d;
+  --danger-soft: #fdebe9;
+  --danger-text: #b42318;
+  --warning: #f5c33b;
+  --warning-soft: #fbf3d9;
+  --warning-text: #8a6a0b;
+  --info: #2563eb;
+  --info-soft: #eff4ff;
+  --info-text: #2563eb;
+
+  /* Stati del task (tacca) */
+  --status-backlog: #9ca1a9;
+  --status-todo: #878d96;
+  --status-progress: #212327;
+  --status-review: var(--brand-600);
+  --status-done: #16a34a;
+
+  /* Sidebar */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #212327;
+  --sidebar-primary: var(--brand-500);
+  --sidebar-primary-foreground: #212327;
+  --sidebar-accent: #f2f2f4;
+  --sidebar-accent-foreground: #212327;
+  --sidebar-border: #eeeff1;
+  --sidebar-ring: var(--brand-600);
+}
+
+@layer base {
+  * {
+    @apply border-border;
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  html {
+    @apply font-sans;
+  }
+
+  body {
+    @apply bg-canvas text-foreground antialiased;
+  }
+
+  ::selection {
+    background: var(--brand-100);
+  }
+
+  /* La riduzione del movimento vale anche per le transizioni CSS;
+     i componenti Motion la rispettano via MotionConfig reducedMotion="user". */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 80ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
