@@ -7,12 +7,15 @@ import {
   BellRing,
   Link2,
   LoaderCircle,
+  Maximize2,
+  Minimize2,
   Plus,
   Trash2,
   X,
 } from "lucide-react";
 
 import { formatDue, timeAgo } from "@/lib/format";
+import { splitMentions } from "@/lib/mentions";
 import { panel, scrim } from "@/lib/motion";
 import { useAppStore } from "@/lib/store";
 import {
@@ -22,8 +25,10 @@ import {
   type TaskStatus,
 } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
+import { MentionTextarea } from "@/components/mention-textarea";
 import { TASK_STATUSES } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +45,9 @@ export function TaskPanelHost() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const taskParam = searchParams.get("task");
+  const [expanded, setExpanded] = React.useState(
+    searchParams.get("tv") === "full",
+  );
 
   const close = React.useCallback(() => {
     const params = new URLSearchParams(searchParams);
@@ -82,11 +90,18 @@ export function TaskPanelHost() {
             role="dialog"
             aria-modal="true"
             aria-label={taskParam === "new" ? "Nuovo task" : "Dettaglio task"}
-            className="glass-strong absolute inset-y-0 right-0 flex w-full flex-col sm:w-[440px] sm:rounded-l-2xl"
+            className={cn(
+              "glass-strong absolute flex flex-col",
+              expanded
+                ? "inset-0 m-auto h-[min(90dvh,840px)] w-[min(1080px,95vw)] rounded-3xl"
+                : "inset-y-0 right-0 w-full sm:w-[460px] sm:rounded-l-2xl",
+            )}
           >
             <PanelBody
               key={taskParam}
               taskParam={taskParam}
+              expanded={expanded}
+              onToggleExpanded={() => setExpanded((v) => !v)}
               onClose={close}
             />
           </motion.aside>
@@ -102,9 +117,13 @@ export function TaskPanelHost() {
 
 function PanelBody({
   taskParam,
+  expanded,
+  onToggleExpanded,
   onClose,
 }: {
   taskParam: string;
+  expanded: boolean;
+  onToggleExpanded: () => void;
   onClose: () => void;
 }) {
   const { tasks } = useAppStore();
@@ -117,14 +136,27 @@ function PanelBody({
         <p className="text-[11px] font-semibold tracking-[0.06em] text-ink-muted uppercase">
           {isNew ? "Nuovo task" : "Dettaglio task"}
         </p>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClose}
-          aria-label="Chiudi pannello"
-        >
-          <X />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onToggleExpanded}
+            aria-label={
+              expanded ? "Riduci a pannello" : "Espandi a schermo intero"
+            }
+            className="hidden sm:inline-flex"
+          >
+            {expanded ? <Minimize2 /> : <Maximize2 />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onClose}
+            aria-label="Chiudi pannello"
+          >
+            <X />
+          </Button>
+        </div>
       </header>
 
       {!isNew && !task ? (
@@ -141,9 +173,14 @@ function PanelBody({
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto">
-          <TaskForm task={task ?? undefined} />
-          {task ? <LinksSection taskId={task.id} /> : null}
-          {task ? <CommentSection taskId={task.id} /> : null}
+          <TaskForm task={task ?? undefined} expanded={expanded}>
+            {task ? (
+              <>
+                <LinksSection taskId={task.id} />
+                <CommentSection taskId={task.id} />
+              </>
+            ) : null}
+          </TaskForm>
         </div>
       )}
     </>
@@ -154,7 +191,15 @@ function PanelBody({
 /* Form del task (creazione e modifica)                                */
 /* ------------------------------------------------------------------ */
 
-function TaskForm({ task }: { task?: Task }) {
+function TaskForm({
+  task,
+  expanded,
+  children,
+}: {
+  task?: Task;
+  expanded: boolean;
+  children?: React.ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -211,27 +256,71 @@ function TaskForm({ task }: { task?: Task }) {
     }
   };
 
-  return (
-    <form onSubmit={submit} noValidate className="space-y-4 p-5">
-      <div className="space-y-2">
-        <Label htmlFor="task-title">Titolo</Label>
-        <Input
-          id="task-title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Es. Shooting still life OKTA RIG"
-          autoFocus
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? "task-title-error" : undefined}
-        />
-        {error ? (
-          <p id="task-title-error" className="text-[13px] text-danger-text">
-            {error}
-          </p>
-        ) : null}
-      </div>
+  const titleField = (
+    <div className="space-y-2">
+      <Label htmlFor="task-title" className={cn(expanded && "sr-only")}>
+        Titolo
+      </Label>
+      <Input
+        id="task-title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Es. Shooting still life OKTA RIG"
+        autoFocus
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? "task-title-error" : undefined}
+        className={cn(
+          expanded &&
+            "h-12 border-transparent bg-transparent px-0 text-[22px] font-bold tracking-[-0.01em] shadow-none focus-visible:ring-0",
+        )}
+      />
+      {error ? (
+        <p id="task-title-error" className="text-[13px] text-danger-text">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
 
-      <div className="grid grid-cols-2 gap-3">
+  const descriptionField = (
+    <div className="space-y-2">
+      <Label htmlFor="task-description">Descrizione</Label>
+      <Textarea
+        id="task-description"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Cosa serve per considerarlo fatto?"
+        className={expanded ? "min-h-36" : "min-h-24"}
+      />
+    </div>
+  );
+
+  const saveRow = (
+    <div className="flex items-center gap-3">
+      <Button
+        type="submit"
+        form="task-form"
+        disabled={saving}
+        aria-busy={saving}
+        className={cn(expanded && "w-full")}
+      >
+        {saving ? <LoaderCircle className="animate-spin" /> : null}
+        {task ? "Salva modifiche" : "Crea task"}
+      </Button>
+      {saved ? (
+        <span
+          role="status"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-success-soft px-2.5 py-1 text-[13px] font-medium text-success-text"
+        >
+          <span className="size-1.5 rounded-full bg-success" />
+          Salvato
+        </span>
+      ) : null}
+    </div>
+  );
+
+  const fieldsGrid = (
+    <div className={cn("grid gap-3", expanded ? "grid-cols-1" : "grid-cols-2")}>
         <div className="space-y-2">
           <Label htmlFor="task-status">Stato</Label>
           <NativeSelect
@@ -315,43 +404,60 @@ function TaskForm({ task }: { task?: Task }) {
           </NativeSelect>
         </div>
         {repeat !== "none" ? (
-          <p className="col-span-2 -mt-1 text-[13px] text-ink-muted">
+          <p
+            className={cn(
+              "-mt-1 text-[13px] text-ink-muted",
+              !expanded && "col-span-2",
+            )}
+          >
             Al completamento si ricrea da solo con la scadenza spostata di{" "}
             {repeat === "weekly" ? "una settimana" : "un mese"} (serve una
             scadenza).
           </p>
         ) : null}
-      </div>
+    </div>
+  );
 
-      <div className="space-y-2">
-        <Label htmlFor="task-description">Descrizione</Label>
-        <Textarea
-          id="task-description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Cosa serve per considerarlo fatto?"
-          className="min-h-24"
-        />
-      </div>
-
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={saving} aria-busy={saving}>
-          {saving ? <LoaderCircle className="animate-spin" /> : null}
-          {task ? "Salva modifiche" : "Crea task"}
-        </Button>
-        {saved ? (
-          <span
-            role="status"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-success-soft px-2.5 py-1 text-[13px] font-medium text-success-text"
+  if (expanded) {
+    return (
+      <div className="grid min-h-full lg:grid-cols-[1fr_320px]">
+        <div className="space-y-5 p-6 lg:border-r lg:border-border-soft">
+          <form
+            id="task-form"
+            onSubmit={submit}
+            noValidate
+            className="space-y-4"
           >
-            <span className="size-1.5 rounded-full bg-success" />
-            Salvato
-          </span>
-        ) : null}
+            {titleField}
+            {descriptionField}
+          </form>
+          <div className="[&>section]:!px-0">{children}</div>
+        </div>
+        <aside className="order-first space-y-4 border-b border-border-soft p-5 lg:order-none lg:border-b-0">
+          {fieldsGrid}
+          {saveRow}
+          {task ? <TaskMeta task={task} /> : null}
+        </aside>
       </div>
+    );
+  }
 
-      {task ? <TaskMeta task={task} /> : null}
-    </form>
+  return (
+    <>
+      <form
+        id="task-form"
+        onSubmit={submit}
+        noValidate
+        className="space-y-4 p-5"
+      >
+        {titleField}
+        {fieldsGrid}
+        {descriptionField}
+        {saveRow}
+        {task ? <TaskMeta task={task} /> : null}
+      </form>
+      {children}
+    </>
   );
 }
 
@@ -597,7 +703,18 @@ function CommentSection({ taskId }: { taskId: string }) {
                     </span>
                   </p>
                   <p className="mt-0.5 text-[13px]/[19px] text-ink-secondary">
-                    {comment.body}
+                    {splitMentions(comment.body, profiles).map((part, i) =>
+                      part.mention ? (
+                        <span
+                          key={i}
+                          className="rounded-sm bg-brand-50 px-0.5 font-semibold text-brand-700"
+                        >
+                          {part.text}
+                        </span>
+                      ) : (
+                        <React.Fragment key={i}>{part.text}</React.Fragment>
+                      ),
+                    )}
                   </p>
                 </div>
               </div>
@@ -610,11 +727,11 @@ function CommentSection({ taskId }: { taskId: string }) {
         <Label htmlFor="comment-body" className="sr-only">
           Nuovo commento
         </Label>
-        <Textarea
+        <MentionTextarea
           id="comment-body"
           value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Scrivi un commento…"
+          onChange={setBody}
+          placeholder="Scrivi un commento… «@» per menzionare un collega o @Admin"
           className="min-h-16"
         />
         <Button

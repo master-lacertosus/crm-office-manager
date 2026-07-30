@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { shiftIsoDays, shiftIsoMonths } from "@/lib/format";
+import { extractMentionIds } from "@/lib/mentions";
 import {
   CURRENT_USER_ID,
   MOCK_COMMENTS,
@@ -227,16 +228,36 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     async addComment(taskId, body) {
       await wait();
+      const trimmed = body.trim();
       setComments((prev) => [
         ...prev,
         {
           id: crypto.randomUUID(),
           task_id: taskId,
           author_id: currentUser.id,
-          body: body.trim(),
+          body: trimmed,
           created_at: new Date().toISOString(),
         },
       ]);
+      // Le menzioni (@Nome, @Admin) diventano avvisi reali al destinatario
+      const mentioned = extractMentionIds(trimmed, profiles, currentUser.id);
+      if (mentioned.length > 0) {
+        const task = tasks.find((t) => t.id === taskId);
+        const excerpt =
+          trimmed.length > 70 ? `${trimmed.slice(0, 70)}…` : trimmed;
+        setNotifications((prev) => [
+          ...prev,
+          ...mentioned.map((toId) => ({
+            id: crypto.randomUUID(),
+            to_user_id: toId,
+            from_user_id: currentUser.id,
+            message: `Ti ha menzionato su «${task?.title ?? "un task"}»: “${excerpt}”`,
+            task_id: taskId,
+            created_at: new Date().toISOString(),
+            read_at: null,
+          })),
+        ]);
+      }
     },
 
     async updateProfileName(id, fullName) {
