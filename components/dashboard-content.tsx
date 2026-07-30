@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import {
   AlarmClockMinus,
@@ -164,7 +165,10 @@ function Section({
 export function DashboardContent() {
   const { tasks, profiles, projects, currentUser, notifications, focusIds } =
     useAppStore();
-  const [standup, setStandup] = React.useState(false);
+  const searchParams = useSearchParams();
+  const [standup, setStandup] = React.useState(
+    searchParams.get("standup") === "1",
+  );
   const today = todayIso();
   const weekEnd = addDaysIso(7);
   const analytics = buildAnalytics(tasks, profiles, projects);

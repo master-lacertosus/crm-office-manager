@@ -1,13 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { CheckCheck, X } from "lucide-react";
 
-import { dueTone, formatDue, todayIso } from "@/lib/format";
+import { buildAnalytics } from "@/lib/analytics";
+import { addDaysIso, dueUrgency } from "@/lib/format";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
+import { DueChip } from "@/components/due-chip";
 import { StatusPip } from "@/components/status-pip";
 import { Button } from "@/components/ui/button";
 
@@ -17,9 +19,32 @@ const DATE_FMT = new Intl.DateTimeFormat("it-IT", {
   month: "long",
 });
 
+function SummaryChip({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: number;
+  className: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold",
+        className,
+      )}
+    >
+      <span className="font-mono text-[13px]">{value}</span>
+      {label}
+    </span>
+  );
+}
+
 /**
- * Modalità standup: vista a schermo intero per il daily del team —
- * una colonna per persona, tipografia grande, ritardi evidenziati.
+ * Modalità standup — vista pulita da proiettare nel daily: riepilogo di
+ * squadra in alto, una card per persona (ordinata per urgenza) con task
+ * aperti, etichette di scadenza sistematiche e chiusure della settimana.
  */
 export function StandupMode({
   open,
@@ -28,8 +53,9 @@ export function StandupMode({
   open: boolean;
   onClose: () => void;
 }) {
-  const { profiles, tasks } = useAppStore();
-  const today = todayIso();
+  const { profiles, tasks, projects } = useAppStore();
+  const reduced = useReducedMotion();
+  const weekAgo = addDaysIso(-6);
 
   React.useEffect(() => {
     if (!open) return;
@@ -44,25 +70,39 @@ export function StandupMode({
     };
   }, [open, onClose]);
 
+  const team = buildAnalytics(tasks, profiles, projects);
+
   const people = profiles
     .filter((p) => p.is_active)
     .map((profile) => {
-      const open = tasks
-        .filter((t) => t.owner_id === profile.id && t.status !== "done")
+      const mine = tasks.filter((t) => t.owner_id === profile.id);
+      const openTasks = mine
+        .filter((t) => t.status !== "done")
         .sort((a, b) => {
-          if (!a.due_date && !b.due_date) return 0;
+          if (!a.due_date && !b.due_date) return a.position - b.position;
           if (!a.due_date) return 1;
           if (!b.due_date) return -1;
           return a.due_date.localeCompare(b.due_date);
         });
       return {
         profile,
-        open,
-        overdue: open.filter((t) => t.due_date && t.due_date < today).length,
-        review: open.filter((t) => t.status === "in_review").length,
+        openTasks,
+        overdue: openTasks.filter(
+          (t) => t.due_date && dueUrgency(t.due_date).level === "overdue",
+        ).length,
+        review: openTasks.filter((t) => t.status === "in_review").length,
+        done7: mine.filter(
+          (t) =>
+            t.status === "done" &&
+            t.completed_at &&
+            t.completed_at.slice(0, 10) >= weekAgo,
+        ).length,
       };
     })
-    .sort((a, b) => b.open.length - a.open.length);
+    .sort(
+      (a, b) =>
+        b.overdue - a.overdue || b.openTasks.length - a.openTasks.length,
+    );
 
   return (
     <AnimatePresence>
@@ -71,117 +111,143 @@ export function StandupMode({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.18 }}
           role="dialog"
           aria-modal="true"
           aria-label="Modalità standup"
-          className="glass-strong fixed inset-0 z-[80] overflow-y-auto"
+          className="fixed inset-0 z-[80] overflow-y-auto bg-canvas"
         >
-          <div className="mx-auto max-w-6xl px-6 py-8">
-            <header className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-mono text-[13px] text-ink-muted first-letter:uppercase">
-                  {DATE_FMT.format(new Date())}
-                </p>
-                <h2 className="mt-1 text-[34px]/10 font-semibold tracking-[-0.016em] text-ink">
-                  Standup <span className="gradient-text">del team</span>
-                </h2>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={onClose}
-                aria-label="Chiudi standup"
-                autoFocus
-              >
-                <X />
-              </Button>
-            </header>
+          <div aria-hidden className="aura-layer" />
 
-            <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {people.map(({ profile, open, overdue, review }) => (
-                <section
+          {/* Barra superiore */}
+          <header className="sticky top-0 z-10 border-b border-border-soft bg-canvas/90 backdrop-blur-md">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-4">
+              <div className="min-w-0">
+                <h2 className="text-[26px]/8 font-bold tracking-[-0.015em] text-ink">
+                  Standup del team
+                </h2>
+                <p className="text-[13px] text-ink-muted first-letter:uppercase">
+                  {DATE_FMT.format(new Date())} · dati live
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+                <SummaryChip
+                  label="aperti"
+                  value={team.open}
+                  className="bg-status-todo-soft text-status-todo-text"
+                />
+                <SummaryChip
+                  label="in ritardo"
+                  value={team.overdue}
+                  className="bg-danger-soft text-danger-text"
+                />
+                <SummaryChip
+                  label="in revisione"
+                  value={team.inReview}
+                  className="bg-status-review-soft text-status-review-text"
+                />
+                <SummaryChip
+                  label="chiusi · 7g"
+                  value={team.done7}
+                  className="bg-status-done-soft text-status-done-text"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={onClose}
+                  aria-label="Chiudi standup (Esc)"
+                  autoFocus
+                  className="ml-1"
+                >
+                  <X />
+                </Button>
+              </div>
+            </div>
+          </header>
+
+          {/* Card persona */}
+          <div className="mx-auto max-w-6xl px-6 py-6">
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {people.map(({ profile, openTasks, overdue, review, done7 }, i) => (
+                <motion.section
                   key={profile.id}
+                  initial={reduced ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.22,
+                    delay: i * 0.05,
+                    ease: [0.2, 0, 0, 1],
+                  }}
                   aria-label={profile.full_name}
-                  className="card-soft rounded-3xl p-5"
+                  className="card-soft flex flex-col p-5"
                 >
                   <header className="flex items-center gap-3">
-                    <AvatarInitials name={profile.full_name} size="lg" />
-                    <div>
-                      <h3 className="text-[17px]/6 font-semibold text-ink">
-                        {profile.full_name.split(" ")[0]}
+                    <AvatarInitials
+                      name={profile.full_name}
+                      size="lg"
+                      className="bg-brand-100 text-brand-700"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-[16px]/6 font-bold text-ink">
+                        {profile.full_name}
                       </h3>
-                      <p className="font-mono text-xs text-ink-muted">
-                        {open.length} aperti
-                        {overdue > 0 ? (
-                          <span className="text-danger-text">
-                            {" "}
-                            · {overdue} in ritardo
-                          </span>
-                        ) : null}
-                        {review > 0 ? (
-                          <span className="text-status-review-text">
-                            {" "}
-                            · {review} in revisione
-                          </span>
-                        ) : null}
+                      <p className="text-[12px] text-ink-muted">
+                        {openTasks.length === 0
+                          ? "In pari"
+                          : `${openTasks.length} task apert${openTasks.length === 1 ? "o" : "i"}`}
                       </p>
                     </div>
+                    {overdue > 0 ? (
+                      <span className="rounded-full bg-danger-soft px-2 py-1 text-[11px] font-bold text-danger-text">
+                        {overdue} in ritardo
+                      </span>
+                    ) : review > 0 ? (
+                      <span className="rounded-full bg-status-review-soft px-2 py-1 text-[11px] font-bold text-status-review-text">
+                        {review} in revisione
+                      </span>
+                    ) : null}
                   </header>
 
-                  <ul className="mt-4 space-y-2.5">
-                    {open.length === 0 ? (
-                      <li className="text-sm text-ink-muted">
+                  <div className="my-4 h-px bg-border-soft" />
+
+                  <ul className="flex-1 space-y-2.5">
+                    {openTasks.length === 0 ? (
+                      <li className="flex items-center gap-2 text-[13px] text-ink-muted">
+                        <CheckCheck className="size-4 text-success" />
                         Nessun task aperto.
                       </li>
                     ) : (
-                      open.slice(0, 5).map((task) => {
-                        const late =
-                          task.due_date && dueTone(task.due_date) === "overdue";
-                        return (
-                          <li
-                            key={task.id}
-                            className="flex items-center gap-2.5"
-                          >
-                            <StatusPip status={task.status} />
-                            <span
-                              className={cn(
-                                "min-w-0 flex-1 truncate text-[15px]/5",
-                                late
-                                  ? "font-medium text-danger-text"
-                                  : "text-ink",
-                              )}
-                            >
-                              {task.title}
-                            </span>
-                            {task.due_date ? (
-                              <span
-                                className={cn(
-                                  "font-mono text-xs",
-                                  late
-                                    ? "font-medium text-danger-text"
-                                    : "text-ink-muted",
-                                )}
-                              >
-                                {formatDue(task.due_date)}
-                              </span>
-                            ) : null}
-                          </li>
-                        );
-                      })
+                      openTasks.slice(0, 5).map((task) => (
+                        <li key={task.id} className="flex items-center gap-2.5">
+                          <StatusPip status={task.status} className="size-3.5" />
+                          <span className="min-w-0 flex-1 truncate text-[14px]/5 font-medium text-ink">
+                            {task.title}
+                          </span>
+                          <DueChip iso={task.due_date} status={task.status} />
+                        </li>
+                      ))
                     )}
-                    {open.length > 5 ? (
-                      <li className="font-mono text-xs text-ink-muted">
-                        +{open.length - 5} altri
+                    {openTasks.length > 5 ? (
+                      <li className="pl-6 text-[12px] font-semibold text-ink-muted">
+                        +{openTasks.length - 5} altri
                       </li>
                     ) : null}
                   </ul>
-                </section>
+
+                  <footer className="mt-4 border-t border-border-soft pt-3">
+                    <p className="text-[12px] text-ink-muted">
+                      <span className="font-mono font-semibold text-status-done-text">
+                        {done7}
+                      </span>{" "}
+                      chius{done7 === 1 ? "o" : "i"} negli ultimi 7 giorni
+                    </p>
+                  </footer>
+                </motion.section>
               ))}
             </div>
 
-            <p className="mt-8 font-mono text-xs text-ink-muted">
-              Esc per uscire · i dati sono live
+            <p className="mt-8 text-center text-[12px] text-ink-muted">
+              Esc per uscire · persone ordinate per urgenza · dati live
             </p>
           </div>
         </motion.div>
