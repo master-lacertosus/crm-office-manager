@@ -6,7 +6,7 @@ import { formatDue } from "@/lib/format";
 import type { TrendPoint } from "@/lib/analytics";
 import { ChartTip, type TipState } from "@/components/charts/chart-tip";
 
-const COLOR = "#166534";
+const COLOR = "#047857";
 const HEIGHT = 150;
 const PAD = { top: 12, right: 10, bottom: 22, left: 10 };
 

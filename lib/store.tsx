@@ -5,11 +5,18 @@ import * as React from "react";
 import {
   CURRENT_USER_ID,
   MOCK_COMMENTS,
+  MOCK_NOTIFICATIONS,
   MOCK_PROFILES,
   MOCK_PROJECTS,
   MOCK_TASKS,
 } from "@/lib/mock-data";
-import type { Profile, Project, Task, TaskComment } from "@/lib/types";
+import type {
+  AppNotification,
+  Profile,
+  Project,
+  Task,
+  TaskComment,
+} from "@/lib/types";
 
 /**
  * Store placeholder in memoria: fa da contratto per lo strato dati vero.
@@ -39,6 +46,15 @@ interface AppStore {
   moveTask: (id: string, status: Task["status"], position: number) => void;
   addComment: (taskId: string, body: string) => Promise<void>;
   updateProfileName: (id: string, fullName: string) => Promise<void>;
+  notifications: AppNotification[];
+  unreadCount: number;
+  sendNotification: (
+    toUserId: string,
+    message: string,
+    taskId?: string | null,
+  ) => Promise<void>;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
 }
 
 const StoreContext = React.createContext<AppStore | null>(null);
@@ -48,9 +64,15 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [projects] = React.useState<Project[]>(MOCK_PROJECTS);
   const [tasks, setTasks] = React.useState<Task[]>(MOCK_TASKS);
   const [comments, setComments] = React.useState<TaskComment[]>(MOCK_COMMENTS);
+  const [notifications, setNotifications] =
+    React.useState<AppNotification[]>(MOCK_NOTIFICATIONS);
 
   const currentUser =
     profiles.find((p) => p.id === CURRENT_USER_ID) ?? profiles[0];
+
+  const myNotifications = notifications
+    .filter((n) => n.to_user_id === currentUser.id)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   const store: AppStore = {
     currentUser,
@@ -136,6 +158,45 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       await wait();
       setProfiles((prev) =>
         prev.map((p) => (p.id === id ? { ...p, full_name: fullName.trim() } : p)),
+      );
+    },
+
+    notifications: myNotifications,
+    unreadCount: myNotifications.filter((n) => !n.read_at).length,
+
+    async sendNotification(toUserId, message, taskId = null) {
+      await wait();
+      setNotifications((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          to_user_id: toUserId,
+          from_user_id: currentUser.id,
+          message: message.trim(),
+          task_id: taskId,
+          created_at: new Date().toISOString(),
+          read_at: null,
+        },
+      ]);
+    },
+
+    markNotificationRead(id) {
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === id && !n.read_at
+            ? { ...n, read_at: new Date().toISOString() }
+            : n,
+        ),
+      );
+    },
+
+    markAllNotificationsRead() {
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.to_user_id === currentUser.id && !n.read_at
+            ? { ...n, read_at: new Date().toISOString() }
+            : n,
+        ),
       );
     },
   };

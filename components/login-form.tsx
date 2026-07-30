@@ -25,7 +25,7 @@ export function LoginForm() {
     <TiltCard>
     <form
       onSubmit={submit}
-      className="space-y-4 rounded-xl border border-border bg-card p-5 shadow-xs"
+      className="glass-strong space-y-4 rounded-2xl p-5"
     >
       <div>
         <h1 className="text-[17px]/6 font-semibold tracking-[-0.008em] text-ink">

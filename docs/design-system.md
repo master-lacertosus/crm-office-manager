@@ -1,5 +1,17 @@
 # Lacertosus Office OS — Design System (Fondamenta)
 
+> **Revisione «Vetro» (30/07/2026, richiesta del committente).** Direzione
+> aggiornata: glass premium stile Apple. Aure colorate fisse sotto
+> (`.aura-layer`), superfici traslucide con blur (`.glass`, `.glass-strong`),
+> bottone primario a gradiente con glow (`.btn-glow`), **stati color-coded**
+> (backlog grigio, da fare azzurro `#0284C7`, in corso violetto `#6D28D9`,
+> in revisione arancio brand, fatto verde `#059669`; token `--status-*` con
+> varianti `-soft` e `-text`, palette grafici validata CVD — §8b), hero
+> personale in dashboard con anello di avanzamento, campanella avvisi nella
+> topbar. Le sezioni seguenti restano valide dove non contraddette da
+> questa nota; i contrasti AA e le regole di accessibilità restano
+> non negoziabili.
+
 > Sistema di riferimento per tutta la UI. Solo light mode nell'MVP.
 > Implementazione: token in `app/globals.css` (Tailwind v4 `@theme`),
 > preset motion in `lib/motion.ts`, componenti base in `components/ui/`.

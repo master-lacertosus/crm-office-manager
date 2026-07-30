@@ -28,6 +28,14 @@ function DueDate({ task }: { task: Task }) {
   );
 }
 
+const ACCENT_VAR: Record<Task["status"], string> = {
+  backlog: "var(--status-backlog)",
+  todo: "var(--status-todo)",
+  in_progress: "var(--status-progress)",
+  in_review: "var(--status-review)",
+  done: "var(--status-done)",
+};
+
 /** Contenuto visuale puro della card: usato dalla card reale e dal ghost del drag. */
 export function CardVisual({
   task,
@@ -41,12 +49,12 @@ export function CardVisual({
   const project = projects.find((p) => p.id === task.project_id);
 
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-border bg-card p-3 shadow-xs",
-        className,
-      )}
-    >
+    <div className={cn("glass relative rounded-xl p-3 pl-4", className)}>
+      <span
+        aria-hidden
+        className="absolute inset-y-2.5 left-1.5 w-[3px] rounded-full"
+        style={{ background: ACCENT_VAR[task.status] }}
+      />
       <p className="text-sm/5 font-medium text-ink">{task.title}</p>
       {(project || task.priority === "high") && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -89,7 +97,7 @@ export function TaskCard({
           e.stopPropagation();
         }
       }}
-      className="block rounded-xl outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas [&>div]:transition-colors [&>div]:hover:border-input"
+      className="block rounded-xl outline-none transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
     >
       <CardVisual task={task} />
     </Link>

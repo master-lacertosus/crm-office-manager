@@ -129,7 +129,7 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
 /** Sidebar fissa: 240px da lg, rail icone 64px su md, assente sotto md. */
 export function Sidebar() {
   return (
-    <aside className="sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-border-soft bg-sidebar md:flex md:w-16 lg:w-60">
+    <aside className="glass sticky top-0 hidden h-dvh shrink-0 flex-col !border-t-0 !border-r-white/60 !border-b-0 !border-l-0 md:flex md:w-16 lg:w-60">
       <Wordmark compact />
       <nav
         aria-label="Navigazione principale"
@@ -182,7 +182,7 @@ export function MobileDrawer({
             role="dialog"
             aria-modal="true"
             aria-label="Navigazione"
-            className="absolute inset-y-0 left-0 flex w-64 flex-col bg-sidebar shadow-md"
+            className="glass-strong absolute inset-y-0 left-0 flex w-64 flex-col"
           >
             <div className="flex items-center justify-between pr-2">
               <Wordmark />

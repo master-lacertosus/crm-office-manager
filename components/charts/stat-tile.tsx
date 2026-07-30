@@ -39,6 +39,7 @@ export function StatTile({
   delta,
   deltaPositiveIsGood = true,
   tone = "default",
+  icon,
   children,
   className,
 }: {
@@ -47,6 +48,7 @@ export function StatTile({
   delta?: number;
   deltaPositiveIsGood?: boolean;
   tone?: "default" | "danger" | "brand";
+  icon?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
 }) {
@@ -58,20 +60,20 @@ export function StatTile({
       whileHover={{ y: -2, rotateX: 3 }}
       transition={{ type: "spring", stiffness: 320, damping: 26 }}
       style={{ transformPerspective: 700 }}
-      className={cn(
-        "rounded-xl border border-border bg-card p-4 shadow-xs transition-shadow hover:shadow-sm",
-        className,
-      )}
+      className={cn("glass rounded-xl p-4 transition-shadow", className)}
     >
-      <p className="text-[11px] font-semibold tracking-[0.06em] text-ink-muted uppercase">
-        {label}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-semibold tracking-[0.06em] text-ink-muted uppercase">
+          {label}
+        </p>
+        {icon}
+      </div>
       <div className="mt-1.5 flex items-end justify-between gap-2">
         <p
           className={cn(
             "font-mono text-[28px]/8 font-medium tabular-nums",
             tone === "danger" && value > 0 ? "text-danger-text" : "text-ink",
-            tone === "brand" && value > 0 && "text-brand-700",
+            tone === "brand" && value > 0 && "text-status-review-text",
           )}
         >
           {display}

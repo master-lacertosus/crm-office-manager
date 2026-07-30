@@ -1,5 +1,11 @@
 import { addDaysIso } from "@/lib/format";
-import type { Profile, Project, Task, TaskComment } from "@/lib/types";
+import type {
+  AppNotification,
+  Profile,
+  Project,
+  Task,
+  TaskComment,
+} from "@/lib/types";
 
 /**
  * Dati placeholder — stessi UUID e contenuti di supabase/seed.sql, così il
@@ -216,6 +222,37 @@ export const MOCK_TASKS: Task[] = [
     position: 10,
     completed_at: t(60 * 24 * 2),
     created_at: t(60 * 24 * 10),
+  },
+];
+
+export const MOCK_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: "00000000-0000-4000-8000-000000000401",
+    to_user_id: U.alessia,
+    from_user_id: U.marco,
+    message:
+      "La newsletter è quasi pronta: mi serve il tuo ok sul soggetto entro stasera.",
+    task_id: "00000000-0000-4000-8000-000000000205",
+    created_at: t(45),
+    read_at: null,
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000402",
+    to_user_id: U.alessia,
+    from_user_id: U.giulia,
+    message: "Caricate le foto del rack PRO: puoi verificare le didascalie?",
+    task_id: "00000000-0000-4000-8000-000000000206",
+    created_at: t(60 * 4),
+    read_at: null,
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000403",
+    to_user_id: U.alessia,
+    from_user_id: U.marco,
+    message: "Il fornitore dei banner ha confermato la consegna per venerdì.",
+    task_id: null,
+    created_at: t(60 * 26),
+    read_at: t(60 * 20),
   },
 ];
 

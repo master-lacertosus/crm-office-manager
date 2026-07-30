@@ -12,13 +12,33 @@ export type { TaskStatus };
 
 export const TASK_STATUSES: Record<
   TaskStatus,
-  { label: string; textClass: string }
+  { label: string; textClass: string; softClass: string }
 > = {
-  backlog: { label: "Backlog", textClass: "text-ink-muted" },
-  todo: { label: "Da fare", textClass: "text-ink" },
-  in_progress: { label: "In corso", textClass: "text-ink" },
-  in_review: { label: "In revisione", textClass: "text-brand-700" },
-  done: { label: "Fatto", textClass: "text-success-text" },
+  backlog: {
+    label: "Backlog",
+    textClass: "text-status-backlog-text",
+    softClass: "bg-status-backlog-soft",
+  },
+  todo: {
+    label: "Da fare",
+    textClass: "text-status-todo-text",
+    softClass: "bg-status-todo-soft",
+  },
+  in_progress: {
+    label: "In corso",
+    textClass: "text-status-progress-text",
+    softClass: "bg-status-progress-soft",
+  },
+  in_review: {
+    label: "In revisione",
+    textClass: "text-status-review-text",
+    softClass: "bg-status-review-soft",
+  },
+  done: {
+    label: "Fatto",
+    textClass: "text-status-done-text",
+    softClass: "bg-status-done-soft",
+  },
 };
 
 export function StatusPip({
@@ -65,8 +85,8 @@ export function StatusPip({
       )}
       {status === "in_review" && (
         <>
-          <circle {...common} stroke="var(--status-review)" />
-          <circle cx={8} cy={8} r={2.75} fill="var(--status-review)" />
+          <circle {...common} stroke="#D97706" />
+          <circle cx={8} cy={8} r={2.75} fill="#D97706" />
         </>
       )}
       {status === "done" && (

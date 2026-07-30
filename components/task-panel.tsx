@@ -3,7 +3,7 @@
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { LoaderCircle, X } from "lucide-react";
+import { BellRing, LoaderCircle, X } from "lucide-react";
 
 import { formatDue, timeAgo } from "@/lib/format";
 import { panel, scrim } from "@/lib/motion";
@@ -11,6 +11,7 @@ import { useAppStore } from "@/lib/store";
 import { STATUS_ORDER, type Task, type TaskStatus } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { TASK_STATUSES } from "@/components/status-pip";
+import { useToast } from "@/components/toaster";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,7 +70,7 @@ export function TaskPanelHost() {
             role="dialog"
             aria-modal="true"
             aria-label={taskParam === "new" ? "Nuovo task" : "Dettaglio task"}
-            className="absolute inset-y-0 right-0 flex w-full flex-col bg-card shadow-md sm:w-[440px] sm:rounded-l-xl"
+            className="glass-strong absolute inset-y-0 right-0 flex w-full flex-col sm:w-[440px] sm:rounded-l-2xl"
           >
             <PanelBody
               key={taskParam}
@@ -321,10 +322,28 @@ function TaskForm({ task }: { task?: Task }) {
 }
 
 function TaskMeta({ task }: { task: Task }) {
-  const { profiles } = useAppStore();
+  const { profiles, currentUser, sendNotification } = useAppStore();
+  const toast = useToast();
+  const [sending, setSending] = React.useState(false);
   const creator = profiles.find((p) => p.id === task.created_by);
+  const owner = profiles.find((p) => p.id === task.owner_id);
+  const canRemind =
+    owner && owner.id !== currentUser.id && task.status !== "done";
+
+  const remind = async () => {
+    if (!owner) return;
+    setSending(true);
+    await sendNotification(
+      owner.id,
+      `Promemoria: il task «${task.title}» aspetta un tuo aggiornamento.`,
+      task.id,
+    );
+    setSending(false);
+    toast(`Promemoria inviato a ${owner.full_name.split(" ")[0]}`);
+  };
+
   return (
-    <div className="space-y-1 pt-1">
+    <div className="space-y-2 pt-1">
       <p className="font-mono text-xs text-ink-muted">
         Creato da {creator?.full_name ?? "—"}
       </p>
@@ -332,6 +351,23 @@ function TaskMeta({ task }: { task: Task }) {
         <p className="font-mono text-xs text-success-text">
           Completato il {formatDue(task.completed_at.slice(0, 10))}
         </p>
+      ) : null}
+      {canRemind ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={remind}
+          disabled={sending}
+          aria-busy={sending}
+        >
+          {sending ? (
+            <LoaderCircle className="animate-spin" />
+          ) : (
+            <BellRing data-icon="inline-start" />
+          )}
+          Sollecita {owner.full_name.split(" ")[0]}
+        </Button>
       ) : null}
     </div>
   );

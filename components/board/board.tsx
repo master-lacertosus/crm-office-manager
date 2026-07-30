@@ -281,10 +281,22 @@ function Column({
       className="flex w-[280px] shrink-0 snap-start flex-col lg:w-auto lg:flex-1 lg:basis-0"
     >
       <header className="flex items-center gap-2 px-1 pb-2.5">
-        <StatusPip status={status} />
-        <h2 className="text-[11px] font-semibold tracking-[0.06em] text-ink-secondary uppercase">
-          {meta.label}
-        </h2>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-lg py-1 pr-2.5 pl-2",
+            meta.softClass,
+          )}
+        >
+          <StatusPip status={status} className="size-3.5" />
+          <h2
+            className={cn(
+              "text-[11px] font-semibold tracking-[0.06em] uppercase",
+              meta.textClass,
+            )}
+          >
+            {meta.label}
+          </h2>
+        </span>
         <span className="font-mono text-xs text-ink-muted">{tasks.length}</span>
       </header>
       <div

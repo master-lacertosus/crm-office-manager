@@ -24,7 +24,7 @@ const UPCOMING = [
 export default function WorkspaceSettingsPage() {
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-card p-4 shadow-xs">
+      <div className="glass rounded-xl p-4">
         <p className="text-[13px] font-medium text-ink-secondary">Workspace</p>
         <p className="mt-1 text-sm font-medium text-ink">
           Lacertosus — Marketing &amp; E-commerce

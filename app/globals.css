@@ -66,10 +66,20 @@
   --color-info-text: var(--info-text);
 
   --color-status-backlog: var(--status-backlog);
+  --color-status-backlog-soft: var(--status-backlog-soft);
+  --color-status-backlog-text: var(--status-backlog-text);
   --color-status-todo: var(--status-todo);
+  --color-status-todo-soft: var(--status-todo-soft);
+  --color-status-todo-text: var(--status-todo-text);
   --color-status-progress: var(--status-progress);
+  --color-status-progress-soft: var(--status-progress-soft);
+  --color-status-progress-text: var(--status-progress-text);
   --color-status-review: var(--status-review);
+  --color-status-review-soft: var(--status-review-soft);
+  --color-status-review-text: var(--status-review-text);
   --color-status-done: var(--status-done);
+  --color-status-done-soft: var(--status-done-soft);
+  --color-status-done-text: var(--status-done-text);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -172,12 +182,22 @@
   --info-soft: #eff4ff;
   --info-text: #2563eb;
 
-  /* Stati del task (tacca) */
-  --status-backlog: #9ca1a9;
-  --status-todo: #878d96;
-  --status-progress: #212327;
-  --status-review: var(--brand-600);
-  --status-done: #16a34a;
+  /* Stati del task — color-coded (revisione "Vetro", palette validata CVD) */
+  --status-backlog: #8a9098;
+  --status-backlog-soft: #f1f2f4;
+  --status-backlog-text: #5a5e66;
+  --status-todo: #0284c7;
+  --status-todo-soft: #e0f2fe;
+  --status-todo-text: #0369a1;
+  --status-progress: #6d28d9;
+  --status-progress-soft: #ede9fe;
+  --status-progress-text: #6d28d9;
+  --status-review: #f09226;
+  --status-review-soft: #fdf6ec;
+  --status-review-text: #b45309;
+  --status-done: #059669;
+  --status-done-soft: #ecfdf5;
+  --status-done-text: #047857;
 
   /* Sidebar */
   --sidebar: #ffffff;
@@ -202,6 +222,60 @@
   body {
     @apply bg-canvas text-foreground antialiased;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Revisione "Vetro" — linguaggio glass premium (richiesta cliente 30/07/2026)
+ * Aure colorate fisse sotto, superfici traslucide con blur sopra.
+ * ------------------------------------------------------------------------- */
+
+@layer components {
+  /* Sfondo ambientale: tre aure morbide, mai sature al punto da ridurre
+     il contrasto del testo sulle superfici glass. */
+  .aura-layer {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(560px 420px at 12% -6%, rgb(240 146 38 / 0.16), transparent 62%),
+      radial-gradient(640px 480px at 96% 12%, rgb(2 132 199 / 0.13), transparent 64%),
+      radial-gradient(720px 560px at 55% 108%, rgb(109 40 217 / 0.1), transparent 66%),
+      linear-gradient(180deg, #f8f8fa 0%, #f4f4f7 100%);
+  }
+
+  .glass {
+    background: rgb(255 255 255 / 0.6);
+    backdrop-filter: blur(22px) saturate(1.5);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    border: 1px solid rgb(255 255 255 / 0.72);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.85),
+      0 1px 2px rgb(23 24 28 / 0.05),
+      0 8px 28px rgb(23 24 28 / 0.06);
+  }
+
+  .glass-strong {
+    background: rgb(255 255 255 / 0.78);
+    backdrop-filter: blur(30px) saturate(1.6);
+    -webkit-backdrop-filter: blur(30px) saturate(1.6);
+    border: 1px solid rgb(255 255 255 / 0.8);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.9),
+      0 2px 6px rgb(23 24 28 / 0.06),
+      0 16px 48px rgb(23 24 28 / 0.12);
+  }
+
+  /* Bottone primario "Vetro": gradiente arancio + glow morbido */
+  .btn-glow {
+    background-image: linear-gradient(180deg, #f4a851 0%, var(--brand-500) 55%, #e28110 100%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.45),
+      0 8px 20px -6px rgb(240 146 38 / 0.55);
+  }
+  .btn-glow:hover {
+    background-image: linear-gradient(180deg, #f29d3d 0%, var(--brand-550) 55%, #d67909 100%);
+  }
+
 
   ::selection {
     background: var(--brand-100);

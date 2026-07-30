@@ -39,7 +39,7 @@ export function ProfileForm() {
     <form
       onSubmit={submit}
       noValidate
-      className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-xs"
+      className="glass space-y-4 rounded-xl p-4"
     >
       <div className="flex items-center gap-3">
         <AvatarInitials name={name.trim() || currentUser.full_name} size="lg" />

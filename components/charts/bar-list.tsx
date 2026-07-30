@@ -3,10 +3,17 @@
 import type { ProjectLoad } from "@/lib/analytics";
 
 /**
- * Elenco a barre (serie singola, grafite): l'identità la danno le etichette
- * di riga, i valori sono etichettati direttamente — niente legenda.
+ * Elenco a barre: identità nelle etichette di riga, valori etichettati
+ * direttamente — niente legenda. Il colore segue l'entità (mai il rango):
+ * lo assegna il chiamante in modo stabile.
  */
-export function BarList({ rows }: { rows: ProjectLoad[] }) {
+export function BarList({
+  rows,
+  colors,
+}: {
+  rows: ProjectLoad[];
+  colors: Map<string, string>;
+}) {
   const max = Math.max(1, ...rows.map((r) => r.total));
   return (
     <div className="space-y-2.5">
@@ -18,8 +25,11 @@ export function BarList({ rows }: { rows: ProjectLoad[] }) {
           <p className="truncate text-[13px] text-ink-secondary">{row.label}</p>
           <div className="h-[18px]">
             <div
-              className="h-full rounded-r-[4px] bg-ink-secondary transition-[width] duration-300"
-              style={{ width: `${(row.total / max) * 100}%` }}
+              className="h-full rounded-r-[4px] transition-[width] duration-300"
+              style={{
+                width: `${(row.total / max) * 100}%`,
+                background: colors.get(row.key) ?? "#94A3B8",
+              }}
               aria-hidden
             />
           </div>

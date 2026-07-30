@@ -22,9 +22,7 @@ function Card({
   className?: string;
 }) {
   return (
-    <section
-      className={`rounded-xl border border-border bg-card p-4 shadow-xs ${className}`}
-    >
+    <section className={`glass rounded-xl p-4 ${className}`}>
       <header className="mb-3">
         <h2 className="text-[11px] font-semibold tracking-[0.06em] text-ink-secondary uppercase">
           {title}
@@ -36,10 +34,17 @@ function Card({
   );
 }
 
+/** Colori per progetto: ordine fisso per entità, mai riassegnati al riordino. */
+const PROJECT_HUES = ["#F09226", "#0284C7", "#6D28D9"];
+
 export function ReportsContent() {
   const { tasks, profiles, projects } = useAppStore();
   const reduced = useReducedMotion();
   const a = buildAnalytics(tasks, profiles, projects);
+  const projectColors = new Map<string, string>(
+    projects.map((p, i) => [p.id, PROJECT_HUES[i % PROJECT_HUES.length]]),
+  );
+  projectColors.set("none", "#94A3B8");
 
   const rise = (order: number) => ({
     initial: reduced ? false : { opacity: 0, y: 6 },
@@ -147,7 +152,7 @@ export function ReportsContent() {
 
         <motion.div {...rise(4)}>
           <Card title="Per progetto" className="h-full">
-            <BarList rows={a.projects} />
+            <BarList rows={a.projects} colors={projectColors} />
           </Card>
         </motion.div>
       </div>

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { TaskPanelHost } from "@/components/task-panel";
+import { ToastProvider } from "@/components/toaster";
 import { AppStoreProvider } from "@/lib/store";
 
 /**
@@ -16,12 +17,14 @@ export default function AppLayout({
 }) {
   return (
     <AppStoreProvider>
-      <AppShell>
-        {children}
-        <Suspense>
-          <TaskPanelHost />
-        </Suspense>
-      </AppShell>
+      <ToastProvider>
+        <AppShell>
+          {children}
+          <Suspense>
+            <TaskPanelHost />
+          </Suspense>
+        </AppShell>
+      </ToastProvider>
     </AppStoreProvider>
   );
 }

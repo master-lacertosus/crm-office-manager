@@ -55,6 +55,17 @@ export interface TaskComment {
   created_at: string;
 }
 
+/** Avviso interno: un responsabile lo invia a un singolo membro. */
+export interface AppNotification {
+  id: string;
+  to_user_id: string;
+  from_user_id: string;
+  message: string;
+  task_id: string | null;
+  created_at: string;
+  read_at: string | null;
+}
+
 export const STATUS_ORDER: TaskStatus[] = [
   "backlog",
   "todo",

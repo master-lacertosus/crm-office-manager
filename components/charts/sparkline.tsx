@@ -3,7 +3,7 @@
 /** Sparkline minimale (dentro le stat tile): niente assi, solo la forma. */
 export function Sparkline({
   values,
-  color = "#166534",
+  color = "#047857",
   ariaLabel,
 }: {
   values: number[];

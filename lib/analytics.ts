@@ -148,18 +148,17 @@ export function buildAnalytics(
 }
 
 /**
- * Palette di stato per i grafici — variante della palette delle tacche,
- * validata con scripts di dataviz (coppia arancio/verde: ΔE protan 14.7).
- * Monocromatica per scelta di design: l'identità dei segmenti è garantita
- * da ordine fisso, legenda con tacche (forma), tratteggio sul backlog,
- * gap di 2px ed etichette dirette.
+ * Palette di stato per i grafici — revisione "Vetro", color-coded e
+ * validata con lo script dataviz (CVD peggiore: ΔE protan 11.0, tritan
+ * 15.9). Il backlog resta grigio tratteggiato (codifica secondaria);
+ * legenda con tacche sagomate, gap 2px, etichette dirette.
  */
 export const CHART_STATUS_COLORS: Record<TaskStatus, string> = {
   backlog: "#A9AFB8",
-  todo: "#71767F",
-  in_progress: "#3E434B",
+  todo: "#0284C7",
+  in_progress: "#6D28D9",
   in_review: "#D97706",
-  done: "#166534",
+  done: "#047857",
 };
 
 /** Tratteggio del backlog (eco della tacca tratteggiata). */
