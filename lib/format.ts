@@ -16,6 +16,36 @@ export function addDaysIso(days: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function toIso(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Sposta una data ISO di n giorni. */
+export function shiftIsoDays(iso: string, days: number): string {
+  const [y, m, dd] = iso.split("-").map(Number);
+  const d = new Date(y, m - 1, dd + days);
+  return toIso(d);
+}
+
+/** Sposta una data ISO di n mesi (stesso giorno del mese, clampato). */
+export function shiftIsoMonths(iso: string, months: number): string {
+  const [y, m, dd] = iso.split("-").map(Number);
+  const d = new Date(y, m - 1 + months, 1);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(dd, lastDay));
+  return toIso(d);
+}
+
+/** Differenza in giorni tra due ISO (b - a). */
+export function diffIsoDays(a: string, b: string): number {
+  const [ya, ma, da] = a.split("-").map(Number);
+  const [yb, mb, db] = b.split("-").map(Number);
+  return Math.round(
+    (new Date(yb, mb - 1, db).getTime() - new Date(ya, ma - 1, da).getTime()) /
+      86_400_000,
+  );
+}
+
 /** "2026-09-12" → "12 set" */
 export function formatDue(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);

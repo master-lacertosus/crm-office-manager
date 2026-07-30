@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  CalendarDays,
   ChartNoAxesColumn,
   Folder,
   LayoutDashboard,
@@ -24,6 +25,7 @@ import { Button } from "@/components/ui/button";
 const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tasks", label: "Task", icon: ListTodo },
+  { href: "/calendar", label: "Calendario", icon: CalendarDays },
   { href: "/projects", label: "Progetti", icon: Folder },
   { href: "/reports", label: "Report", icon: ChartNoAxesColumn },
   { href: "/team", label: "Team", icon: Users },

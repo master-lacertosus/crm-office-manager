@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
+import { Repeat } from "lucide-react";
+
 import { dueTone, formatDue } from "@/lib/format";
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
@@ -65,7 +67,16 @@ export function CardVisual({
         </div>
       )}
       <div className="mt-2 flex items-center justify-between gap-2">
-        <DueDate task={task} />
+        <span className="flex items-center gap-1.5">
+          <DueDate task={task} />
+          {task.repeat !== "none" ? (
+            <Repeat
+              aria-label="Ricorrente"
+              className="size-3 text-ink-muted"
+              strokeWidth={2}
+            />
+          ) : null}
+        </span>
         {owner ? <AvatarInitials name={owner.full_name} size="sm" /> : null}
       </div>
     </div>

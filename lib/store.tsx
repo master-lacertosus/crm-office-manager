@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { shiftIsoDays, shiftIsoMonths } from "@/lib/format";
 import {
   CURRENT_USER_ID,
   MOCK_COMMENTS,
@@ -9,6 +10,7 @@ import {
   MOCK_PROFILES,
   MOCK_PROJECTS,
   MOCK_TASKS,
+  MOCK_TASK_LINKS,
 } from "@/lib/mock-data";
 import type {
   AppNotification,
@@ -16,6 +18,7 @@ import type {
   Project,
   Task,
   TaskComment,
+  TaskLink,
 } from "@/lib/types";
 
 /**
@@ -29,7 +32,29 @@ const LATENCY_MS = 250;
 const wait = () => new Promise((r) => setTimeout(r, LATENCY_MS));
 
 type NewTask = Pick<Task, "title" | "owner_id"> &
-  Partial<Pick<Task, "description" | "status" | "priority" | "project_id" | "due_date">>;
+  Partial<
+    Pick<
+      Task,
+      "description" | "status" | "priority" | "project_id" | "due_date" | "repeat"
+    >
+  >;
+
+/** Ricorrenza furba: alla chiusura, il task si ricrea con la scadenza avanti. */
+function nextOccurrence(task: Task): Task | null {
+  if (task.repeat === "none" || !task.due_date) return null;
+  return {
+    ...task,
+    id: crypto.randomUUID(),
+    status: "todo",
+    due_date:
+      task.repeat === "weekly"
+        ? shiftIsoDays(task.due_date, 7)
+        : shiftIsoMonths(task.due_date, 1),
+    position: Date.now(),
+    completed_at: null,
+    created_at: new Date().toISOString(),
+  };
+}
 
 interface AppStore {
   currentUser: Profile;
@@ -44,6 +69,14 @@ interface AppStore {
   ) => Promise<void>;
   /** Spostamento da board (drag): sincrono, l'interazione deve essere istantanea. */
   moveTask: (id: string, status: Task["status"], position: number) => void;
+  /** Cambio scadenza da calendario/timeline (drag): sincrono. */
+  rescheduleTask: (id: string, dueDate: string | null) => void;
+  taskLinks: TaskLink[];
+  addTaskLink: (taskId: string, url: string, label: string) => Promise<void>;
+  removeTaskLink: (id: string) => void;
+  /** Focus di oggi: fino a 3 task scelti dall'utente corrente. */
+  focusIds: string[];
+  toggleFocus: (taskId: string) => void;
   addComment: (taskId: string, body: string) => Promise<void>;
   updateProfileName: (id: string, fullName: string) => Promise<void>;
   notifications: AppNotification[];
@@ -66,6 +99,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [comments, setComments] = React.useState<TaskComment[]>(MOCK_COMMENTS);
   const [notifications, setNotifications] =
     React.useState<AppNotification[]>(MOCK_NOTIFICATIONS);
+  const [taskLinks, setTaskLinks] =
+    React.useState<TaskLink[]>(MOCK_TASK_LINKS);
+  const [focusIds, setFocusIds] = React.useState<string[]>([]);
 
   const currentUser =
     profiles.find((p) => p.id === CURRENT_USER_ID) ?? profiles[0];
@@ -94,6 +130,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         project_id: input.project_id ?? null,
         due_date: input.due_date ?? null,
         position: Date.now(),
+        repeat: input.repeat ?? "none",
         completed_at: null,
         created_at: new Date().toISOString(),
       };
@@ -103,28 +140,33 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     async updateTask(id, patch) {
       await wait();
-      setTasks((prev) =>
-        prev.map((task) => {
+      setTasks((prev) => {
+        const spawned: Task[] = [];
+        const mapped = prev.map((task) => {
           if (task.id !== id) return task;
           const next = { ...task, ...patch };
           // Stessa regola del trigger tasks_set_completed_at
           if (patch.status) {
             if (patch.status === "done" && task.status !== "done") {
               next.completed_at = new Date().toISOString();
+              const following = nextOccurrence(next);
+              if (following) spawned.push(following);
             } else if (patch.status !== "done") {
               next.completed_at = null;
             }
           }
           return next;
-        }),
-      );
+        });
+        return spawned.length > 0 ? [...mapped, ...spawned] : mapped;
+      });
     },
 
     moveTask(id, status, position) {
-      setTasks((prev) =>
-        prev.map((task) => {
+      setTasks((prev) => {
+        const spawned: Task[] = [];
+        const mapped = prev.map((task) => {
           if (task.id !== id) return task;
-          return {
+          const next = {
             ...task,
             status,
             position,
@@ -136,8 +178,51 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
                   : task.completed_at
                 : null,
           };
-        }),
+          if (status === "done" && task.status !== "done") {
+            const following = nextOccurrence(next);
+            if (following) spawned.push(following);
+          }
+          return next;
+        });
+        return spawned.length > 0 ? [...mapped, ...spawned] : mapped;
+      });
+    },
+
+    rescheduleTask(id, dueDate) {
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === id ? { ...task, due_date: dueDate } : task,
+        ),
       );
+    },
+
+    taskLinks,
+
+    async addTaskLink(taskId, url, label) {
+      await wait();
+      setTaskLinks((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          task_id: taskId,
+          url: url.trim(),
+          label: label.trim() ? label.trim() : null,
+        },
+      ]);
+    },
+
+    removeTaskLink(id) {
+      setTaskLinks((prev) => prev.filter((l) => l.id !== id));
+    },
+
+    focusIds,
+
+    toggleFocus(taskId) {
+      setFocusIds((prev) => {
+        if (prev.includes(taskId)) return prev.filter((id) => id !== taskId);
+        if (prev.length >= 3) return prev;
+        return [...prev, taskId];
+      });
     },
 
     async addComment(taskId, body) {

@@ -3,12 +3,24 @@
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { BellRing, LoaderCircle, X } from "lucide-react";
+import {
+  BellRing,
+  Link2,
+  LoaderCircle,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import { formatDue, timeAgo } from "@/lib/format";
 import { panel, scrim } from "@/lib/motion";
 import { useAppStore } from "@/lib/store";
-import { STATUS_ORDER, type Task, type TaskStatus } from "@/lib/types";
+import {
+  STATUS_ORDER,
+  type Task,
+  type TaskRepeat,
+  type TaskStatus,
+} from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { TASK_STATUSES } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
@@ -130,6 +142,7 @@ function PanelBody({
       ) : (
         <div className="flex-1 overflow-y-auto">
           <TaskForm task={task ?? undefined} />
+          {task ? <LinksSection taskId={task.id} /> : null}
           {task ? <CommentSection taskId={task.id} /> : null}
         </div>
       )}
@@ -155,6 +168,7 @@ function TaskForm({ task }: { task?: Task }) {
   const [ownerId, setOwnerId] = React.useState(task?.owner_id ?? currentUser.id);
   const [projectId, setProjectId] = React.useState(task?.project_id ?? "");
   const [dueDate, setDueDate] = React.useState(task?.due_date ?? "");
+  const [repeat, setRepeat] = React.useState<TaskRepeat>(task?.repeat ?? "none");
 
   const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
@@ -182,6 +196,7 @@ function TaskForm({ task }: { task?: Task }) {
       owner_id: ownerId,
       project_id: projectId ? projectId : null,
       due_date: dueDate ? dueDate : null,
+      repeat,
     };
     if (task) {
       await updateTask(task.id, patch);
@@ -270,7 +285,7 @@ function TaskForm({ task }: { task?: Task }) {
             onChange={(e) => setDueDate(e.target.value)}
           />
         </div>
-        <div className="col-span-2 space-y-2">
+        <div className="space-y-2">
           <Label htmlFor="task-project">Progetto</Label>
           <NativeSelect
             id="task-project"
@@ -287,6 +302,25 @@ function TaskForm({ task }: { task?: Task }) {
               ))}
           </NativeSelect>
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="task-repeat">Ripetizione</Label>
+          <NativeSelect
+            id="task-repeat"
+            value={repeat}
+            onChange={(e) => setRepeat(e.target.value as TaskRepeat)}
+          >
+            <option value="none">Nessuna</option>
+            <option value="weekly">Settimanale</option>
+            <option value="monthly">Mensile</option>
+          </NativeSelect>
+        </div>
+        {repeat !== "none" ? (
+          <p className="col-span-2 -mt-1 text-[13px] text-ink-muted">
+            Al completamento si ricrea da solo con la scadenza spostata di{" "}
+            {repeat === "weekly" ? "una settimana" : "un mese"} (serve una
+            scadenza).
+          </p>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -370,6 +404,146 @@ function TaskMeta({ task }: { task: Task }) {
         </Button>
       ) : null}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Allegati-link (fase senza Supabase Storage: si allegano URL)        */
+/* ------------------------------------------------------------------ */
+
+const IMAGE_RE = /\.(png|jpe?g|gif|webp|avif)(\?|$)/i;
+
+function LinksSection({ taskId }: { taskId: string }) {
+  const { taskLinks, addTaskLink, removeTaskLink } = useAppStore();
+  const [url, setUrl] = React.useState("");
+  const [label, setLabel] = React.useState("");
+  const [adding, setAdding] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const list = taskLinks.filter((l) => l.task_id === taskId);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^https?:\/\/\S+/.test(url.trim())) {
+      setError("Serve un URL valido (https://…).");
+      return;
+    }
+    setError(null);
+    setAdding(true);
+    await addTaskLink(taskId, url, label);
+    setAdding(false);
+    setUrl("");
+    setLabel("");
+  };
+
+  return (
+    <section aria-label="Allegati" className="px-5 pb-2">
+      <Separator className="mb-4" />
+      <h3 className="text-[11px] font-semibold tracking-[0.06em] text-ink-muted uppercase">
+        Allegati e link · {list.length}
+      </h3>
+
+      <ul className="mt-3 space-y-2">
+        {list.length === 0 ? (
+          <li className="text-[13px] text-ink-muted">
+            Nessun allegato. Incolla un link (brief, Figma, foto…).
+          </li>
+        ) : (
+          list.map((link) => {
+            const isImage = IMAGE_RE.test(link.url);
+            let host = "";
+            try {
+              host = new URL(link.url).hostname.replace("www.", "");
+            } catch {
+              host = link.url;
+            }
+            return (
+              <li key={link.id} className="group flex items-center gap-2.5">
+                {isImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={link.url}
+                    alt=""
+                    className="size-10 shrink-0 rounded-lg border border-border object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <Link2 aria-hidden className="size-4 text-ink-muted" />
+                  </span>
+                )}
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="min-w-0 flex-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <p className="truncate text-[13px] font-medium text-ink group-hover:underline">
+                    {link.label ?? host}
+                  </p>
+                  <p className="truncate font-mono text-[10px] text-ink-muted">
+                    {host}
+                  </p>
+                </a>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Rimuovi ${link.label ?? host}`}
+                  onClick={() => removeTaskLink(link.id)}
+                  className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                >
+                  <Trash2 />
+                </Button>
+              </li>
+            );
+          })
+        )}
+      </ul>
+
+      <form onSubmit={submit} noValidate className="mt-3 space-y-2">
+        <div className="flex gap-2">
+          <div className="min-w-0 flex-1 space-y-2">
+            <Label htmlFor="link-url" className="sr-only">
+              URL
+            </Label>
+            <Input
+              id="link-url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://…"
+              aria-invalid={error ? true : undefined}
+            />
+          </div>
+          <div className="w-32 space-y-2 sm:w-40">
+            <Label htmlFor="link-label" className="sr-only">
+              Etichetta
+            </Label>
+            <Input
+              id="link-label"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="Etichetta"
+            />
+          </div>
+          <Button
+            type="submit"
+            variant="secondary"
+            size="icon"
+            aria-label="Aggiungi link"
+            disabled={adding || url.trim().length === 0}
+            aria-busy={adding}
+          >
+            {adding ? <LoaderCircle className="animate-spin" /> : <Plus />}
+          </Button>
+        </div>
+        {error ? (
+          <p className="text-[13px] text-danger-text">{error}</p>
+        ) : null}
+      </form>
+    </section>
   );
 }
 

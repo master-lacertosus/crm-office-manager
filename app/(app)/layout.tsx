@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { CommandPalette } from "@/components/command-palette";
 import { AppShell } from "@/components/shell/app-shell";
 import { TaskPanelHost } from "@/components/task-panel";
 import { ToastProvider } from "@/components/toaster";
@@ -23,6 +24,7 @@ export default function AppLayout({
           <Suspense>
             <TaskPanelHost />
           </Suspense>
+          <CommandPalette />
         </AppShell>
       </ToastProvider>
     </AppStoreProvider>

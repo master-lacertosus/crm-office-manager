@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -11,8 +12,13 @@ import {
   Eye,
   FolderOpen,
   Inbox,
+  Presentation,
+  Star,
   type LucideIcon,
 } from "lucide-react";
+
+import { StandupMode } from "@/components/standup-mode";
+import { Button } from "@/components/ui/button";
 
 import { buildAnalytics } from "@/lib/analytics";
 import { addDaysIso, timeAgo, todayIso } from "@/lib/format";
@@ -138,8 +144,9 @@ function Section({
 }
 
 export function DashboardContent() {
-  const { tasks, profiles, projects, currentUser, notifications } =
+  const { tasks, profiles, projects, currentUser, notifications, focusIds } =
     useAppStore();
+  const [standup, setStandup] = React.useState(false);
   const today = todayIso();
   const weekEnd = addDaysIso(7);
   const analytics = buildAnalytics(tasks, profiles, projects);
@@ -160,6 +167,9 @@ export function DashboardContent() {
       ? 0
       : Math.round((mineDone / (mine.length + mineDone)) * 100);
   const latestAlerts = notifications.slice(0, 3);
+  const focusTasks = focusIds
+    .map((id) => tasks.find((t) => t.id === id))
+    .filter((t): t is Task => Boolean(t) && t!.status !== "done");
 
   return (
     <div className="flex-1 space-y-4 px-4 py-4 sm:px-6">
@@ -206,6 +216,15 @@ export function DashboardContent() {
               </>
             )}
           </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => setStandup(true)}
+          >
+            <Presentation data-icon="inline-start" />
+            Modalità standup
+          </Button>
         </div>
         <div className="relative">
           <div
@@ -277,7 +296,25 @@ export function DashboardContent() {
         </StatTile>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* Focus di oggi */}
+        <Section title="Focus di oggi" count={focusTasks.length}>
+          {focusTasks.length === 0 ? (
+            <EmptyState
+              icon={Star}
+              title="Scegli fino a 3 task"
+              hint="Usa la stella accanto ai tuoi task per metterli a fuoco."
+              className="py-6"
+            />
+          ) : (
+            <div className="-mx-1 flex flex-col">
+              {focusTasks.map((t) => (
+                <TaskRow key={t.id} task={t} focusable />
+              ))}
+            </div>
+          )}
+        </Section>
+
         {/* Avvisi */}
         <Section title="Avvisi recenti" count={latestAlerts.length}>
           {latestAlerts.length === 0 ? (
@@ -361,7 +398,7 @@ export function DashboardContent() {
           ) : (
             <div className="-mx-1 flex flex-col">
               {mine.map((t) => (
-                <TaskRow key={t.id} task={t} />
+                <TaskRow key={t.id} task={t} focusable />
               ))}
             </div>
           )}
@@ -410,6 +447,8 @@ export function DashboardContent() {
           )}
         </Section>
       </div>
+
+      <StandupMode open={standup} onClose={() => setStandup(false)} />
     </div>
   );
 }

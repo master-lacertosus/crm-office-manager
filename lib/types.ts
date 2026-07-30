@@ -13,6 +13,10 @@ export type TaskStatus =
 
 export type TaskPriority = "low" | "normal" | "high";
 
+/** Ricorrenza "furba": al completamento il task si ricrea con la scadenza
+ *  spostata avanti. Niente motore di ricorrenza completo (per scelta). */
+export type TaskRepeat = "none" | "weekly" | "monthly";
+
 export type Role = "admin" | "member";
 
 export interface Profile {
@@ -43,8 +47,17 @@ export interface Task {
   /** ISO date (YYYY-MM-DD), senza orario. */
   due_date: string | null;
   position: number;
+  repeat: TaskRepeat;
   completed_at: string | null;
   created_at: string;
+}
+
+/** Allegato-link (fase senza Supabase Storage: si allegano URL). */
+export interface TaskLink {
+  id: string;
+  task_id: string;
+  url: string;
+  label: string | null;
 }
 
 export interface TaskComment {

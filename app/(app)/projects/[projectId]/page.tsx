@@ -4,21 +4,64 @@ import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 
 import { MOCK_PROJECTS } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 import { Board } from "@/components/board/board";
 import { BoardFilters } from "@/components/board/filters";
 import { NewTaskButton } from "@/components/new-task-button";
+import { ProjectTimeline } from "@/components/project-timeline";
 import { Topbar } from "@/components/shell/topbar";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Progetto" };
 
+function ViewToggle({
+  projectId,
+  view,
+}: {
+  projectId: string;
+  view: "board" | "timeline";
+}) {
+  const base =
+    "rounded-md px-2.5 py-1 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring";
+  return (
+    <div className="glass flex gap-0.5 rounded-lg p-0.5">
+      <Link
+        href={`/projects/${projectId}`}
+        className={cn(
+          base,
+          view === "board"
+            ? "bg-white text-ink shadow-xs"
+            : "text-ink-secondary hover:text-ink",
+        )}
+      >
+        Board
+      </Link>
+      <Link
+        href={`/projects/${projectId}?view=timeline`}
+        className={cn(
+          base,
+          view === "timeline"
+            ? "bg-white text-ink shadow-xs"
+            : "text-ink-secondary hover:text-ink",
+        )}
+      >
+        Timeline
+      </Link>
+    </div>
+  );
+}
+
 export default async function ProjectPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ view?: string }>;
 }) {
   const { projectId } = await params;
+  const { view } = await searchParams;
   const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const activeView = view === "timeline" ? "timeline" : "board";
 
   if (!project) {
     return (
@@ -45,7 +88,8 @@ export default async function ProjectPage({
         title={project.name}
         actions={
           <Suspense>
-            <BoardFilters lockProject />
+            <ViewToggle projectId={project.id} view={activeView} />
+            {activeView === "board" ? <BoardFilters lockProject /> : null}
             <NewTaskButton />
           </Suspense>
         }
@@ -56,7 +100,11 @@ export default async function ProjectPage({
         </p>
       ) : null}
       <Suspense>
-        <Board projectId={project.id} />
+        {activeView === "timeline" ? (
+          <ProjectTimeline projectId={project.id} />
+        ) : (
+          <Board projectId={project.id} />
+        )}
       </Suspense>
     </>
   );

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { Star } from "lucide-react";
 
 import { dueTone, formatDue } from "@/lib/format";
 import { useAppStore } from "@/lib/store";
@@ -15,11 +16,14 @@ import { Badge } from "@/components/ui/badge";
 export function TaskRow({
   task,
   showOwner = false,
+  focusable = false,
 }: {
   task: Task;
   showOwner?: boolean;
+  /** Mostra la stella per aggiungere/togliere dal Focus di oggi (max 3). */
+  focusable?: boolean;
 }) {
-  const { profiles, projects } = useAppStore();
+  const { profiles, projects, focusIds, toggleFocus } = useAppStore();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -59,6 +63,33 @@ export function TaskRow({
       ) : null}
       {showOwner && owner ? (
         <AvatarInitials name={owner.full_name} size="sm" />
+      ) : null}
+      {focusable ? (
+        <button
+          type="button"
+          aria-label={
+            focusIds.includes(task.id)
+              ? "Togli dal focus di oggi"
+              : "Aggiungi al focus di oggi"
+          }
+          aria-pressed={focusIds.includes(task.id)}
+          disabled={!focusIds.includes(task.id) && focusIds.length >= 3}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFocus(task.id);
+          }}
+          className="rounded-sm p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-35"
+        >
+          <Star
+            className={cn(
+              "size-4 transition-colors",
+              focusIds.includes(task.id)
+                ? "fill-brand-500 text-brand-500"
+                : "text-ink-faint hover:text-brand-600",
+            )}
+          />
+        </button>
       ) : null}
     </Link>
   );

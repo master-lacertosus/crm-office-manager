@@ -17,6 +17,14 @@ trappole di complessità.
 > grafici SVG fatti in casa (regole in `design-system.md` §8b). Il
 > drag-and-drop della board (M4) è stato anticipato in versione artigianale
 > senza dipendenze. La §5 resta il riferimento per tutto il resto.
+>
+> **Secondo emendamento (30/07/2026, upgrade richiesti):** aggiunti
+> Calendario mensile con drag delle scadenze (settima voce di navigazione),
+> command palette ⌘K, allegati-link sui task (in attesa di Supabase
+> Storage; futura tabella additiva `task_links`), ricorrenza "furba"
+> (`tasks.repeat`: al completamento il task si ricrea — da aggiungere allo
+> schema con migrazione additiva), timeline di progetto (mini-Gantt) e
+> Focus di oggi + modalità standup in dashboard.
 
 ---
 
