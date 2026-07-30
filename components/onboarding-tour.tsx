@@ -56,10 +56,12 @@ const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
 export function OnboardingTour() {
   const searchParams = useSearchParams();
   const forced = searchParams.get("tour") === "1";
+  const suppressed = searchParams.get("tour") === "0";
   const [open, setOpen] = React.useState(false);
   const [step, setStep] = React.useState(0);
 
   React.useEffect(() => {
+    if (suppressed) return; // demo/test: niente tour
     if (forced) {
       queueMicrotask(() => {
         setStep(0);
@@ -74,7 +76,7 @@ export function OnboardingTour() {
         /* senza storage niente tour automatico */
       }
     });
-  }, [forced]);
+  }, [forced, suppressed]);
 
   const finish = () => {
     try {

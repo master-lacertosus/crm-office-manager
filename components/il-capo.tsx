@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { X } from "lucide-react";
 
@@ -327,6 +327,31 @@ export function IlCapo() {
     window.addEventListener("capo:summon", onSummon);
     return () => window.removeEventListener("capo:summon", onSummon);
   }, [summon]);
+
+  /* Saluto GARANTITO all'ingresso in dashboard (una volta per sessione,
+     ignora il silenzio giornaliero): se c'è un dialog aperto aspetta che
+     si chiuda, poi entra. */
+  const pathname = usePathname();
+  const greetedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!pathname.startsWith("/dashboard") || greetedRef.current) return;
+    greetedRef.current = true;
+    let cancelled = false;
+    let tries = 0;
+    const attempt = () => {
+      if (cancelled) return;
+      if (document.querySelector('[role="dialog"]')) {
+        if (tries++ < 40) setTimeout(attempt, 1_500);
+        return;
+      }
+      summon();
+    };
+    const timer = setTimeout(attempt, 700);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [pathname, summon]);
 
   /* Elogio (a modo suo) quando un task viene completato */
   React.useEffect(() => {
