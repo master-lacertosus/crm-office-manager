@@ -34,6 +34,7 @@ function pickMessage(ctx: CapoContext): string {
 
   if (ctx.overdue > 0) {
     add("TI VEDO CHE NON STAI COMPLETANDO LE TASK!", 3);
+    add("IL SEGNALE È ACCESO: C'È UN TASK IN RITARDO.", 2);
     add(
       ctx.overdue === 1
         ? `C'È UN TASK IN RITARDO DA ${Math.max(1, ctx.worstLateDays)} GIORNI. IO. VEDO. TUTTO.`
@@ -58,8 +59,11 @@ function pickMessage(ctx: CapoContext): string {
     add("ANCORA QUI? RISPETTO. MA DOMANI SI SPINGE DI PIÙ.", 2);
   }
   add("DEVI LAVORARE. PERFORMA MEGLIO.", 2);
+  add("IO SONO LA SCADENZA.", 2);
   add("MENO SCROLL, PIÙ DELIVERY.", 2);
   add("TRATTA LE TASK COME GLI STACCHI: UNA RIPETIZIONE ALLA VOLTA.", 2);
+  add("PARMA DORME. LE TASK NO.", 1);
+  add("NON SONO IL CAPO CHE MERITATE. SONO QUELLO CHE VI SERVE.", 1);
   add("IL BLACK FRIDAY NON SI PREPARA DA SOLO.", 1);
   add("CHI CHIUDE TASK OGGI, SOLLEVA DI PIÙ DOMANI.", 1);
 
@@ -76,6 +80,7 @@ const PRAISE = [
   "COSÌ SI FA! ORA FANNE UN ALTRO.",
   "VISTO? QUANDO VUOI, PUOI.",
   "BENE. NON MONTARTI LA TESTA.",
+  "PARMA È FIERA DI TE. IO QUASI.",
 ];
 
 function offUntilToday(): boolean {
@@ -113,60 +118,96 @@ function TypewriterText({ text }: { text: string }) {
   );
 }
 
-/** Caricatura SVG: giacca, cravatta arancio, occhiali, bicipiti. */
+/**
+ * Claudio P. — il Cavaliere di Parma. Parodia originale in salsa
+ * Lacertosus: cappuccio con orecchie, mantello, LUCERTOLA arancio sul
+ * petto (lacertosus = «lucertoloso»), cintura con fibbia CEO. Nessun
+ * asset DC: design disegnato a mano.
+ */
 function CapoSvg() {
   return (
     <svg viewBox="0 0 120 130" className="h-[120px] w-[112px] drop-shadow-md">
-      {/* braccia incrociate (dietro) */}
+      {/* mantello (dietro, con orlo frastagliato che spunta ai lati) */}
+      <path
+        d="M12 128 L15 78 Q22 58 40 53 L80 53 Q98 58 105 78 L108 128 L97 117 L86 128 L74 117 L62 128 L50 117 L38 128 L26 117 Z"
+        fill="#0f172a"
+      />
+      {/* busto e spalle */}
       <path
         d="M14 96 q6 -26 26 -30 l40 0 q20 4 26 30 l0 34 -92 0 Z"
-        fill="#1f2937"
+        fill="#172033"
       />
-      {/* spalle esagerate */}
-      <ellipse cx="24" cy="82" rx="16" ry="14" fill="#1f2937" />
-      <ellipse cx="96" cy="82" rx="16" ry="14" fill="#1f2937" />
-      {/* camicia */}
-      <path d="M46 72 l14 14 14 -14 0 58 -28 0 Z" fill="#f8fafc" />
-      {/* cravatta arancio */}
-      <path d="M56 84 l4 -6 4 6 -3 8 3 26 -4 8 -4 -8 3 -26 Z" fill="#ff6b00" />
-      {/* avambracci incrociati */}
+      <ellipse cx="24" cy="82" rx="16" ry="14" fill="#172033" />
+      <ellipse cx="96" cy="82" rx="16" ry="14" fill="#172033" />
+      {/* scudo pettorale con emblema lucertola */}
+      <ellipse cx="60" cy="92" rx="14" ry="10" fill="#0b1220" />
+      <g
+        stroke="#ff6b00"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      >
+        {/* corpo a S della lucertola */}
+        <path d="M57 85 q6 2 5 7 q-1 4 -5 5" strokeWidth="3" />
+        {/* coda arricciata */}
+        <path d="M57 97 q-4 2 -3 5" strokeWidth="2" />
+        {/* zampe */}
+        <path d="M56 88 l-4 -2" />
+        <path d="M62 89 l4 -2" />
+        <path d="M55 94 l-4 2" />
+        <path d="M61 95 l4 2" />
+      </g>
+      {/* testa della lucertola */}
+      <circle cx="58" cy="84" r="2.4" fill="#ff6b00" />
+      {/* cintura CEO */}
+      <rect x="32" y="114" width="56" height="8" rx="3" fill="#ff6b00" />
+      <rect x="51" y="112" width="18" height="12" rx="3" fill="#e05300" />
+      <text
+        x="60"
+        y="121"
+        textAnchor="middle"
+        fontSize="6.5"
+        fontWeight="800"
+        fill="#ffffff"
+      >
+        CEO
+      </text>
+      {/* avambracci incrociati con pinne */}
       <path
         d="M18 104 q22 -14 52 -4 q-4 12 -20 12 q-20 0 -32 -8 Z"
-        fill="#111827"
+        fill="#0b1220"
       />
       <path
         d="M102 104 q-22 -14 -52 -4 q4 12 20 12 q20 0 32 -8 Z"
-        fill="#374151"
+        fill="#24303f"
       />
-      {/* pugni */}
-      <circle cx="78" cy="108" r="7" fill="#e8b088" />
-      <circle cx="42" cy="108" r="7" fill="#e8b088" />
-      {/* collo taurino */}
-      <rect x="50" y="58" width="20" height="16" rx="6" fill="#e8b088" />
-      {/* testa */}
-      <circle cx="60" cy="38" r="24" fill="#f0bd93" />
-      {/* orecchie */}
-      <circle cx="37" cy="40" r="4.5" fill="#e8b088" />
-      <circle cx="83" cy="40" r="4.5" fill="#e8b088" />
-      {/* capelli rasati */}
-      <path d="M38 30 q4 -16 22 -16 q18 0 22 16 q-10 -7 -22 -7 q-12 0 -22 7 Z" fill="#374151" />
-      {/* occhiali da sole */}
-      <rect x="41" y="32" width="17" height="11" rx="5" fill="#111827" />
-      <rect x="62" y="32" width="17" height="11" rx="5" fill="#111827" />
-      <rect x="56" y="35" width="8" height="3" rx="1.5" fill="#111827" />
-      {/* riflesso arancio */}
-      <path d="M44 34 l6 0 -4 6 -3 0 Z" fill="#ff8a1f" opacity="0.85" />
-      <path d="M65 34 l6 0 -4 6 -3 0 Z" fill="#ff8a1f" opacity="0.85" />
-      {/* naso e baffi */}
-      <path d="M58 44 q2 4 4 0" stroke="#d99b6d" strokeWidth="2" fill="none" strokeLinecap="round" />
-      <path d="M50 51 q10 6 20 0 q-4 7 -10 7 q-6 0 -10 -7 Z" fill="#374151" />
-      {/* bocca decisa */}
-      <path d="M55 56 q5 3 10 0" stroke="#8a5a3b" strokeWidth="2" fill="none" strokeLinecap="round" />
-      {/* badge CEO */}
-      <rect x="26" y="94" width="16" height="9" rx="2.5" fill="#ff6b00" />
-      <text x="34" y="101" textAnchor="middle" fontSize="6.2" fontWeight="800" fill="#ffffff">
-        CEO
-      </text>
+      <path d="M40 101 l5 -7 2 8 Z" fill="#ff6b00" opacity="0.9" />
+      <path d="M80 101 l-5 -7 -2 8 Z" fill="#ff8a1f" opacity="0.9" />
+      {/* pugni guantati */}
+      <circle cx="78" cy="108" r="7" fill="#111827" />
+      <circle cx="42" cy="108" r="7" fill="#172033" />
+      {/* collo */}
+      <rect x="50" y="56" width="20" height="18" rx="6" fill="#e8b088" />
+      {/* mascella scoperta */}
+      <path d="M40 42 q0 22 20 22 q20 0 20 -22 Z" fill="#f0bd93" />
+      {/* cappuccio con orecchie */}
+      <path
+        d="M36 46 q-3 -27 24 -27 q27 0 24 27 q0 5 -3 7 l-42 0 q-3 -2 -3 -7 Z"
+        fill="#111b2e"
+      />
+      <path d="M42 23 l3 -13 7 11 Z" fill="#111b2e" />
+      <path d="M78 23 l-3 -13 -7 11 Z" fill="#111b2e" />
+      {/* occhi bianchi decisi */}
+      <path d="M44 37 l12 -2.5 0 6 -11 1 Z" fill="#ffffff" />
+      <path d="M76 37 l-12 -2.5 0 6 11 1 Z" fill="#ffffff" />
+      {/* bocca severa */}
+      <path
+        d="M54 56 q6 3 12 0"
+        stroke="#8a5a3b"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -279,7 +320,7 @@ export function IlCapo() {
           >
             <div className="flex items-start justify-between gap-2">
               <p className="text-[10px] font-bold tracking-[0.08em] text-brand-600 uppercase">
-                Il Capo · CEO
+                Claudio P. · Il Cavaliere di Parma
               </p>
               <button
                 onClick={() => setVisible(false)}
