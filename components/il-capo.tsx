@@ -26,38 +26,49 @@ interface CapoContext {
   inReview: number;
   myOpen: number;
   hour: number;
+  minute: number;
 }
+
+const clock = (h: number, m: number) => {
+  const total = (((h * 60 + m) % 1440) + 1440) % 1440;
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+};
 
 function pickMessage(ctx: CapoContext): string {
   const pool: { text: string; weight: number }[] = [];
   const add = (text: string, weight = 1) => pool.push({ text, weight });
 
+  /* --- contestuali (dure) --- */
   if (ctx.overdue > 0) {
     add("TI VEDO CHE NON STAI COMPLETANDO LE TASK!", 3);
     add("IL SEGNALE È ACCESO: C'È UN TASK IN RITARDO.", 2);
     add(
       ctx.overdue === 1
-        ? `C'È UN TASK IN RITARDO DA ${Math.max(1, ctx.worstLateDays)} GIORNI. IO. VEDO. TUTTO.`
+        ? `QUEL TASK È IN RITARDO DA ${Math.max(1, ctx.worstLateDays)} GIORNI. HA MESSO RADICI.`
         : `${ctx.overdue} TASK IN RITARDO. IO. VEDO. TUTTO.`,
       3,
     );
+    add("IL RITARDO NON È UN'OPINIONE. È UN FATTO. VOSTRO.", 2);
     add("LE FERIE SONO UN CONCETTO. LE SCADENZE SONO REALTÀ.", 2);
   }
   if (ctx.inReview >= 2) {
     add(
-      `${ctx.inReview} TASK IN REVISIONE. LE REVISIONI NON SI APPROVANO DA SOLE.`,
+      `${ctx.inReview} TASK IN REVISIONE. LE REVISIONI SI APPROVANO, NON SI COVANO.`,
       2,
     );
   }
   if (ctx.myOpen === 0) {
-    add("TUTTO FATTO?! NON CI CREDO. ORA CONTROLLO.", 3);
+    add("TUTTO FATTO?! ALLORA PERCHÉ NON STATE GIÀ FACENDO ALTRO?", 3);
   }
   if (ctx.hour < 10) {
+    add("IL SOLE È SORTO ALLE 6:12. VOI?", 2);
     add("IL CAFFÈ È FINITO. SI PERFORMA.", 2);
   }
   if (ctx.hour >= 18) {
-    add("ANCORA QUI? RISPETTO. MA DOMANI SI SPINGE DI PIÙ.", 2);
+    add(`ALLE ${clock(ctx.hour, ctx.minute)} ANCORA QUI. ALLE 8:31 VEDIAMO.`, 2);
   }
+
+  /* --- dure sempre valide --- */
   add("DEVI LAVORARE. PERFORMA MEGLIO.", 2);
   add("IO SONO LA SCADENZA.", 2);
   add("MENO SCROLL, PIÙ DELIVERY.", 2);
@@ -65,7 +76,24 @@ function pickMessage(ctx: CapoContext): string {
   add("PARMA DORME. LE TASK NO.", 1);
   add("NON SONO IL CAPO CHE MERITATE. SONO QUELLO CHE VI SERVE.", 1);
   add("IL BLACK FRIDAY NON SI PREPARA DA SOLO.", 1);
-  add("CHI CHIUDE TASK OGGI, SOLLEVA DI PIÙ DOMANI.", 1);
+
+  /* --- assurde senza senso (marchio di fabbrica del Capo) --- */
+  add("COME MAI SIETE ARRIVATI ALLE 8:26? LA TIMBRATURA È ALLE 8:30.", 3);
+  add(
+    `SONO LE ${clock(ctx.hour, ctx.minute)} E SIETE QUI DALLE ${clock(ctx.hour, ctx.minute - 4)}. CHI VE L'HA CHIESTO?`,
+    2,
+  );
+  add("HO CONTATO I VOSTRI CLICK. TROPPI.", 2);
+  add("LA PAUSA CAFFÈ DI IERI È DURATA 4 MINUTI. CHI VI CREDETE DI ESSERE?", 2);
+  add("VI HO VISTO RESPIRARE TRA UNA TASK E L'ALTRA.", 2);
+  add("CHI HA APPROVATO IL WEEKEND?", 2);
+  add("TROPPO SILENZIO. NON SENTO DIGITARE.", 2);
+  add("LA SEDIA È INCLINATA DI 3 GRADI. RADDRIZZATEVI.", 1);
+  add("LE FERIE DI AGOSTO 2019 NON LE HO DIMENTICATE.", 1);
+  add("LA LUCERTOLA SUL MIO PETTO LAVORA PIÙ DI VOI.", 1);
+  add("HO SOGNATO CHE ERAVATE PRODUTTIVI. POI MI SONO SVEGLIATO.", 1);
+  add("IL BADGE VI HA VISTI USCIRE ALLE 18:00 IN PUNTO. SOSPETTO.", 1);
+  add("QUESTA DASHBOARD È TROPPO BELLA PER I RISULTATI CHE PORTATE.", 1);
 
   const total = pool.reduce((s, p) => s + p.weight, 0);
   let r = Math.random() * total;
@@ -81,6 +109,8 @@ const PRAISE = [
   "VISTO? QUANDO VUOI, PUOI.",
   "BENE. NON MONTARTI LA TESTA.",
   "PARMA È FIERA DI TE. IO QUASI.",
+  "UN TASK CHIUSO. NE RESTANO INFINITI.",
+  "BRAVO. ORA DIMOSTRATE CHE NON ERA FORTUNA.",
 ];
 
 function offUntilToday(): boolean {
@@ -251,6 +281,7 @@ export function IlCapo() {
       inReview: open.filter((t) => t.status === "in_review").length,
       myOpen: open.filter((t) => t.owner_id === userRef.current.id).length,
       hour: new Date().getHours(),
+      minute: new Date().getMinutes(),
     };
     show(pickMessage(ctx));
   }, [show]);
