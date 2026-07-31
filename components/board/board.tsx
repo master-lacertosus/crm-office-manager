@@ -69,6 +69,7 @@ export function Board({ projectId }: { projectId?: string }) {
   }, [visible, statuses]);
 
   const columnRefs = React.useRef(new Map<string, HTMLElement>());
+  const scrollRef = React.useRef<HTMLDivElement>(null);
   const suppressClickRef = React.useRef(false);
   const [drag, setDrag] = React.useState<DragState | null>(null);
   const dragRef = React.useRef<DragState | null>(null);
@@ -91,12 +92,26 @@ export function Board({ projectId }: { projectId?: string }) {
 
   const hitTest = React.useCallback(
     (clientX: number, clientY: number, dragged: Task) => {
-      let target: string = dragged.status;
+      let target: string | null = null;
       for (const [status, el] of columnRefs.current) {
         const rect = el.getBoundingClientRect();
         if (clientX >= rect.left && clientX <= rect.right) {
           target = status;
           break;
+        }
+      }
+      // Sopra un vuoto (gap, lane «Nuova fase», oltre i bordi): la lane
+      // valida più vicina, così il rilascio al bordo non si perde.
+      if (!target) {
+        target = dragged.status;
+        let best = Infinity;
+        for (const [status, el] of columnRefs.current) {
+          const r = el.getBoundingClientRect();
+          const d = Math.abs(clientX - (r.left + r.right) / 2);
+          if (d < best) {
+            best = d;
+            target = status;
+          }
         }
       }
       const columnEl = columnRefs.current.get(target);
@@ -129,9 +144,58 @@ export function Board({ projectId }: { projectId?: string }) {
     const wrapper = e.currentTarget as HTMLElement;
     const rect = wrapper.getBoundingClientRect();
     const start = { x: e.clientX, y: e.clientY };
+    const pointer = { x: e.clientX, y: e.clientY };
     let started = false;
+    let raf = 0;
+
+    /* Auto-scroll ai bordi durante il drag: su schermi stretti le lane di
+       destinazione (es. «Fatto») possono essere fuori vista — tenendo la
+       card vicino al bordo la board scorre da sola. Verticale: la pagina.
+       Velocità in px/s (indipendente dal frame rate). */
+    const EDGE = 64;
+    const SPEED = 900;
+    const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+    let lastTs = 0;
+    const autoScroll = (ts: number) => {
+      const dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.05) : 0.016;
+      lastTs = ts;
+      let scrolled = false;
+      const scroller = scrollRef.current;
+      if (scroller && scroller.scrollWidth > scroller.clientWidth) {
+        const r = scroller.getBoundingClientRect();
+        let vx = 0;
+        vx -= SPEED * dt * clamp01((r.left + EDGE - pointer.x) / EDGE);
+        vx += SPEED * dt * clamp01((pointer.x - (r.right - EDGE)) / EDGE);
+        if (vx !== 0) {
+          const before = scroller.scrollLeft;
+          scroller.scrollLeft = before + vx;
+          if (scroller.scrollLeft !== before) scrolled = true;
+        }
+      }
+      let vy = 0;
+      vy -= SPEED * dt * clamp01((64 + EDGE - pointer.y) / EDGE); // 64 = topbar
+      vy += SPEED * dt * clamp01((pointer.y - (window.innerHeight - EDGE)) / EDGE);
+      if (vy !== 0) {
+        const before = window.scrollY;
+        window.scrollBy(0, vy);
+        if (window.scrollY !== before) scrolled = true;
+      }
+      // le colonne scivolano sotto il puntatore fermo: ricalcola il target,
+      // ma re-renderizza solo se è cambiato davvero
+      if (scrolled) {
+        const { target, insertIndex } = hitTest(pointer.x, pointer.y, task);
+        setDrag((d) =>
+          d && (d.target !== target || d.insertIndex !== insertIndex)
+            ? { ...d, target, insertIndex }
+            : d,
+        );
+      }
+      raf = requestAnimationFrame(autoScroll);
+    };
 
     const onMove = (ev: PointerEvent) => {
+      pointer.x = ev.clientX;
+      pointer.y = ev.clientY;
       const dx = ev.clientX - start.x;
       const dy = ev.clientY - start.y;
       if (!started && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
@@ -141,6 +205,9 @@ export function Board({ projectId }: { projectId?: string }) {
         suppressClickRef.current = true;
         document.body.style.cursor = "grabbing";
         document.body.style.userSelect = "none";
+        // lo scroll-snap combatterebbe con l'auto-scroll: sospeso nel drag
+        if (scrollRef.current) scrollRef.current.style.scrollSnapType = "none";
+        raf = requestAnimationFrame(autoScroll);
       }
       const { target, insertIndex } = hitTest(ev.clientX, ev.clientY, task);
       setDrag({
@@ -159,6 +226,8 @@ export function Board({ projectId }: { projectId?: string }) {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("keydown", onKey);
+      cancelAnimationFrame(raf);
+      if (scrollRef.current) scrollRef.current.style.scrollSnapType = "";
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
 
@@ -203,7 +272,10 @@ export function Board({ projectId }: { projectId?: string }) {
 
   return (
     <LayoutGroup>
-      <div className="relative flex flex-1 snap-x snap-mandatory gap-3 overflow-x-auto px-4 py-4 sm:px-6">
+      <div
+        ref={scrollRef}
+        className="relative flex flex-1 snap-x snap-mandatory gap-3 overflow-x-auto px-4 py-4 sm:px-6"
+      >
         {statuses.map((meta) => (
           <Column
             key={meta.key}
