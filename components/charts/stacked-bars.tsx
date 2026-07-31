@@ -30,12 +30,13 @@ function Segment({
   if (count === 0) return null;
   return (
     <div
-      className="h-full min-w-[3px]"
+      className="h-full min-w-[3px] transition-transform duration-150 ease-out hover:-translate-y-px hover:brightness-105"
       style={{
         flexGrow: count,
         flexBasis: 0,
         background:
           meta.key === "backlog" ? BACKLOG_HATCH : segColor(meta.key, meta),
+        boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.25)",
       }}
       onPointerEnter={(e) => onHover(e, meta, count)}
       onPointerLeave={onLeave}

@@ -26,12 +26,13 @@ export function BarList({
           className="grid grid-cols-[minmax(0,40%)_1fr_auto] items-center gap-3"
         >
           <p className="truncate text-[13px] text-ink-secondary">{row.label}</p>
-          <div className="h-[18px]">
+          <div className="h-[18px] overflow-hidden rounded-r-[5px]">
             <div
-              className="h-full rounded-r-[4px] transition-[width] duration-300"
+              className="h-full rounded-r-[5px] transition-[width] duration-300"
               style={{
                 width: `${(row.total / max) * 100}%`,
-                background: colors.get(row.key) ?? "#94A3B8",
+                background: `linear-gradient(90deg, color-mix(in oklab, ${colors.get(row.key) ?? "#94A3B8"} 62%, white) 0%, ${colors.get(row.key) ?? "#94A3B8"} 100%)`,
+                boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.35)",
               }}
               aria-hidden
             />

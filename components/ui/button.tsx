@@ -17,7 +17,7 @@ const buttonVariants = cva(
         default:
           "btn-glow text-primary-foreground active:brightness-95",
         outline:
-          "border-input bg-card text-foreground hover:bg-accent aria-expanded:bg-accent",
+          "glass-chip border-border/90 text-foreground transition-all hover:-translate-y-px hover:brightness-[1.01] aria-expanded:bg-accent",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]",
         ghost:

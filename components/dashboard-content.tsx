@@ -60,8 +60,15 @@ function ProgressRing({ percent, delta }: { percent: number; delta: number }) {
   const target = C * (1 - percent / 100);
 
   return (
-    <div className="relative size-[132px] shrink-0 rounded-full bg-white shadow-[0_10px_30px_rgb(15_23_42/0.08)]">
+    <div className="relative size-[132px] shrink-0 rounded-full bg-white shadow-[0_10px_30px_rgb(15_23_42/0.08),inset_0_1px_0_rgb(255_255_255/0.9)]">
       <svg viewBox="0 0 132 132" className="size-[132px] -rotate-90">
+        <defs>
+          <linearGradient id="ring-brand" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#ff9d47" />
+            <stop offset="55%" stopColor="#ff6b00" />
+            <stop offset="100%" stopColor="#f05a00" />
+          </linearGradient>
+        </defs>
         <circle
           cx="66"
           cy="66"
@@ -75,13 +82,16 @@ function ProgressRing({ percent, delta }: { percent: number; delta: number }) {
           cy="66"
           r={R}
           fill="none"
-          stroke="var(--brand-500)"
+          stroke="url(#ring-brand)"
           strokeWidth="11"
           strokeLinecap="round"
           strokeDasharray={C}
           initial={{ strokeDashoffset: reduced ? target : C }}
           animate={{ strokeDashoffset: target }}
           transition={{ duration: 1, ease: [0.2, 0, 0, 1] }}
+          style={{
+            filter: "drop-shadow(0 3px 6px rgb(255 107 0 / 0.35))",
+          }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">

@@ -110,7 +110,14 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
               {yMax}
             </text>
 
-            <path d={area} fill={COLOR} opacity={0.07} />
+            <defs>
+              <linearGradient id="trend-area" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={COLOR} stopOpacity={0.22} />
+                <stop offset="60%" stopColor={COLOR} stopOpacity={0.06} />
+                <stop offset="100%" stopColor={COLOR} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <path d={area} fill="url(#trend-area)" />
             <path
               d={line}
               fill="none"
@@ -118,6 +125,8 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
               strokeWidth={2}
               strokeLinecap="round"
               strokeLinejoin="round"
+              pathLength={1}
+              className="trend-draw"
             />
 
             {/* etichette x essenziali */}
@@ -133,7 +142,7 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
               </text>
             ))}
 
-            {/* crosshair + marker (anello di superficie 2px) */}
+            {/* crosshair + marker (anello di superficie 2px + alone) */}
             {hover !== null ? (
               <>
                 <line
@@ -142,6 +151,13 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
                   y1={PAD.top}
                   y2={PAD.top + innerH}
                   stroke="#C9CDD3"
+                />
+                <circle
+                  cx={coords[hover].x}
+                  cy={coords[hover].y}
+                  r={10}
+                  fill={COLOR}
+                  opacity={0.14}
                 />
                 <circle
                   cx={coords[hover].x}

@@ -505,9 +505,10 @@ function Column({
       ref={registerRef}
       aria-label={meta.label}
       className={cn(
-        "flex w-[290px] shrink-0 snap-start flex-col rounded-2xl p-2 transition-colors",
+        "flex w-[290px] shrink-0 snap-start flex-col rounded-2xl p-2 shadow-[inset_0_1px_0_rgb(255_255_255/0.65)] transition-[background,box-shadow]",
         meta.kind === "alert" ? "bg-[#FEF2F2]/80" : "bg-[#EDF1F7]/70",
-        isTarget && "bg-brand-50 ring-1 ring-brand-300/70",
+        isTarget &&
+          "bg-brand-50 ring-1 ring-brand-300/70 shadow-[inset_0_1px_0_rgb(255_255_255/0.65),0_10px_34px_-10px_rgb(255_107_0/0.4)]",
         "lg:w-auto lg:flex-1 lg:basis-0",
       )}
     >

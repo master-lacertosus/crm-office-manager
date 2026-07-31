@@ -37,12 +37,13 @@ export function CardVisual({
     <div
       className={cn(
         "card-soft relative rounded-2xl p-3 pl-4",
-        urgency === "overdue" && "border-destructive/35",
+        urgency === "overdue" &&
+          "border-destructive/35 shadow-[0_6px_18px_-6px_rgb(217_45_32/0.25)]",
         urgency === "today" && "border-brand-300",
         urgency !== "overdue" &&
           urgency !== "today" &&
           task.priority === "high" &&
-          "border-[#F59E0B]/60",
+          "border-[#F59E0B]/60 shadow-[0_6px_18px_-6px_rgb(245_158_11/0.3)]",
         className,
       )}
     >

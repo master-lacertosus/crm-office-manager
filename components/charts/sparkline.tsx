@@ -21,6 +21,8 @@ export function Sparkline({
   }));
   const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
 
+  const gradId = `spark-${color.replace("#", "")}`;
+
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
@@ -29,10 +31,15 @@ export function Sparkline({
       className="mt-2 h-7 w-full"
       preserveAspectRatio="none"
     >
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.28} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
       <path
         d={`${line} L${width},${height} L0,${height} Z`}
-        fill={color}
-        opacity={0.08}
+        fill={`url(#${gradId})`}
       />
       <path
         d={line}

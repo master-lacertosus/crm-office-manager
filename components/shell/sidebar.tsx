@@ -6,39 +6,45 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  CalendarDays,
-  ChartNoAxesColumn,
   Check,
   ChevronDown,
   Compass,
-  Folder,
-  LayoutDashboard,
-  ListTodo,
   LogOut,
   Settings,
-  TriangleAlert,
   UserRound,
-  Users,
   X,
-  type LucideIcon,
 } from "lucide-react";
 
 import { drawer, pop, scrim } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
 import { AvatarInitials } from "@/components/avatar-initials";
+import {
+  IconCalendar,
+  IconDashboard,
+  IconProblems,
+  IconProjects,
+  IconReports,
+  IconSettings,
+  IconTasks,
+  IconTeam,
+} from "@/components/shell/nav-icons";
 import { useToast } from "@/components/toaster";
 import { Button } from "@/components/ui/button";
 
-const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/tasks", label: "Task", icon: ListTodo },
-  { href: "/calendar", label: "Calendario", icon: CalendarDays },
-  { href: "/projects", label: "Progetti", icon: Folder },
-  { href: "/problems", label: "Problemi", icon: TriangleAlert },
-  { href: "/reports", label: "Report", icon: ChartNoAxesColumn },
-  { href: "/team", label: "Team", icon: Users },
-  { href: "/settings/profile", label: "Impostazioni", icon: Settings },
+const NAV_ITEMS: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+}[] = [
+  { href: "/dashboard", label: "Dashboard", icon: IconDashboard },
+  { href: "/tasks", label: "Task", icon: IconTasks },
+  { href: "/calendar", label: "Calendario", icon: IconCalendar },
+  { href: "/projects", label: "Progetti", icon: IconProjects },
+  { href: "/problems", label: "Problemi", icon: IconProblems },
+  { href: "/reports", label: "Report", icon: IconReports },
+  { href: "/team", label: "Team", icon: IconTeam },
+  { href: "/settings/profile", label: "Impostazioni", icon: IconSettings },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -66,22 +72,19 @@ function NavLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex h-9 items-center gap-3 rounded-lg px-2.5 text-sm outline-none transition-colors",
+        "relative flex h-9.5 items-center gap-3 rounded-xl px-2.5 text-sm outline-none transition-all",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         active
-          ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
-          : "text-ink-secondary hover:bg-accent hover:text-ink",
+          ? "nav-tile-active font-semibold"
+          : "text-ink-secondary hover:bg-white/70 hover:text-ink",
         labelVisibility === "lg" && "md:justify-center lg:justify-start",
       )}
     >
-      {/* rail arancio: l'unico arancio persistente a schermo */}
-      {active ? (
-        <span
-          aria-hidden
-          className="absolute top-1.5 bottom-1.5 -left-2.5 w-0.5 rounded-full bg-primary"
-        />
-      ) : null}
-      <Icon aria-hidden className="size-[18px] shrink-0" strokeWidth={1.75} />
+      <Icon
+        aria-hidden
+        className="size-[18px] shrink-0"
+        strokeWidth={active ? 2 : 1.75}
+      />
       <span
         className={cn(labelVisibility === "lg" && "md:hidden lg:inline")}
       >
@@ -187,7 +190,7 @@ function UserFooter({ compact = false }: { compact?: boolean }) {
         aria-expanded={open}
         aria-haspopup="menu"
         className={cn(
-          "flex w-full items-center gap-2.5 rounded-2xl border border-border bg-white px-2.5 py-2 shadow-xs outline-none transition-colors hover:border-input focus-visible:ring-2 focus-visible:ring-ring",
+          "glass-chip flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 outline-none transition-all hover:-translate-y-px hover:border-input focus-visible:ring-2 focus-visible:ring-ring",
           compact && "md:justify-center lg:justify-start",
         )}
       >
@@ -268,7 +271,7 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
 /** Sidebar fissa: 240px da lg, rail icone 64px su md, assente sotto md. */
 export function Sidebar() {
   return (
-    <aside className="sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex md:w-16 lg:w-60 print:hidden">
+    <aside className="glass-chrome sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-white/60 md:flex md:w-16 lg:w-60 print:hidden">
       <Wordmark compact />
       <nav
         aria-label="Navigazione principale"

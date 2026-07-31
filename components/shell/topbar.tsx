@@ -18,7 +18,7 @@ export function Topbar({
   const { openDrawer } = useShell();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 bg-canvas/85 px-4 backdrop-blur-md sm:px-6 print:hidden">
+    <header className="glass-chrome sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-white/60 px-4 sm:px-6 print:hidden">
       <Button
         variant="ghost"
         size="icon-sm"

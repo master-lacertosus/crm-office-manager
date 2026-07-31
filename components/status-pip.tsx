@@ -97,6 +97,7 @@ export function StatusPip({
       {status === "done" && (
         <>
           <circle cx={8} cy={8} r={7} fill={meta.color} />
+          <circle cx={8} cy={8} r={7} fill="url(#pip-gloss)" />
           <path
             d="M 4.9 8.2 L 7.1 10.4 L 11.2 5.9"
             fill="none"
@@ -108,16 +109,35 @@ export function StatusPip({
         </>
       )}
       {meta.kind === "custom" && (
-        <rect
-          x="3.6"
-          y="3.6"
-          width="8.8"
-          height="8.8"
-          rx="2.2"
-          fill={meta.color}
-          transform="rotate(45 8 8)"
-        />
+        <>
+          <rect
+            x="3.6"
+            y="3.6"
+            width="8.8"
+            height="8.8"
+            rx="2.2"
+            fill={meta.color}
+            transform="rotate(45 8 8)"
+          />
+          <rect
+            x="3.6"
+            y="3.6"
+            width="8.8"
+            height="8.8"
+            rx="2.2"
+            fill="url(#pip-gloss)"
+            transform="rotate(45 8 8)"
+          />
+        </>
       )}
+      {/* luce «a gemma» condivisa dai pip pieni */}
+      <defs>
+        <radialGradient id="pip-gloss" cx="0.35" cy="0.25" r="0.75">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.5" />
+          <stop offset="55%" stopColor="#ffffff" stopOpacity="0.08" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        </radialGradient>
+      </defs>
     </svg>
   );
 }

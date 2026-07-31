@@ -239,9 +239,11 @@
     inset: 0;
     z-index: -1;
     background:
-      radial-gradient(680px 420px at 90% -8%, rgb(255 107 0 / 0.06), transparent 60%),
-      radial-gradient(720px 520px at 6% 108%, rgb(109 93 251 / 0.05), transparent 64%),
-      linear-gradient(180deg, #f7f9fc 0%, #f4f6fb 100%);
+      radial-gradient(760px 460px at 92% -10%, rgb(255 107 0 / 0.09), transparent 62%),
+      radial-gradient(520px 380px at 70% 4%, rgb(255 176 102 / 0.07), transparent 58%),
+      radial-gradient(780px 560px at 4% 110%, rgb(100 116 139 / 0.08), transparent 64%),
+      radial-gradient(560px 420px at 36% 118%, rgb(109 93 251 / 0.05), transparent 60%),
+      linear-gradient(165deg, #f8fafd 0%, #f4f6fb 55%, #f1f4fa 100%);
   }
 
   /* Card solida premium (revisione mockup): bianco pieno, raggio ampio,
@@ -266,15 +268,36 @@
       0 8px 28px rgb(23 24 28 / 0.06);
   }
 
+  /* Overlay di vetro (dialoghi, palette, campanella, drawer): denso,
+     testo sempre leggibile (opacità ≥ 78%). */
   .glass-strong {
-    background: rgb(255 255 255 / 0.78);
-    backdrop-filter: blur(30px) saturate(1.6);
-    -webkit-backdrop-filter: blur(30px) saturate(1.6);
-    border: 1px solid rgb(255 255 255 / 0.8);
+    background: rgb(255 255 255 / 0.82);
+    backdrop-filter: blur(32px) saturate(1.7);
+    -webkit-backdrop-filter: blur(32px) saturate(1.7);
+    border: 1px solid rgb(255 255 255 / 0.85);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.9),
+      inset 0 1px 0 rgb(255 255 255 / 0.95),
+      inset 0 -1px 0 rgb(15 23 42 / 0.03),
       0 2px 6px rgb(23 24 28 / 0.06),
-      0 16px 48px rgb(23 24 28 / 0.12);
+      0 20px 56px rgb(23 24 28 / 0.14);
+  }
+
+  /* Telaio di vetro (sidebar, topbar): l'aurora traspare, il contenuto
+     resta nitido. Niente ombra esterna: sono superfici a filo. */
+  .glass-chrome {
+    background: rgb(255 255 255 / 0.68);
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  }
+
+  /* Chip di vetro per controlli piccoli (toggle, contatori, pillole). */
+  .glass-chip {
+    background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+    border: 1px solid rgb(226 232 240 / 0.9);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.95),
+      0 1px 2px rgb(15 23 42 / 0.05);
   }
 
   /* Aure che respirano: due blob extra in lentissimo movimento
@@ -376,9 +399,110 @@
     background-image: linear-gradient(180deg, #ff7f0d 0%, var(--brand-550) 55%, #e05300 100%);
   }
 
+  /* Tessera di navigazione attiva (reference H.Care): la voce corrente è
+     una tessera arancio piena con alone — l'unico blocco pieno del telaio. */
+  .nav-tile-active {
+    background-image: linear-gradient(180deg, #ff8a1f 0%, var(--brand-500) 58%, #f05a00 100%);
+    color: #ffffff;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.4),
+      0 8px 20px -6px rgb(255 107 0 / 0.5);
+  }
+
+  /* Sollevamento all'hover: elevazione e2 (card interattive). */
+  .hover-lift {
+    transition:
+      transform 160ms var(--ease-out),
+      box-shadow 160ms var(--ease-out);
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 2px 6px rgb(15 23 42 / 0.05),
+      0 16px 40px rgb(15 23 42 / 0.1);
+  }
+  .pressable:active {
+    transform: translateY(0) scale(0.985);
+  }
+
+  /* Lucentezza "a gemma" per pip e pallini colorati: luce dall'alto. */
+  .gem {
+    background-image: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.5) 0%,
+      rgb(255 255 255 / 0.08) 46%,
+      rgb(0 0 0 / 0.06) 100%
+    );
+    box-shadow:
+      inset 0 1px 1px rgb(255 255 255 / 0.55),
+      inset 0 -1px 1px rgb(0 0 0 / 0.08);
+  }
+
+  /* La linea del trend si disegna all'ingresso (pathLength normalizzato). */
+  .trend-draw {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: trend-draw 900ms var(--ease-out) forwards;
+  }
+  @keyframes trend-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  /* Shimmer per gli stati di caricamento. */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: #eef2f7;
+    border-radius: 10px;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgb(255 255 255 / 0.7) 50%,
+      transparent 80%
+    );
+    transform: translateX(-100%);
+    animation: skeleton-sweep 1.4s ease-in-out infinite;
+  }
+  @keyframes skeleton-sweep {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
 
   ::selection {
     background: var(--brand-100);
+  }
+
+  /* Scrollbar sottili e discrete (WebKit + Firefox). */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #c7d0dc transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #c7d0dc;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: #9aa7b8;
+    background-clip: content-box;
+    border: 2px solid transparent;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
   }
 
   /* La riduzione del movimento vale anche per le transizioni CSS;
