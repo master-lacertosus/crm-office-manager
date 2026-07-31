@@ -36,6 +36,14 @@ export function shiftIsoMonths(iso: string, months: number): string {
   return toIso(d);
 }
 
+/** Range di un mese di calendario (0 = corrente, -1 = scorso…). */
+export function monthRangeIso(offsetMonths = 0): { from: string; to: string } {
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth() + offsetMonths, 1);
+  const last = new Date(now.getFullYear(), now.getMonth() + offsetMonths + 1, 0);
+  return { from: toIso(first), to: toIso(last) };
+}
+
 /** Prossima ricorrenza del giorno `day` del mese (oggi incluso). */
 export function nextMonthlyIso(day: number): string {
   const now = new Date();

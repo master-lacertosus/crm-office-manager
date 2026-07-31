@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LayoutGroup, motion } from "motion/react";
 import { Check, Plus, X } from "lucide-react";
 
@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { StatusPip } from "@/components/status-pip";
 import { CardVisual, TaskCard } from "@/components/board/task-card";
+import { useToast } from "@/components/toaster";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -45,11 +46,15 @@ export function Board({ projectId }: { projectId?: string }) {
     currentUser,
   } = useAppStore();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const toast = useToast();
 
   const ownerFilter = searchParams.get("owner");
   const projectFilter = projectId ?? searchParams.get("project");
 
   const visible = tasks.filter((task) => {
+    if (task.archived_at) return false;
     if (ownerFilter && task.owner_id !== ownerFilter) return false;
     if (projectFilter && task.project_id !== projectFilter) return false;
     return true;
@@ -249,7 +254,15 @@ export function Board({ projectId }: { projectId?: string }) {
               targetTasks[current.insertIndex].position) /
             2;
         }
-        moveTask(current.task.id, current.target, position);
+        const revert = moveTask(current.task.id, current.target, position);
+        if (revert) {
+          const label =
+            statuses.find((s) => s.key === current.target)?.label ??
+            current.target;
+          toast(`«${current.task.title}» → ${label}`, {
+            action: { label: "Annulla", onClick: revert },
+          });
+        }
       }
       setDrag(null);
       setTimeout(() => {
@@ -267,6 +280,128 @@ export function Board({ projectId }: { projectId?: string }) {
     window.addEventListener("keydown", onKey);
   };
 
+  /* Tastiera: frecce selezionano, Invio apre, Shift+←/→ sposta di fase. */
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const statusesRef = React.useRef(statuses);
+  React.useEffect(() => {
+    statusesRef.current = statuses;
+  }, [statuses]);
+
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const arrows = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+      if (!arrows.includes(e.key) && e.key !== "Enter" && e.key !== "Escape")
+        return;
+      const tag = (document.activeElement?.tagName ?? "").toLowerCase();
+      if (["input", "textarea", "select"].includes(tag)) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      if (dragRef.current) return;
+
+      const order = statusesRef.current.map((s) => s.key);
+      const byLane = byStatusRef.current;
+      const findPos = (id: string | null) => {
+        if (!id) return null;
+        for (let li = 0; li < order.length; li++) {
+          const idx = (byLane.get(order[li]) ?? []).findIndex(
+            (t) => t.id === id,
+          );
+          if (idx >= 0) return { lane: li, idx };
+        }
+        return null;
+      };
+
+      if (e.key === "Escape") {
+        setSelectedId(null);
+        return;
+      }
+
+      const pos = findPos(selectedId);
+
+      if (e.key === "Enter") {
+        if (!selectedId || !pos) return;
+        e.preventDefault();
+        const params = new URLSearchParams(searchParams);
+        params.set("task", selectedId);
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+        return;
+      }
+
+      e.preventDefault();
+
+      // nessuna selezione: parte dalla prima card disponibile
+      if (!pos) {
+        for (const key of order) {
+          const first = (byLane.get(key) ?? [])[0];
+          if (first) {
+            setSelectedId(first.id);
+            return;
+          }
+        }
+        return;
+      }
+
+      const lane = byLane.get(order[pos.lane]) ?? [];
+      const task = lane[pos.idx];
+
+      // Shift+←/→: sposta il task nella fase adiacente (con Annulla)
+      if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        if (!task) return;
+        const dir = e.key === "ArrowLeft" ? -1 : 1;
+        const targetLane = pos.lane + dir;
+        if (targetLane < 0 || targetLane >= order.length) return;
+        const target = order[targetLane];
+        const targetTasks = (byLane.get(target) ?? []).filter(
+          (t) => t.id !== task.id,
+        );
+        const last = targetTasks[targetTasks.length - 1];
+        const revert = moveTask(
+          task.id,
+          target,
+          last ? last.position + 1 : task.position,
+        );
+        if (revert) {
+          const label =
+            statusesRef.current.find((s) => s.key === target)?.label ?? target;
+          toast(`«${task.title}» → ${label}`, {
+            action: { label: "Annulla", onClick: revert },
+          });
+        }
+        return;
+      }
+
+      // frecce semplici: sposta la selezione
+      let next: Task | undefined;
+      if (e.key === "ArrowUp") next = lane[Math.max(0, pos.idx - 1)];
+      else if (e.key === "ArrowDown")
+        next = lane[Math.min(lane.length - 1, pos.idx + 1)];
+      else {
+        const dir = e.key === "ArrowLeft" ? -1 : 1;
+        for (
+          let li = pos.lane + dir;
+          li >= 0 && li < order.length;
+          li += dir
+        ) {
+          const cand = byLane.get(order[li]) ?? [];
+          if (cand.length > 0) {
+            next = cand[Math.min(pos.idx, cand.length - 1)];
+            break;
+          }
+        }
+      }
+      if (next) setSelectedId(next.id);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId, searchParams, pathname, router, moveTask, toast]);
+
+  /* La card selezionata resta in vista */
+  React.useEffect(() => {
+    if (!selectedId) return;
+    document
+      .querySelector(`[data-card-id="${selectedId}"]`)
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [selectedId]);
+
   const canAddPhase =
     currentUser.role === "admin" && customStatuses.length < MAX_CUSTOM_STATUSES;
 
@@ -282,6 +417,7 @@ export function Board({ projectId }: { projectId?: string }) {
             meta={meta}
             tasks={byStatus.get(meta.key) ?? []}
             drag={drag}
+            selectedId={selectedId}
             registerRef={(el) => {
               if (el) columnRefs.current.set(meta.key, el);
               else columnRefs.current.delete(meta.key);
@@ -321,6 +457,7 @@ function Column({
   meta,
   tasks,
   drag,
+  selectedId,
   registerRef,
   onCardPointerDown,
   suppressClickRef,
@@ -328,6 +465,7 @@ function Column({
   meta: StatusMeta;
   tasks: Task[];
   drag: DragState | null;
+  selectedId: string | null;
   registerRef: (el: HTMLElement | null) => void;
   onCardPointerDown: (e: React.PointerEvent, task: Task) => void;
   suppressClickRef: React.RefObject<boolean>;
@@ -350,7 +488,11 @@ function Column({
         className="cursor-grab touch-pan-x touch-pan-y"
         transition={{ layout: { duration: 0.18, ease: [0.2, 0, 0, 1] } }}
       >
-        <TaskCard task={task} suppressClickRef={suppressClickRef} />
+        <TaskCard
+          task={task}
+          suppressClickRef={suppressClickRef}
+          selected={task.id === selectedId}
+        />
       </motion.div>,
     );
   });

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Compass, KeyRound, MailPlus, UserX } from "lucide-react";
 
+import { ConfigBackup } from "@/components/config-backup";
 import { PhaseManager } from "@/components/phase-manager";
 import { TemplateManager } from "@/components/template-manager";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,8 @@ export default function WorkspaceSettingsPage() {
       <TemplateManager />
 
       <PhaseManager />
+
+      <ConfigBackup />
 
       <div className="rounded-xl border border-dashed border-border p-4">
         <p className="text-[13px] font-medium text-ink-secondary">

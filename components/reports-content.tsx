@@ -1,14 +1,28 @@
 "use client";
 
+import * as React from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
+import { Download, Printer } from "lucide-react";
 
 import { buildAnalytics } from "@/lib/analytics";
+import {
+  addDaysIso,
+  diffIsoDays,
+  formatDue,
+  monthRangeIso,
+  todayIso,
+} from "@/lib/format";
 import { useAppStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 import { BarList } from "@/components/charts/bar-list";
 import { Sparkline } from "@/components/charts/sparkline";
 import { StatTile } from "@/components/charts/stat-tile";
 import { WorkloadChart } from "@/components/charts/stacked-bars";
 import { TrendChart } from "@/components/charts/trend-chart";
+import { useToast } from "@/components/toaster";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 function Card({
   title,
@@ -37,19 +51,144 @@ function Card({
 /** Colori per progetto: ordine fisso per entità, mai riassegnati al riordino. */
 const PROJECT_HUES = ["#F09226", "#0284C7", "#6D28D9"];
 
+const PRESETS = [
+  { key: "7", label: "7 giorni" },
+  { key: "30", label: "30 giorni" },
+  { key: "90", label: "90 giorni" },
+  { key: "month", label: "Mese corrente" },
+  { key: "prevmonth", label: "Mese scorso" },
+] as const;
+
+type PresetKey = (typeof PRESETS)[number]["key"] | "custom";
+
+function resolveRange(
+  preset: PresetKey,
+  from: string | null,
+  to: string | null,
+): { from: string; to: string } {
+  const today = todayIso();
+  switch (preset) {
+    case "7":
+      return { from: addDaysIso(-6), to: today };
+    case "90":
+      return { from: addDaysIso(-89), to: today };
+    case "month": {
+      const m = monthRangeIso(0);
+      return { from: m.from, to: today < m.to ? today : m.to };
+    }
+    case "prevmonth":
+      return monthRangeIso(-1);
+    case "custom":
+      if (from && to && from <= to) return { from, to };
+      return { from: addDaysIso(-29), to: today };
+    default:
+      return { from: addDaysIso(-29), to: today };
+  }
+}
+
 export function ReportsContent() {
   const { tasks, profiles, projects, statuses } = useAppStore();
   const reduced = useReducedMotion();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const toast = useToast();
+
+  const rawPreset = searchParams.get("range");
+  const preset: PresetKey =
+    rawPreset === "custom" ||
+    PRESETS.some((p) => p.key === rawPreset)
+      ? (rawPreset as PresetKey)
+      : "30";
+  const range = resolveRange(
+    preset,
+    searchParams.get("from"),
+    searchParams.get("to"),
+  );
+
+  const setPreset = (key: PresetKey, custom?: { from: string; to: string }) => {
+    const params = new URLSearchParams(searchParams);
+    if (key === "30") params.delete("range");
+    else params.set("range", key);
+    if (key === "custom" && custom) {
+      params.set("from", custom.from);
+      params.set("to", custom.to);
+    } else {
+      params.delete("from");
+      params.delete("to");
+    }
+    const qs = params.toString();
+    // Aggiornamento parametri sulla stessa pagina: in Next 16 la via
+    // canonica è l'History API nativa (il router la integra e sincronizza
+    // useSearchParams); router.replace su rotta statica scarta i parametri.
+    window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
+  };
+
   const a = buildAnalytics(
     tasks,
     profiles,
     projects,
     statuses.map((s) => s.key),
+    range,
   );
+
   const projectColors = new Map<string, string>(
     projects.map((p, i) => [p.id, PROJECT_HUES[i % PROJECT_HUES.length]]),
   );
   projectColors.set("none", "#94A3B8");
+  const doneColors = new Map<string, string>(
+    a.donePerPerson.map((p) => [p.key, "#047857"]),
+  );
+
+  const rangeLabel = `${formatDue(range.from)} – ${formatDue(range.to)}`;
+
+  /** Esporta i task completati nel periodo (CSV per Excel, ; e BOM). */
+  const exportCsv = () => {
+    const rows = tasks
+      .filter((t) => {
+        const d =
+          t.status === "done" && t.completed_at
+            ? t.completed_at.slice(0, 10)
+            : null;
+        return d !== null && d >= range.from && d <= range.to;
+      })
+      .sort((x, y) =>
+        (x.completed_at ?? "").localeCompare(y.completed_at ?? ""),
+      );
+    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const name = (id: string) =>
+      profiles.find((p) => p.id === id)?.full_name ?? "";
+    const proj = (id: string | null) =>
+      id ? (projects.find((p) => p.id === id)?.name ?? "") : "";
+    const lines = [
+      ["Titolo", "Progetto", "Responsabile", "Priorità", "Creato", "Completato", "Giorni"].join(";"),
+      ...rows.map((t) =>
+        [
+          esc(t.title),
+          esc(proj(t.project_id)),
+          esc(name(t.owner_id)),
+          t.priority === "high" ? "Alta" : t.priority === "low" ? "Bassa" : "Normale",
+          t.created_at.slice(0, 10),
+          t.completed_at?.slice(0, 10) ?? "",
+          String(
+            diffIsoDays(
+              t.created_at.slice(0, 10),
+              t.completed_at?.slice(0, 10) ?? t.created_at.slice(0, 10),
+            ),
+          ),
+        ].join(";"),
+      ),
+    ];
+    const blob = new Blob(["﻿" + lines.join("\r\n")], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `report-lacertosus-${range.from}-${range.to}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast(`CSV esportato: ${rows.length} task del periodo`);
+  };
 
   const rise = (order: number) => ({
     initial: reduced ? false : { opacity: 0, y: 6 },
@@ -59,43 +198,106 @@ export function ReportsContent() {
 
   return (
     <div className="flex-1 space-y-4 px-4 py-4 sm:px-6">
-      {/* KPI — reagiscono in tempo reale alla board */}
+      {/* Selettore periodo + azioni */}
+      <div className="flex flex-wrap items-center gap-2 print:hidden">
+        <div className="flex flex-wrap gap-0.5 rounded-xl border border-border bg-white p-0.5 shadow-xs">
+          {PRESETS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setPreset(key)}
+              aria-pressed={preset === key}
+              className={cn(
+                "rounded-md px-2.5 py-1 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                preset === key
+                  ? "bg-brand-50 text-brand-700"
+                  : "text-ink-secondary hover:text-ink",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Input
+            type="date"
+            value={range.from}
+            max={range.to}
+            onChange={(e) =>
+              e.target.value &&
+              setPreset("custom", { from: e.target.value, to: range.to })
+            }
+            aria-label="Dal giorno"
+            className="h-8 w-36 text-[13px]"
+          />
+          <span className="text-xs text-ink-muted">→</span>
+          <Input
+            type="date"
+            value={range.to}
+            min={range.from}
+            max={todayIso()}
+            onChange={(e) =>
+              e.target.value &&
+              setPreset("custom", { from: range.from, to: e.target.value })
+            }
+            aria-label="Al giorno"
+            className="h-8 w-36 text-[13px]"
+          />
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportCsv}>
+            <Download data-icon="inline-start" />
+            Esporta CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Printer data-icon="inline-start" />
+            Stampa
+          </Button>
+        </div>
+      </div>
+
+      <p className="hidden font-mono text-xs text-ink-muted print:block">
+        Report Lacertosus Office OS · periodo {rangeLabel}
+      </p>
+
+      {/* KPI del periodo — reagiscono in tempo reale alla board */}
       <motion.div {...rise(0)} className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
-          label="Task aperti"
-          value={a.open}
-          aurora="rgb(2 132 199 / 0.14)"
-        />
-        <StatTile
-          label="In ritardo"
-          value={a.overdue}
-          tone="danger"
-          aurora="rgb(217 45 32 / 0.11)"
-        />
-        <StatTile
-          label="In revisione"
-          value={a.inReview}
-          tone="brand"
-          aurora="rgb(240 146 38 / 0.16)"
-        />
-        <StatTile
-          label="Completati · 7g"
-          value={a.done7}
-          delta={a.done7Delta}
+          label={`Completati · ${a.rangeDays}g`}
+          value={a.doneInRange}
+          delta={a.doneInRangeDelta}
+          deltaLabel="vs periodo prec."
           aurora="rgb(22 163 101 / 0.11)"
         >
           <Sparkline
             values={a.trend.map((p) => p.value)}
-            ariaLabel="Andamento completamenti, ultime due settimane"
+            ariaLabel={`Andamento completamenti nel periodo ${rangeLabel}`}
           />
         </StatTile>
+        <StatTile
+          label="Creati nel periodo"
+          value={a.createdInRange}
+          aurora="rgb(2 132 199 / 0.14)"
+        />
+        <StatTile
+          label="Tempo medio (giorni)"
+          value={a.avgLeadDays ?? 0}
+          decimals={1}
+          aurora="rgb(109 40 217 / 0.10)"
+          sublabel="da creazione a completamento"
+        />
+        <StatTile
+          label="In ritardo (oggi)"
+          value={a.overdue}
+          tone="danger"
+          aurora="rgb(217 45 32 / 0.11)"
+        />
       </motion.div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <motion.div {...rise(1)} className="lg:col-span-2">
           <Card
             title="Flusso di completamento"
-            hint="Task completati al giorno, ultime due settimane"
+            hint={`Task completati al giorno · ${rangeLabel}`}
             className="h-full"
           >
             <TrendChart points={a.trend} />
@@ -103,26 +305,43 @@ export function ReportsContent() {
         </motion.div>
 
         <motion.div {...rise(2)}>
-          <Card title="Riepilogo" hint="Generato dai dati correnti" className="h-full">
+          <Card title="Riepilogo" hint={`Periodo ${rangeLabel}`} className="h-full">
             <ul className="space-y-2.5 text-[13px]/[19px] text-ink-secondary">
               <li>
-                Negli ultimi 7 giorni il team ha completato{" "}
-                <span className="font-mono font-medium text-ink">{a.done7}</span>{" "}
+                Nel periodo il team ha completato{" "}
+                <span className="font-mono font-medium text-ink">
+                  {a.doneInRange}
+                </span>{" "}
                 task (
                 <span className="font-mono">
-                  {a.done7Delta >= 0 ? `+${a.done7Delta}` : a.done7Delta}
+                  {a.doneInRangeDelta >= 0
+                    ? `+${a.doneInRangeDelta}`
+                    : a.doneInRangeDelta}
                 </span>{" "}
-                sui 7 precedenti).
+                sul periodo precedente) e ne ha creati{" "}
+                <span className="font-mono font-medium text-ink">
+                  {a.createdInRange}
+                </span>
+                .
               </li>
+              {a.avgLeadDays !== null ? (
+                <li>
+                  Un task si chiude in media in{" "}
+                  <span className="font-mono font-medium text-ink">
+                    {a.avgLeadDays}
+                  </span>{" "}
+                  giorni.
+                </li>
+              ) : null}
               <li>
                 {a.overdue === 0 ? (
-                  <>Nessun task in ritardo. Ottimo ritmo.</>
+                  <>Nessun task in ritardo oggi. Ottimo ritmo.</>
                 ) : (
                   <>
                     <span className="font-mono font-medium text-danger-text">
                       {a.overdue}
                     </span>{" "}
-                    in ritardo{a.mostUrgent ? (
+                    in ritardo oggi{a.mostUrgent ? (
                       <>
                         ; il più urgente è{" "}
                         <span className="font-medium text-ink">
@@ -135,12 +354,6 @@ export function ReportsContent() {
                     )}
                   </>
                 )}
-              </li>
-              <li>
-                <span className="font-mono font-medium text-brand-700">
-                  {a.inReview}
-                </span>{" "}
-                task aspettano una revisione.
               </li>
               {a.busiest ? (
                 <li>
@@ -163,7 +376,7 @@ export function ReportsContent() {
       <div className="grid gap-4 lg:grid-cols-3">
         <motion.div {...rise(3)} className="lg:col-span-2">
           <Card
-            title="Carico di lavoro"
+            title="Carico di lavoro (oggi)"
             hint="Task per persona e stato — il backlog è tratteggiato"
           >
             <WorkloadChart
@@ -175,7 +388,19 @@ export function ReportsContent() {
         </motion.div>
 
         <motion.div {...rise(4)}>
-          <Card title="Per progetto" className="h-full">
+          <Card
+            title="Completati per persona"
+            hint={`Periodo ${rangeLabel}`}
+            className="h-full"
+          >
+            <BarList rows={a.donePerPerson} colors={doneColors} valueOnly />
+          </Card>
+        </motion.div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <motion.div {...rise(5)}>
+          <Card title="Per progetto (oggi)" className="h-full">
             <BarList rows={a.projects} colors={projectColors} />
           </Card>
         </motion.div>

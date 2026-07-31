@@ -4,7 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { CheckCircle2, Repeat, Settings2, X } from "lucide-react";
+import { CheckCircle2, Package, Repeat, Settings2, X } from "lucide-react";
 
 import { nextMonthlyIso } from "@/lib/format";
 import { pop, scrim } from "@/lib/motion";
@@ -120,13 +120,13 @@ export function RecurringPlanner() {
         }),
       ),
     );
-    const n = created.filter(Boolean).length;
+    const total = created.reduce((sum, arr) => sum + (arr?.length ?? 0), 0);
     setCreating(false);
     setOpen(false);
     toast(
-      n === 1
-        ? "1 attività pianificata: è sulla board"
-        : `${n} attività pianificate: sono sulla board`,
+      total === 1
+        ? "1 task creato: è sulla board"
+        : `${total} task creati: sono sulla board`,
     );
   };
 
@@ -189,7 +189,22 @@ export function RecurringPlanner() {
 
                 {templates.map((tpl) => {
                   const active = activeByTemplate.get(tpl.id);
+                  const isPack = (tpl.pack?.length ?? 0) > 0;
+                  const cadenceLabel = isPack ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Package className="size-3" strokeWidth={2} />
+                      Pacchetto · {tpl.pack?.length} task
+                    </span>
+                  ) : tpl.repeat !== "none" ? (
+                    REPEAT_META[tpl.repeat].label
+                  ) : (
+                    "Una tantum"
+                  );
                   if (active) {
+                    const openCount = tasks.filter(
+                      (t) =>
+                        t.template_id === tpl.id && t.status !== "done",
+                    ).length;
                     return (
                       <div
                         key={tpl.id}
@@ -207,11 +222,11 @@ export function RecurringPlanner() {
                             ) : null}
                           </span>
                           <span className="text-xs text-ink-muted">
-                            {tpl.repeat !== "none"
-                              ? REPEAT_META[tpl.repeat].label
-                              : "Una tantum"}
+                            {cadenceLabel}
                             {" · "}
-                            {ownerName(active.owner_id)}
+                            {isPack && openCount > 1
+                              ? `${openCount} task aperti`
+                              : ownerName(active.owner_id)}
                           </span>
                         </span>
                         <DueChip iso={active.due_date} status={active.status} />
@@ -259,16 +274,23 @@ export function RecurringPlanner() {
                           ) : null}
                         </span>
                         <span className="text-xs text-ink-muted">
-                          {tpl.repeat !== "none"
-                            ? REPEAT_META[tpl.repeat].label
-                            : "Una tantum"}
+                          {cadenceLabel}
                         </span>
                       </span>
                       <Input
                         type="date"
                         value={r.due}
                         onChange={(e) => setRow(tpl.id, { due: e.target.value })}
-                        aria-label={`Scadenza per ${tpl.name}`}
+                        aria-label={
+                          isPack
+                            ? `Data àncora del pacchetto ${tpl.name}`
+                            : `Scadenza per ${tpl.name}`
+                        }
+                        title={
+                          isPack
+                            ? "Data àncora: i task del pacchetto si distribuiscono attorno a questa data"
+                            : undefined
+                        }
                         className="h-9 w-36 shrink-0"
                       />
                       <NativeSelect
@@ -277,6 +299,12 @@ export function RecurringPlanner() {
                           setRow(tpl.id, { owner: e.target.value })
                         }
                         aria-label={`Responsabile per ${tpl.name}`}
+                        disabled={isPack}
+                        title={
+                          isPack
+                            ? "I responsabili sono definiti nel pacchetto"
+                            : undefined
+                        }
                         className="h-9 w-40 shrink-0"
                       >
                         {profiles

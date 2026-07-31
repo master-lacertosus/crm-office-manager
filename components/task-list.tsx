@@ -7,6 +7,7 @@ import { ChevronRight, Repeat } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
+import { ChecklistChip } from "@/components/board/task-card";
 import { DueChip } from "@/components/due-chip";
 import { PriorityBadge } from "@/components/priority-badge";
 import { StatusPip } from "@/components/status-pip";
@@ -38,6 +39,7 @@ function Row({ task }: { task: Task }) {
           />
         ) : null}
       </span>
+      <ChecklistChip task={task} />
       {task.priority === "high" ? (
         <PriorityBadge className="hidden sm:inline-flex" />
       ) : null}
@@ -76,6 +78,7 @@ export function TaskList() {
   const projectFilter = searchParams.get("project");
 
   const visible = tasks.filter((task) => {
+    if (task.archived_at) return false;
     if (ownerFilter && task.owner_id !== ownerFilter) return false;
     if (projectFilter && task.project_id !== projectFilter) return false;
     return true;

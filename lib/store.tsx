@@ -13,6 +13,7 @@ import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
 import {
   CURRENT_USER_ID,
   MOCK_COMMENTS,
+  MOCK_EVENTS,
   MOCK_NOTIFICATIONS,
   MOCK_PROFILES,
   MOCK_PROJECTS,
@@ -24,12 +25,14 @@ import {
 import type {
   AppNotification,
   CustomStatus,
+  NotificationKind,
   Profile,
   Project,
   ProjectComment,
   StatusMeta,
   Task,
   TaskComment,
+  TaskEvent,
   TaskLink,
   WorkspaceTemplate,
 } from "@/lib/types";
@@ -82,7 +85,8 @@ type NewTask = Pick<Task, "title" | "owner_id"> &
     >
   >;
 
-/** Ricorrenza furba: alla chiusura, il task si ricrea con la scadenza avanti. */
+/** Ricorrenza furba: alla chiusura, il task si ricrea con la scadenza avanti
+ *  (e la checklist azzerata, pronta per la nuova uscita). */
 function nextOccurrence(task: Task): Task | null {
   if (task.repeat === "none" || !task.due_date) return null;
   return {
@@ -94,9 +98,47 @@ function nextOccurrence(task: Task): Task | null {
         ? shiftIsoMonths(task.due_date, 1)
         : shiftIsoDays(task.due_date, task.repeat === "weekly" ? 7 : 14),
     position: Date.now(),
+    checklist: task.checklist?.map((item) => ({ ...item, done: false })),
+    problem_reason: null,
+    problem_since: null,
+    archived_at: null,
     completed_at: null,
     created_at: new Date().toISOString(),
   };
+}
+
+const makeEvent = (
+  taskId: string,
+  actorId: string,
+  type: TaskEvent["type"],
+  from?: string | null,
+  to?: string | null,
+): TaskEvent => ({
+  id: crypto.randomUUID(),
+  task_id: taskId,
+  actor_id: actorId,
+  type,
+  from: from ?? null,
+  to: to ?? null,
+  created_at: new Date().toISOString(),
+});
+
+/** Eventi di cronologia derivati da una modifica (campi tracciati). */
+function diffTaskEvents(before: Task, after: Task, actorId: string): TaskEvent[] {
+  const out: TaskEvent[] = [];
+  if (before.status !== after.status) {
+    out.push(makeEvent(before.id, actorId, "status_changed", before.status, after.status));
+  }
+  if ((before.due_date ?? null) !== (after.due_date ?? null)) {
+    out.push(makeEvent(before.id, actorId, "due_changed", before.due_date, after.due_date));
+  }
+  if (before.owner_id !== after.owner_id) {
+    out.push(makeEvent(before.id, actorId, "owner_changed", before.owner_id, after.owner_id));
+  }
+  if (before.priority !== after.priority) {
+    out.push(makeEvent(before.id, actorId, "priority_changed", before.priority, after.priority));
+  }
+  return out;
 }
 
 interface AppStore {
@@ -108,14 +150,28 @@ interface AppStore {
   tasks: Task[];
   comments: TaskComment[];
   createTask: (input: NewTask) => Promise<Task>;
+  /** Restituisce l'annulla (undo) se la modifica è significativa. */
   updateTask: (
     id: string,
     patch: Partial<Omit<Task, "id" | "created_by" | "created_at">>,
-  ) => Promise<void>;
-  /** Spostamento da board (drag): sincrono, l'interazione deve essere istantanea. */
-  moveTask: (id: string, status: Task["status"], position: number) => void;
+  ) => Promise<(() => void) | null>;
+  /** Spostamento da board (drag): sincrono; restituisce l'annulla se
+   *  la fase è cambiata (l'undo rimuove anche la ricorrenza generata). */
+  moveTask: (
+    id: string,
+    status: Task["status"],
+    position: number,
+  ) => (() => void) | null;
   /** Cambio scadenza da calendario/timeline (drag): sincrono. */
   rescheduleTask: (id: string, dueDate: string | null) => void;
+  /** Cronologia (registro eventi append-only: timeline + report). */
+  events: TaskEvent[];
+  /** Checklist: spunte immediate, senza passare dal form. */
+  toggleChecklistItem: (taskId: string, itemId: string) => void;
+  addChecklistItem: (taskId: string, text: string) => void;
+  removeChecklistItem: (taskId: string, itemId: string) => void;
+  /** Riporta in board un task auto-archiviato. */
+  restoreTask: (taskId: string) => void;
   taskLinks: TaskLink[];
   addTaskLink: (taskId: string, url: string, label: string) => Promise<void>;
   removeTaskLink: (id: string) => void;
@@ -126,7 +182,8 @@ interface AppStore {
   statuses: StatusMeta[];
   customStatuses: CustomStatus[];
   addCustomStatus: (label: string, presetIndex: number) => boolean;
-  removeCustomStatus: (key: string) => void;
+  /** Restituisce l'annulla: ripristina la fase e i task che ci stavano. */
+  removeCustomStatus: (key: string) => (() => void) | null;
   /** Bacheca di progetto. */
   projectComments: ProjectComment[];
   addProjectComment: (projectId: string, body: string) => Promise<void>;
@@ -147,12 +204,20 @@ interface AppStore {
     id: string,
     patch: Partial<Omit<WorkspaceTemplate, "id">>,
   ) => void;
-  removeTemplate: (id: string) => void;
-  /** Crea un task dal template (scadenza/responsabile personalizzabili). */
+  /** Restituisce l'annulla (il template torna al suo posto). */
+  removeTemplate: (id: string) => (() => void) | null;
+  /** Crea i task dal template (uno, o l'intero pacchetto se pack).
+   *  La scadenza passata fa da àncora per gli offset del pacchetto. */
   createTaskFromTemplate: (
     templateId: string,
     overrides?: { due_date?: string | null; owner_id?: string },
-  ) => Promise<Task | null>;
+  ) => Promise<Task[] | null>;
+  /** Backup di configurazione: import di template, fasi custom e viste. */
+  importConfig: (config: {
+    templates?: WorkspaceTemplate[];
+    customStatuses?: CustomStatus[];
+    savedViews?: SavedView[];
+  }) => void;
   /** Viste salvate (filtri della pagina Task), persistite in locale. */
   savedViews: SavedView[];
   addSavedView: (name: string, params: string) => void;
@@ -165,7 +230,10 @@ interface AppStore {
     toUserId: string,
     message: string,
     taskId?: string | null,
+    kind?: NotificationKind,
   ) => Promise<void>;
+  /** Segna letti tutti gli avvisi di un task (gruppo della campanella). */
+  markTaskNotificationsRead: (taskId: string) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
 }
@@ -192,7 +260,104 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [savedViews, setSavedViews] = React.useState<SavedView[]>([]);
   const [templates, setTemplates] =
     React.useState<WorkspaceTemplate[]>(MOCK_TEMPLATES);
+  const [events, setEvents] = React.useState<TaskEvent[]>(MOCK_EVENTS);
   const escalatedRef = React.useRef(new Set<string>());
+
+  /* ------------------------------------------------------------------ */
+  /* Persistenza locale dell'intero workspace (fase placeholder).        */
+  /* «Si deve memorizzare tutto»: task, cronologia, commenti e avvisi    */
+  /* sopravvivono al refresh; con Supabase questo strato sparisce.       */
+  /* Bump di STATE_VERSION = reset pulito ai seed (schema cambiato).     */
+  /* ------------------------------------------------------------------ */
+  const STATE_KEY = "office-state";
+  const STATE_VERSION = 1;
+  const stateLoadedRef = React.useRef(false);
+  React.useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const raw = localStorage.getItem(STATE_KEY);
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (data?.version === STATE_VERSION) {
+            if (data.tasks) setTasks(data.tasks);
+            if (data.events) setEvents(data.events);
+            if (data.comments) setComments(data.comments);
+            if (data.notifications) setNotifications(data.notifications);
+            if (data.taskLinks) setTaskLinks(data.taskLinks);
+            if (data.projectComments) setProjectComments(data.projectComments);
+            if (data.snoozes) setSnoozes(data.snoozes);
+            if (data.focusIds) setFocusIds(data.focusIds);
+            if (data.customStatuses) setCustomStatuses(data.customStatuses);
+          }
+        }
+      } catch {
+        /* storage illeggibile: si riparte dai seed */
+      }
+      stateLoadedRef.current = true;
+    });
+  }, []);
+  React.useEffect(() => {
+    if (!stateLoadedRef.current) return;
+    const id = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          STATE_KEY,
+          JSON.stringify({
+            version: STATE_VERSION,
+            savedAt: new Date().toISOString(),
+            tasks,
+            events,
+            comments,
+            notifications,
+            taskLinks,
+            projectComments,
+            snoozes,
+            focusIds,
+            customStatuses,
+          }),
+        );
+      } catch {
+        /* quota piena o storage assente: pazienza */
+      }
+    }, 400);
+    return () => clearTimeout(id);
+  }, [
+    tasks,
+    events,
+    comments,
+    notifications,
+    taskLinks,
+    projectComments,
+    snoozes,
+    focusIds,
+    customStatuses,
+  ]);
+
+  /* Auto-archivio: i Fatto completati da più di 14 giorni escono dalla
+     board (restano in archivio e nei report). */
+  React.useEffect(() => {
+    if (!stateLoadedRef.current) return;
+    const cutoff = Date.now() - 14 * 86_400_000;
+    const stale = tasks.filter(
+      (t) =>
+        t.status === "done" &&
+        !t.archived_at &&
+        t.completed_at &&
+        new Date(t.completed_at).getTime() < cutoff,
+    );
+    if (stale.length === 0) return;
+    queueMicrotask(() => {
+      const ids = new Set(stale.map((t) => t.id));
+      const nowIso = new Date().toISOString();
+      setTasks((prev) =>
+        prev.map((t) => (ids.has(t.id) ? { ...t, archived_at: nowIso } : t)),
+      );
+      setEvents((prev) => [
+        ...prev,
+        ...stale.map((t) => makeEvent(t.id, t.owner_id, "archived")),
+      ]);
+    });
+  }, [tasks]);
 
   /* Viste salvate e template: carica e persisti in localStorage. Il flag
      "loaded" evita che il primo salvataggio (stato iniziale) sovrascriva
@@ -258,6 +423,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           from_user_id: CURRENT_USER_ID,
           message: `«${tasks.find((t) => t.id === taskId)?.title ?? "Task"}» è tornato dal posticipo.`,
           task_id: taskId,
+          kind: "sistema" as const,
           created_at: new Date().toISOString(),
           read_at: null,
         })),
@@ -291,6 +457,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             from_user_id: task.owner_id,
             message: `⛔ Problema fermo da ${days} g: «${task.title}»${task.problem_reason ? ` — ${task.problem_reason}` : ""}`,
             task_id: task.id,
+            kind: "sistema" as const,
             created_at: new Date().toISOString(),
             read_at: null,
           }));
@@ -349,79 +516,179 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         created_at: new Date().toISOString(),
       };
       setTasks((prev) => [...prev, task]);
+      setEvents((prev) => [
+        ...prev,
+        makeEvent(task.id, currentUser.id, "created"),
+      ]);
       return task;
     },
 
     async updateTask(id, patch) {
       await wait();
-      setTasks((prev) => {
-        const spawned: Task[] = [];
-        const mapped = prev.map((task) => {
-          if (task.id !== id) return task;
-          const next = { ...task, ...patch };
-          // Stessa regola del trigger tasks_set_completed_at
-          if (patch.status) {
-            if (patch.status === "done" && task.status !== "done") {
-              next.completed_at = new Date().toISOString();
-              const following = nextOccurrence(next);
-              if (following) spawned.push(following);
-            } else if (patch.status !== "done") {
-              next.completed_at = null;
-            }
-            // Ingresso/uscita dalla fase Problema
-            if (patch.status === "alert" && task.status !== "alert") {
-              next.problem_since =
-                next.problem_since ?? new Date().toISOString();
-            } else if (patch.status !== "alert") {
-              next.problem_reason = null;
-              next.problem_since = null;
-            }
-          }
-          return next;
-        });
-        return spawned.length > 0 ? [...mapped, ...spawned] : mapped;
-      });
+      const before = tasks.find((t) => t.id === id);
+      if (!before) return null;
+      const next: Task = { ...before, ...patch };
+      const spawned: Task[] = [];
+      // Stessa regola del trigger tasks_set_completed_at
+      if (patch.status) {
+        if (patch.status === "done" && before.status !== "done") {
+          next.completed_at = new Date().toISOString();
+          const following = nextOccurrence(next);
+          if (following) spawned.push(following);
+        } else if (patch.status !== "done") {
+          next.completed_at = null;
+        }
+        // Ingresso/uscita dalla fase Problema
+        if (patch.status === "alert" && before.status !== "alert") {
+          next.problem_since = next.problem_since ?? new Date().toISOString();
+        } else if (patch.status !== "alert") {
+          next.problem_reason = null;
+          next.problem_since = null;
+        }
+      }
+      const evs = diffTaskEvents(before, next, currentUser.id);
+      if (spawned.length > 0) {
+        evs.push(makeEvent(spawned[0].id, currentUser.id, "created"));
+      }
+      setTasks((prev) => [
+        ...prev.map((t) => (t.id === id ? next : t)),
+        ...spawned,
+      ]);
+      if (evs.length > 0) setEvents((prev) => [...prev, ...evs]);
+
+      if (before.status === next.status) return null;
+      const spawnedIds = new Set(spawned.map((s) => s.id));
+      const evIds = new Set(evs.map((e) => e.id));
+      return () => {
+        setTasks((prev) =>
+          prev
+            .filter((t) => !spawnedIds.has(t.id))
+            .map((t) => (t.id === id ? before : t)),
+        );
+        setEvents((prev) => prev.filter((e) => !evIds.has(e.id)));
+      };
     },
 
     moveTask(id, status, position) {
-      setTasks((prev) => {
-        const spawned: Task[] = [];
-        const mapped = prev.map((task) => {
-          if (task.id !== id) return task;
-          const next = {
-            ...task,
-            status,
-            position,
-            // Stessa regola del trigger tasks_set_completed_at
-            completed_at:
-              status === "done"
-                ? task.status !== "done"
-                  ? new Date().toISOString()
-                  : task.completed_at
-                : null,
-          };
-          if (status === "done" && task.status !== "done") {
-            const following = nextOccurrence(next);
-            if (following) spawned.push(following);
-          }
-          if (status === "alert" && task.status !== "alert") {
-            next.problem_since = next.problem_since ?? new Date().toISOString();
-          } else if (status !== "alert") {
-            next.problem_reason = null;
-            next.problem_since = null;
-          }
-          return next;
-        });
-        return spawned.length > 0 ? [...mapped, ...spawned] : mapped;
-      });
+      const before = tasks.find((t) => t.id === id);
+      if (!before) return null;
+      const next: Task = {
+        ...before,
+        status,
+        position,
+        // Stessa regola del trigger tasks_set_completed_at
+        completed_at:
+          status === "done"
+            ? before.status !== "done"
+              ? new Date().toISOString()
+              : before.completed_at
+            : null,
+      };
+      const spawned: Task[] = [];
+      if (status === "done" && before.status !== "done") {
+        const following = nextOccurrence(next);
+        if (following) spawned.push(following);
+      }
+      if (status === "alert" && before.status !== "alert") {
+        next.problem_since = next.problem_since ?? new Date().toISOString();
+      } else if (status !== "alert") {
+        next.problem_reason = null;
+        next.problem_since = null;
+      }
+      const evs = diffTaskEvents(before, next, currentUser.id);
+      if (spawned.length > 0) {
+        evs.push(makeEvent(spawned[0].id, currentUser.id, "created"));
+      }
+      setTasks((prev) => [
+        ...prev.map((t) => (t.id === id ? next : t)),
+        ...spawned,
+      ]);
+      if (evs.length > 0) setEvents((prev) => [...prev, ...evs]);
+
+      if (before.status === status) return null;
+      const spawnedIds = new Set(spawned.map((s) => s.id));
+      const evIds = new Set(evs.map((e) => e.id));
+      return () => {
+        setTasks((prev) =>
+          prev
+            .filter((t) => !spawnedIds.has(t.id))
+            .map((t) => (t.id === id ? before : t)),
+        );
+        setEvents((prev) => prev.filter((e) => !evIds.has(e.id)));
+      };
+    },
+
+    events,
+
+    toggleChecklistItem(taskId, itemId) {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                checklist: t.checklist?.map((item) =>
+                  item.id === itemId ? { ...item, done: !item.done } : item,
+                ),
+              }
+            : t,
+        ),
+      );
+    },
+
+    addChecklistItem(taskId, text) {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                checklist: [
+                  ...(t.checklist ?? []),
+                  { id: crypto.randomUUID(), text: trimmed, done: false },
+                ],
+              }
+            : t,
+        ),
+      );
+    },
+
+    removeChecklistItem(taskId, itemId) {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                checklist: t.checklist?.filter((item) => item.id !== itemId),
+              }
+            : t,
+        ),
+      );
+    },
+
+    restoreTask(taskId) {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, archived_at: null } : t)),
+      );
+      setEvents((prev) => [
+        ...prev,
+        makeEvent(taskId, currentUser.id, "restored"),
+      ]);
     },
 
     rescheduleTask(id, dueDate) {
+      const before = tasks.find((t) => t.id === id);
       setTasks((prev) =>
         prev.map((task) =>
           task.id === id ? { ...task, due_date: dueDate } : task,
         ),
       );
+      if (before && (before.due_date ?? null) !== (dueDate ?? null)) {
+        setEvents((prev) => [
+          ...prev,
+          makeEvent(id, currentUser.id, "due_changed", before.due_date, dueDate),
+        ]);
+      }
     },
 
     taskLinks,
@@ -470,11 +737,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     removeCustomStatus(key) {
+      const removed = customStatuses.find((c) => c.key === key);
+      if (!removed) return null;
+      const index = customStatuses.findIndex((c) => c.key === key);
+      const movedIds = tasks.filter((t) => t.status === key).map((t) => t.id);
       setCustomStatuses((prev) => prev.filter((c) => c.key !== key));
       // i task nella fase rimossa tornano in "Da fare"
       setTasks((prev) =>
         prev.map((t) => (t.status === key ? { ...t, status: "todo" } : t)),
       );
+      return () => {
+        setCustomStatuses((prev) => {
+          const next = [...prev];
+          next.splice(Math.min(index, next.length), 0, removed);
+          return next;
+        });
+        setTasks((prev) =>
+          prev.map((t) =>
+            movedIds.includes(t.id) ? { ...t, status: key } : t,
+          ),
+        );
+      };
     },
 
     projectComments,
@@ -505,6 +788,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             from_user_id: currentUser.id,
             message: `Ti ha menzionato nella bacheca di «${project?.name ?? "un progetto"}»: “${excerpt}”`,
             task_id: null,
+            kind: "mention" as const,
             created_at: new Date().toISOString(),
             read_at: null,
           })),
@@ -558,6 +842,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     async reportProblem(taskId, reason) {
       await wait();
       const trimmed = reason.trim();
+      const beforeStatus = tasks.find((t) => t.id === taskId)?.status;
       let title = "";
       let ownerId = "";
       setTasks((prev) =>
@@ -579,6 +864,12 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           .filter((p) => p.is_active && p.role === "admin")
           .map((p) => p.id),
       );
+      if (beforeStatus && beforeStatus !== "alert") {
+        setEvents((prev) => [
+          ...prev,
+          makeEvent(taskId, currentUser.id, "status_changed", beforeStatus, "alert"),
+        ]);
+      }
       if (ownerId) recipients.add(ownerId);
       recipients.delete(currentUser.id);
       setNotifications((prev) => [
@@ -589,6 +880,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           from_user_id: currentUser.id,
           message: `⚠️ Problema segnalato su «${title}»${trimmed ? `: ${trimmed}` : ""}`,
           task_id: taskId,
+          kind: "sistema" as const,
           created_at: new Date().toISOString(),
           read_at: null,
         })),
@@ -596,6 +888,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     resolveProblem(taskId) {
+      const beforeStatus = tasks.find((t) => t.id === taskId)?.status;
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
@@ -608,6 +901,12 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             : t,
         ),
       );
+      if (beforeStatus && beforeStatus !== "in_progress") {
+        setEvents((prev) => [
+          ...prev,
+          makeEvent(taskId, currentUser.id, "status_changed", beforeStatus, "in_progress"),
+        ]);
+      }
     },
 
     templates,
@@ -626,13 +925,60 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     removeTemplate(id) {
+      const removed = templates.find((t) => t.id === id);
+      if (!removed) return null;
+      const index = templates.findIndex((t) => t.id === id);
       setTemplates((prev) => prev.filter((t) => t.id !== id));
+      return () => {
+        setTemplates((prev) => {
+          const next = [...prev];
+          next.splice(Math.min(index, next.length), 0, removed);
+          return next;
+        });
+      };
     },
 
     async createTaskFromTemplate(templateId, overrides) {
       const tpl = templates.find((t) => t.id === templateId);
       if (!tpl) return null;
       await wait();
+      const anchor =
+        overrides?.due_date !== undefined
+          ? overrides.due_date
+          : tpl.due_day !== null
+            ? nextMonthlyIso(tpl.due_day)
+            : null;
+      const nowIso = new Date().toISOString();
+
+      // Pacchetto: un set di task collegati (stesso batch), con scadenze
+      // relative alla data àncora scelta.
+      if (tpl.pack && tpl.pack.length > 0) {
+        const batchId = crypto.randomUUID();
+        const created: Task[] = tpl.pack.map((item, i) => ({
+          id: crypto.randomUUID(),
+          title: item.title,
+          description: tpl.description || null,
+          status: "todo",
+          priority: tpl.priority,
+          owner_id: item.owner_id ?? overrides?.owner_id ?? currentUser.id,
+          created_by: currentUser.id,
+          project_id: tpl.project_id,
+          due_date: anchor ? shiftIsoDays(anchor, item.offset_days) : null,
+          position: Date.now() + i,
+          repeat: "none",
+          template_id: tpl.id,
+          batch_id: batchId,
+          completed_at: null,
+          created_at: nowIso,
+        }));
+        setTasks((prev) => [...prev, ...created]);
+        setEvents((prev) => [
+          ...prev,
+          ...created.map((t) => makeEvent(t.id, currentUser.id, "created")),
+        ]);
+        return created;
+      }
+
       const task: Task = {
         id: crypto.randomUUID(),
         title: tpl.name,
@@ -642,19 +988,23 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         owner_id: overrides?.owner_id ?? tpl.owner_id ?? currentUser.id,
         created_by: currentUser.id,
         project_id: tpl.project_id,
-        due_date:
-          overrides?.due_date !== undefined
-            ? overrides.due_date
-            : tpl.due_day !== null
-              ? nextMonthlyIso(tpl.due_day)
-              : null,
+        due_date: anchor,
         position: Date.now(),
         repeat: tpl.repeat,
         template_id: tpl.id,
+        checklist: tpl.checklist?.map((text) => ({
+          id: crypto.randomUUID(),
+          text,
+          done: false,
+        })),
         completed_at: null,
-        created_at: new Date().toISOString(),
+        created_at: nowIso,
       };
       setTasks((prev) => [...prev, task]);
+      setEvents((prev) => [
+        ...prev,
+        makeEvent(task.id, currentUser.id, "created"),
+      ]);
       if (tpl.links.length > 0) {
         setTaskLinks((prev) => [
           ...prev,
@@ -666,7 +1016,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           })),
         ]);
       }
-      return task;
+      return [task];
+    },
+
+    importConfig(config) {
+      if (config.templates) setTemplates(config.templates);
+      if (config.customStatuses) setCustomStatuses(config.customStatuses);
+      if (config.savedViews) setSavedViews(config.savedViews);
     },
 
     savedViews,
@@ -719,6 +1075,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             from_user_id: currentUser.id,
             message: `Ti ha menzionato su «${task?.title ?? "un task"}»: “${excerpt}”`,
             task_id: taskId,
+            kind: "mention" as const,
             created_at: new Date().toISOString(),
             read_at: null,
           })),
@@ -736,7 +1093,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     notifications: myNotifications,
     unreadCount: myNotifications.filter((n) => !n.read_at).length,
 
-    async sendNotification(toUserId, message, taskId = null) {
+    async sendNotification(toUserId, message, taskId = null, kind = "sistema") {
       await wait();
       setNotifications((prev) => [
         ...prev,
@@ -746,10 +1103,21 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           from_user_id: currentUser.id,
           message: message.trim(),
           task_id: taskId,
+          kind,
           created_at: new Date().toISOString(),
           read_at: null,
         },
       ]);
+    },
+
+    markTaskNotificationsRead(taskId) {
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.to_user_id === currentUser.id && n.task_id === taskId && !n.read_at
+            ? { ...n, read_at: new Date().toISOString() }
+            : n,
+        ),
+      );
     },
 
     markNotificationRead(id) {

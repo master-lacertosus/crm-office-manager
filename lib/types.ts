@@ -68,6 +68,13 @@ export interface Project {
   created_by: string;
 }
 
+/** Voce di checklist del task: spunte vere, avanzamento sulla card. */
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -88,8 +95,42 @@ export interface Task {
   repeat: TaskRepeat;
   /** Template ricorrente da cui è nato (per la pianificazione mensile). */
   template_id?: string | null;
+  /** Task creati insieme da un template «pacchetto» condividono il batch. */
+  batch_id?: string | null;
+  checklist?: ChecklistItem[];
+  /** Uscito dalla board (auto-archivio dei Fatto): resta nei report. */
+  archived_at?: string | null;
   completed_at: string | null;
   created_at: string;
+}
+
+/** Evento di cronologia del task — registro append-only: alimenta la
+ *  timeline nel dettaglio e i report per intervallo di date. */
+export interface TaskEvent {
+  id: string;
+  task_id: string;
+  actor_id: string;
+  type:
+    | "created"
+    | "status_changed"
+    | "due_changed"
+    | "owner_changed"
+    | "priority_changed"
+    | "archived"
+    | "restored";
+  /** Valore precedente/nuovo (chiave di stato, ISO, id utente…). */
+  from?: string | null;
+  to?: string | null;
+  created_at: string;
+}
+
+/** Voce di un template «pacchetto»: un task del set, con scadenza
+ *  relativa alla data àncora scelta al momento della creazione. */
+export interface TemplatePackItem {
+  title: string;
+  owner_id: string | null;
+  /** Giorni rispetto alla data àncora (negativi = prima). */
+  offset_days: number;
 }
 
 /**
@@ -108,6 +149,10 @@ export interface WorkspaceTemplate {
   repeat: TaskRepeat;
   /** Giorno del mese proposto come scadenza (1–28), per la pianificazione. */
   due_day: number | null;
+  /** Checklist materializzata come spunte sul task creato. */
+  checklist?: string[];
+  /** Pacchetto: crea più task collegati (batch) invece di uno solo. */
+  pack?: TemplatePackItem[];
   links: { url: string; label: string }[];
 }
 
@@ -145,6 +190,9 @@ export interface ProjectComment {
 /** Emoji ammesse per le reazioni rapide. */
 export const REACTION_EMOJIS = ["👍", "✅", "⚠️"] as const;
 
+/** Natura dell'avviso: alimenta i tab della campanella. */
+export type NotificationKind = "mention" | "sollecito" | "sistema";
+
 /** Avviso interno: un responsabile lo invia a un singolo membro. */
 export interface AppNotification {
   id: string;
@@ -152,6 +200,7 @@ export interface AppNotification {
   from_user_id: string;
   message: string;
   task_id: string | null;
+  kind?: NotificationKind;
   created_at: string;
   read_at: string | null;
 }

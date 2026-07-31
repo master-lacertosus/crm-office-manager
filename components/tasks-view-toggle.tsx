@@ -2,22 +2,29 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Columns3, List } from "lucide-react";
+import { Archive, Columns3, List } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-/** Toggle Board/Elenco sulla pagina Task, preservando filtri e pannello. */
+const VIEWS = [
+  { key: "board", label: "Board", icon: Columns3 },
+  { key: "list", label: "Elenco", icon: List },
+  { key: "archive", label: "Archivio", icon: Archive },
+] as const;
+
+/** Toggle Board/Elenco/Archivio sulla pagina Task, preservando i filtri. */
 export function TasksViewToggle() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const view = searchParams.get("view") === "list" ? "list" : "board";
+  const raw = searchParams.get("view");
+  const view = raw === "list" || raw === "archive" ? raw : "board";
 
-  const hrefFor = (target: "board" | "list") => {
+  const hrefFor = (target: (typeof VIEWS)[number]["key"]) => {
     const params = new URLSearchParams(searchParams);
-    if (target === "list") {
-      params.set("view", "list");
-    } else {
+    if (target === "board") {
       params.delete("view");
+    } else {
+      params.set("view", target);
     }
     const qs = params.toString();
     return qs ? `${pathname}?${qs}` : pathname;
@@ -28,30 +35,23 @@ export function TasksViewToggle() {
 
   return (
     <div className="flex gap-0.5 rounded-xl border border-border bg-white p-0.5 shadow-xs">
-      <Link
-        href={hrefFor("board")}
-        className={cn(
-          base,
-          view === "board"
-            ? "bg-brand-50 text-brand-700"
-            : "text-ink-secondary hover:text-ink",
-        )}
-      >
-        <Columns3 aria-hidden className="size-3.5" />
-        Board
-      </Link>
-      <Link
-        href={hrefFor("list")}
-        className={cn(
-          base,
-          view === "list"
-            ? "bg-brand-50 text-brand-700"
-            : "text-ink-secondary hover:text-ink",
-        )}
-      >
-        <List aria-hidden className="size-3.5" />
-        Elenco
-      </Link>
+      {VIEWS.map(({ key, label, icon: Icon }) => (
+        <Link
+          key={key}
+          href={hrefFor(key)}
+          className={cn(
+            base,
+            view === key
+              ? "bg-brand-50 text-brand-700"
+              : "text-ink-secondary hover:text-ink",
+          )}
+        >
+          <Icon aria-hidden className="size-3.5" />
+          <span className={cn(key === "archive" && "hidden lg:inline")}>
+            {label}
+          </span>
+        </Link>
+      ))}
     </div>
   );
 }

@@ -73,12 +73,14 @@ export function CalendarView() {
 
   const byDay = new Map<string, Task[]>();
   for (const task of tasks) {
-    if (!task.due_date) continue;
+    if (!task.due_date || task.archived_at) continue;
     const list = byDay.get(task.due_date) ?? [];
     list.push(task);
     byDay.set(task.due_date, list);
   }
-  const unscheduled = tasks.filter((t) => !t.due_date && t.status !== "done");
+  const unscheduled = tasks.filter(
+    (t) => !t.due_date && t.status !== "done" && !t.archived_at,
+  );
 
   const gridRef = React.useRef<HTMLDivElement>(null);
   const stripRef = React.useRef<HTMLDivElement>(null);

@@ -1,11 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Link2, Pencil, Plus, Repeat, Trash2, X } from "lucide-react";
+import { Link2, Package, Pencil, Plus, Repeat, Trash2, X } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
 import { REPEAT_META } from "@/lib/types";
-import type { TaskPriority, TaskRepeat, WorkspaceTemplate } from "@/lib/types";
+import type {
+  TaskPriority,
+  TaskRepeat,
+  TemplatePackItem,
+  WorkspaceTemplate,
+} from "@/lib/types";
 import { PriorityBadge } from "@/components/priority-badge";
 import { useToast } from "@/components/toaster";
 import { Button } from "@/components/ui/button";
@@ -28,6 +33,10 @@ interface FormValues {
   priority: TaskPriority;
   repeat: TaskRepeat;
   due_day: string;
+  /** Una voce per riga: diventa la checklist del task creato. */
+  checklist: string;
+  /** Pacchetto: se non vuoto, il template crea questo set di task. */
+  pack: TemplatePackItem[];
 }
 
 function toFormValues(tpl?: WorkspaceTemplate): FormValues {
@@ -39,6 +48,8 @@ function toFormValues(tpl?: WorkspaceTemplate): FormValues {
     priority: tpl?.priority ?? "normal",
     repeat: tpl?.repeat ?? "monthly",
     due_day: tpl?.due_day != null ? String(tpl.due_day) : "",
+    checklist: (tpl?.checklist ?? []).join("\n"),
+    pack: tpl?.pack ?? [],
   };
 }
 
@@ -162,6 +173,27 @@ function TemplateForm({
           </NativeSelect>
         </div>
       </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="tpl-checklist">
+          Checklist (una voce per riga, diventa spunte sul task)
+        </Label>
+        <Textarea
+          id="tpl-checklist"
+          value={values.checklist}
+          onChange={(e) => set("checklist", e.target.value)}
+          rows={3}
+          placeholder={"Soggetto e preheader\nCTA e link tracciati\nTest invio"}
+          disabled={values.pack.length > 0}
+        />
+      </div>
+
+      <PackEditor
+        items={values.pack}
+        onChange={(pack) => set("pack", pack)}
+        profiles={profiles}
+      />
+
       <div className="flex items-center gap-2">
         <Button type="submit" size="sm" disabled={!values.name.trim()}>
           Salva template
@@ -171,6 +203,101 @@ function TemplateForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+/** Editor del pacchetto: il template crea più task collegati, con
+ *  scadenze relative alla data àncora (giorni prima/dopo). */
+function PackEditor({
+  items,
+  onChange,
+  profiles,
+}: {
+  items: TemplatePackItem[];
+  onChange: (items: TemplatePackItem[]) => void;
+  profiles: { id: string; full_name: string; is_active: boolean }[];
+}) {
+  const setItem = (i: number, patch: Partial<TemplatePackItem>) =>
+    onChange(items.map((item, j) => (j === i ? { ...item, ...patch } : item)));
+
+  return (
+    <div className="space-y-2 rounded-xl border border-border bg-white p-3">
+      <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.05em] text-ink-secondary uppercase">
+        <Package className="size-3.5" />
+        Pacchetto multi-task
+        <span className="font-normal normal-case tracking-normal text-ink-muted">
+          {items.length === 0
+            ? "— vuoto: il template crea un task solo"
+            : `· ${items.length} task collegati`}
+        </span>
+      </p>
+      {items.map((item, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-2">
+          <Input
+            value={item.title}
+            onChange={(e) => setItem(i, { title: e.target.value })}
+            placeholder="Titolo del task"
+            aria-label={`Titolo task ${i + 1} del pacchetto`}
+            className="h-9 min-w-40 flex-1"
+          />
+          <NativeSelect
+            value={item.owner_id ?? ""}
+            onChange={(e) =>
+              setItem(i, { owner_id: e.target.value || null })
+            }
+            aria-label={`Responsabile task ${i + 1}`}
+            className="h-9 w-40 shrink-0"
+          >
+            <option value="">Chi crea</option>
+            {profiles
+              .filter((p) => p.is_active)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                </option>
+              ))}
+          </NativeSelect>
+          <span className="flex shrink-0 items-center gap-1.5">
+            <Input
+              type="number"
+              value={String(item.offset_days)}
+              onChange={(e) =>
+                setItem(i, { offset_days: Number(e.target.value) || 0 })
+              }
+              aria-label={`Giorni rispetto alla data àncora, task ${i + 1}`}
+              className="h-9 w-20"
+            />
+            <span className="text-xs text-ink-muted">gg dall&rsquo;àncora</span>
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Rimuovi il task ${i + 1} dal pacchetto`}
+            onClick={() => onChange(items.filter((_, j) => j !== i))}
+          >
+            <Trash2 />
+          </Button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() =>
+          onChange([...items, { title: "", owner_id: null, offset_days: 0 }])
+        }
+      >
+        <Plus data-icon="inline-start" />
+        Aggiungi task al pacchetto
+      </Button>
+      {items.length > 0 ? (
+        <p className="text-[12px] text-ink-muted">
+          Offset negativi = giorni prima della data àncora (es. −7). La
+          checklist singola è disattivata quando il pacchetto è attivo.
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -190,6 +317,9 @@ export function TemplateManager() {
     id ? (profiles.find((p) => p.id === id)?.full_name ?? "—") : "Chi crea";
 
   const save = (id: string | null, v: FormValues) => {
+    const pack = v.pack
+      .map((item) => ({ ...item, title: item.title.trim() }))
+      .filter((item) => item.title.length > 0);
     const patch = {
       name: v.name.trim(),
       description: v.description.trim(),
@@ -198,6 +328,11 @@ export function TemplateManager() {
       priority: v.priority,
       repeat: v.repeat,
       due_day: v.due_day ? Math.min(Math.max(Number(v.due_day), 1), 28) : null,
+      checklist: v.checklist
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+      pack,
     };
     if (id) {
       updateTemplate(id, patch);
@@ -254,7 +389,12 @@ export function TemplateManager() {
                 </span>
                 <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
                   <span>{ownerName(tpl.owner_id)}</span>
-                  {tpl.repeat !== "none" ? (
+                  {tpl.pack && tpl.pack.length > 0 ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Package className="size-3" strokeWidth={2} />
+                      Pacchetto · {tpl.pack.length} task
+                    </span>
+                  ) : tpl.repeat !== "none" ? (
                     <span className="inline-flex items-center gap-1">
                       <Repeat className="size-3" strokeWidth={2} />
                       {REPEAT_META[tpl.repeat].label}
@@ -284,8 +424,13 @@ export function TemplateManager() {
                     size="icon-sm"
                     aria-label={`Elimina il template ${tpl.name}`}
                     onClick={() => {
-                      removeTemplate(tpl.id);
-                      toast(`Template «${tpl.name}» eliminato`);
+                      const revert = removeTemplate(tpl.id);
+                      toast(
+                        `Template «${tpl.name}» eliminato`,
+                        revert
+                          ? { action: { label: "Annulla", onClick: revert } }
+                          : undefined,
+                      );
                     }}
                   >
                     <Trash2 />

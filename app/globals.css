@@ -393,4 +393,19 @@
       scroll-behavior: auto !important;
     }
   }
+
+  /* Stampa dei report: fondo bianco, card piatte con bordo, niente chrome
+     (sidebar/topbar/capo/toast portano già print:hidden). */
+  @media print {
+    body {
+      background: #ffffff;
+    }
+    .card-soft,
+    .tile-aurora {
+      background: #ffffff;
+      box-shadow: none;
+      border: 1px solid #e2e8f0;
+      break-inside: avoid;
+    }
+  }
 }

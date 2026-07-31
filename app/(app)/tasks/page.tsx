@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import { ArchiveView } from "@/components/archive-view";
 import { Board } from "@/components/board/board";
 import { BoardFilters } from "@/components/board/filters";
 import { NewTaskButton } from "@/components/new-task-button";
@@ -18,7 +19,6 @@ export default async function TasksPage({
   searchParams: Promise<{ view?: string }>;
 }) {
   const { view } = await searchParams;
-  const isList = view === "list";
 
   return (
     <>
@@ -36,7 +36,15 @@ export default async function TasksPage({
       <Suspense>
         <SavedViews />
       </Suspense>
-      <Suspense>{isList ? <TaskList /> : <Board />}</Suspense>
+      <Suspense>
+        {view === "archive" ? (
+          <ArchiveView />
+        ) : view === "list" ? (
+          <TaskList />
+        ) : (
+          <Board />
+        )}
+      </Suspense>
     </>
   );
 }

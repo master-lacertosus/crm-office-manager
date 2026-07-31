@@ -59,6 +59,33 @@ trappole di complessità.
 > **«Ogni 2 settimane»** (biweekly). Con Supabase: tabella additiva
 > `workspace_templates`, colonna `tasks.template_id` (FK nullable) e
 > nuovo valore nel CHECK di `tasks.repeat`.
+>
+> **Sesto emendamento (31/07/2026, pacchetto «deep» 1–10 + report a
+> intervallo):** (1) checklist interattive sui task con avanzamento su
+> card/elenco, materializzate dai template; (2) Annulla (undo) su
+> spostamenti/completamenti (de-genera anche la ricorrenza), eliminazione
+> template e fasi custom — toaster con pulsante azione; (3) template
+> «pacchetto» multi-task (`WorkspaceTemplate.pack`, `tasks.batch_id`,
+> offset dalla data àncora, fratelli visibili nel dettaglio);
+> (4) **registro eventi** `task_events` append-only (creazione, cambi
+> fase/scadenza/responsabile/priorità, archivio) → cronologia nel
+> dettaglio e report; (5) vista Carico (Team ?view=carico); (6) campanella
+> con tab Tutte/Menzioni/Solleciti (`notifications.kind`) e raggruppamento
+> per task con segna-letto di gruppo; (7) auto-archivio dei Fatto >14g
+> (`tasks.archived_at`) + vista Archivio ricercabile con ripristino; le
+> viste operative escludono gli archiviati, i report li includono;
+> (8) board da tastiera (frecce, Invio, Shift+←/→); (9) Report filtrabili
+> per intervallo (preset + personalizzato) con export CSV e stampa; il
+> trend nasce dai completamenti REALI; (10) backup/import JSON della
+> configurazione. **Persistenza placeholder**: intero workspace in
+> localStorage (`office-state`, versionato; bump di STATE_VERSION =
+> reset ai seed) con ~60 giorni di storico sintetico deterministico.
+> Con Supabase: tabelle additive `task_events`, colonne
+> `tasks.batch_id/archived_at/checklist(jsonb)`,
+> `notifications.kind`, `workspace_templates.pack/checklist (jsonb)`.
+> Nota Next 16: per aggiornare i parametri della stessa pagina si usa
+> `window.history.replaceState` nativo (integrato dal router);
+> `router.replace` che AGGIUNGE parametri su rotta statica li scarta.
 
 ---
 

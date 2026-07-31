@@ -36,7 +36,7 @@ export default function RootLayout({
       className={`${manrope.variable} ${plexMono.variable} h-full`}
     >
       <body className="flex min-h-full flex-col">
-        <div aria-hidden className="aura-layer" />
+        <div aria-hidden className="aura-layer print:hidden" />
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -10,9 +10,12 @@ import type { ProjectLoad } from "@/lib/analytics";
 export function BarList({
   rows,
   colors,
+  valueOnly = false,
 }: {
   rows: ProjectLoad[];
   colors: Map<string, string>;
+  /** Mostra solo il totale (es. «Completati per persona»), senza «aperti». */
+  valueOnly?: boolean;
 }) {
   const max = Math.max(1, ...rows.map((r) => r.total));
   return (
@@ -33,10 +36,16 @@ export function BarList({
               aria-hidden
             />
           </div>
-          <p className="font-mono text-xs text-ink-muted">
-            <span className="font-medium text-ink">{row.open}</span> aperti ·{" "}
-            {row.total}
-          </p>
+          {valueOnly ? (
+            <p className="font-mono text-xs font-medium text-ink">
+              {row.total}
+            </p>
+          ) : (
+            <p className="font-mono text-xs text-ink-muted">
+              <span className="font-medium text-ink">{row.open}</span> aperti ·{" "}
+              {row.total}
+            </p>
+          )}
         </div>
       ))}
     </div>

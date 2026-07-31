@@ -34,7 +34,7 @@ export function ProjectTimeline({ projectId }: { projectId: string }) {
   const totalDays = PAST_DAYS + FUTURE_DAYS + 1;
 
   const rows = tasks
-    .filter((t) => t.project_id === projectId && t.due_date)
+    .filter((t) => t.project_id === projectId && t.due_date && !t.archived_at)
     .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""));
   const unscheduled = tasks.filter(
     (t) => t.project_id === projectId && !t.due_date && t.status !== "done",

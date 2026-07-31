@@ -7,10 +7,11 @@ import { ChevronRight, MoveDown, MoveUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-function useCountUp(value: number): number {
+function useCountUp(value: number, decimals = 0): number {
   const reduced = useReducedMotion();
   const [display, setDisplay] = React.useState(0);
   const previous = React.useRef(0);
+  const factor = 10 ** decimals;
 
   React.useEffect(() => {
     if (reduced) {
@@ -20,11 +21,11 @@ function useCountUp(value: number): number {
     const controls = animate(previous.current, value, {
       duration: 0.7,
       ease: [0.2, 0, 0, 1],
-      onUpdate: (v) => setDisplay(Math.round(v)),
+      onUpdate: (v) => setDisplay(Math.round(v * factor) / factor),
     });
     previous.current = value;
     return () => controls.stop();
-  }, [value, reduced]);
+  }, [value, reduced, factor]);
 
   return reduced ? value : display;
 }
@@ -37,8 +38,10 @@ function useCountUp(value: number): number {
 export function StatTile({
   label,
   value,
+  decimals = 0,
   sublabel,
   delta,
+  deltaLabel = "vs sett.",
   deltaPositiveIsGood = true,
   tone = "default",
   icon,
@@ -49,8 +52,12 @@ export function StatTile({
 }: {
   label: string;
   value: number;
+  /** Cifre decimali mostrate (es. 1 per «4,5 giorni»). */
+  decimals?: number;
   sublabel?: string;
   delta?: number;
+  /** Suffisso del delta (default «vs sett.»). */
+  deltaLabel?: string;
   deltaPositiveIsGood?: boolean;
   tone?: "default" | "danger" | "brand";
   icon?: React.ReactNode;
@@ -60,7 +67,7 @@ export function StatTile({
   children?: React.ReactNode;
   className?: string;
 }) {
-  const display = useCountUp(value);
+  const display = useCountUp(value, decimals);
   const good = delta !== undefined && (delta >= 0) === deltaPositiveIsGood;
 
   const body = (
@@ -108,7 +115,7 @@ export function StatTile({
             ) : delta < 0 ? (
               <MoveDown aria-hidden className="size-3" />
             ) : null}
-            {delta > 0 ? `+${delta}` : delta} vs sett.
+            {delta > 0 ? `+${delta}` : delta} {deltaLabel}
           </p>
         ) : null}
       </div>

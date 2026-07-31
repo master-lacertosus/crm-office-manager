@@ -1,16 +1,22 @@
-import { addDaysIso, todayIso } from "@/lib/format";
+import { addDaysIso, diffIsoDays, shiftIsoDays, todayIso } from "@/lib/format";
 import type { Profile, Project, Task } from "@/lib/types";
 import { STATUS_ORDER } from "@/lib/types";
 
 /**
  * Motore analitico dei report: pure funzioni sui dati dello store, quindi
  * ogni grafico reagisce in tempo reale alle modifiche (drag sulla board
- * incluso). La serie storica dei completamenti è sintetica e deterministica
- * per i giorni passati (fase placeholder), ma il punto di OGGI è calcolato
- * dai dati veri: completare un task oggi muove il grafico.
+ * incluso). Con lo storico persistito i completamenti sono REALI: la
+ * serie del trend nasce da completed_at (archiviati inclusi), filtrabile
+ * per intervallo di date.
  */
 
 export type StatusCounts = Record<string, number>;
+
+export interface DateRange {
+  /** ISO date (YYYY-MM-DD), estremi inclusi. */
+  from: string;
+  to: string;
+}
 
 export interface PersonLoad {
   profile: Profile;
@@ -35,8 +41,17 @@ export interface Analytics {
   open: number;
   overdue: number;
   inReview: number;
+  /** Trailing 7 giorni (per la dashboard, indipendente dal range). */
   done7: number;
   done7Delta: number;
+  /** Metriche del periodo selezionato. */
+  doneInRange: number;
+  doneInRangeDelta: number;
+  createdInRange: number;
+  /** Giorni medi creazione→completamento nel periodo (null se nessuno). */
+  avgLeadDays: number | null;
+  donePerPerson: { key: string; label: string; total: number; open: number }[];
+  rangeDays: number;
   statusTotals: StatusCounts;
   people: PersonLoad[];
   maxPersonTotal: number;
@@ -49,40 +64,71 @@ export interface Analytics {
 const emptyCounts = (keys: string[]): StatusCounts =>
   Object.fromEntries(keys.map((k) => [k, 0]));
 
-/** Completamenti/giorno dei 13 giorni passati (fissi, fase placeholder). */
-const PAST_SERIES = [1, 2, 0, 3, 1, 2, 4, 2, 1, 3, 2, 0, 1];
-
 export function buildAnalytics(
   tasks: Task[],
   profiles: Profile[],
   projects: Project[],
   statusKeys: string[] = STATUS_ORDER,
+  range?: DateRange,
 ): Analytics {
   const today = todayIso();
+  const from = range?.from ?? addDaysIso(-29);
+  const to = range?.to ?? today;
+  const rangeDays = Math.max(1, diffIsoDays(from, to) + 1);
 
-  const open = tasks.filter((t) => t.status !== "done");
+  /* Snapshot operativo: gli archiviati restano fuori (sono storia). */
+  const operational = tasks.filter((t) => !t.archived_at);
+  const open = operational.filter((t) => t.status !== "done");
   const overdue = open.filter((t) => t.due_date && t.due_date < today);
   const inReview = open.filter((t) => t.status === "in_review");
 
-  const doneOn = (iso: string) =>
-    tasks.filter(
-      (t) =>
-        t.status === "done" &&
-        t.completed_at &&
-        t.completed_at.slice(0, 10) === iso,
-    ).length;
+  /* Storia: i completamenti contano SEMPRE, anche da archiviati. */
+  const completedDay = (t: Task) =>
+    t.status === "done" && t.completed_at ? t.completed_at.slice(0, 10) : null;
+  const doneBetween = (a: string, b: string) =>
+    tasks.filter((t) => {
+      const d = completedDay(t);
+      return d !== null && d >= a && d <= b;
+    });
 
-  const trend: TrendPoint[] = [];
-  for (let i = 13; i >= 1; i--) {
-    trend.push({ iso: addDaysIso(-i), value: PAST_SERIES[13 - i] });
+  const doneRangeTasks = doneBetween(from, to);
+  const doneInRange = doneRangeTasks.length;
+  const prevFrom = shiftIsoDays(from, -rangeDays);
+  const prevTo = shiftIsoDays(from, -1);
+  const doneInRangeDelta = doneInRange - doneBetween(prevFrom, prevTo).length;
+
+  const createdInRange = tasks.filter((t) => {
+    const d = t.created_at.slice(0, 10);
+    return d >= from && d <= to;
+  }).length;
+
+  const leads = doneRangeTasks.map((t) =>
+    diffIsoDays(t.created_at.slice(0, 10), t.completed_at!.slice(0, 10)),
+  );
+  const avgLeadDays =
+    leads.length > 0
+      ? Math.round((leads.reduce((s, v) => s + v, 0) / leads.length) * 10) / 10
+      : null;
+
+  /* Trend: un punto per giorno del periodo (tetto di sicurezza a 366). */
+  const byDay = new Map<string, number>();
+  for (const t of tasks) {
+    const d = completedDay(t);
+    if (d) byDay.set(d, (byDay.get(d) ?? 0) + 1);
   }
-  trend.push({ iso: today, value: doneOn(today) });
+  const trend: TrendPoint[] = [];
+  for (let i = 0; i < Math.min(rangeDays, 366); i++) {
+    const iso = shiftIsoDays(from, i);
+    if (iso > today) break;
+    trend.push({ iso, value: byDay.get(iso) ?? 0 });
+  }
 
-  const last7 = trend.slice(-7).reduce((sum, p) => sum + p.value, 0);
-  const prev7 = trend.slice(0, 7).reduce((sum, p) => sum + p.value, 0);
+  /* Trailing 7g per la dashboard (reale, non più sintetico). */
+  const done7 = doneBetween(addDaysIso(-6), today).length;
+  const done7Delta = done7 - doneBetween(addDaysIso(-13), addDaysIso(-7)).length;
 
   const statusTotals = emptyCounts(statusKeys);
-  for (const task of tasks) {
+  for (const task of operational) {
     if (statusTotals[task.status] !== undefined) statusTotals[task.status] += 1;
   }
 
@@ -90,7 +136,7 @@ export function buildAnalytics(
     .filter((p) => p.is_active)
     .map((profile) => {
       const counts = emptyCounts(statusKeys);
-      for (const task of tasks) {
+      for (const task of operational) {
         if (task.owner_id === profile.id && counts[task.status] !== undefined) {
           counts[task.status] += 1;
         }
@@ -100,11 +146,28 @@ export function buildAnalytics(
     })
     .sort((a, b) => b.total - a.total);
 
+  const donePerPerson = profiles
+    .filter((p) => p.is_active)
+    .map((profile) => {
+      const done = doneRangeTasks.filter(
+        (t) => t.owner_id === profile.id,
+      ).length;
+      return {
+        key: profile.id,
+        label: profile.full_name.split(" ")[0],
+        total: done,
+        open: done,
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+
   const projectLoads: ProjectLoad[] = [
     ...projects
       .filter((p) => !p.is_archived)
       .map((project) => {
-        const inProject = tasks.filter((t) => t.project_id === project.id);
+        const inProject = operational.filter(
+          (t) => t.project_id === project.id,
+        );
         return {
           key: project.id,
           label: project.name,
@@ -113,7 +176,7 @@ export function buildAnalytics(
         };
       }),
     (() => {
-      const none = tasks.filter((t) => !t.project_id);
+      const none = operational.filter((t) => !t.project_id);
       return {
         key: "none",
         label: "Senza progetto",
@@ -135,8 +198,14 @@ export function buildAnalytics(
     open: open.length,
     overdue: overdue.length,
     inReview: inReview.length,
-    done7: last7,
-    done7Delta: last7 - prev7,
+    done7,
+    done7Delta,
+    doneInRange,
+    doneInRangeDelta,
+    createdInRange,
+    avgLeadDays,
+    donePerPerson,
+    rangeDays,
     statusTotals,
     people,
     maxPersonTotal: Math.max(1, ...people.map((p) => p.total)),

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -8,10 +9,13 @@ import {
   BellRing,
   ChevronLeft,
   ChevronRight,
+  History,
   Link2,
+  ListChecks,
   LoaderCircle,
   Maximize2,
   Minimize2,
+  Package,
   Plus,
   Quote,
   Trash2,
@@ -41,7 +45,7 @@ import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { PriorityBadge } from "@/components/priority-badge";
-import { StatusLabel } from "@/components/status-pip";
+import { StatusLabel, StatusPip } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -351,10 +355,14 @@ function TaskForm({
 
   const applyTemplate = async (templateId: string) => {
     const created = await createTaskFromTemplate(templateId);
-    if (!created) return;
-    toast(`«${created.title}» creato dal template`);
+    if (!created || created.length === 0) return;
+    toast(
+      created.length === 1
+        ? `«${created[0].title}» creato dal template`
+        : `Pacchetto creato: ${created.length} task collegati`,
+    );
     const params = new URLSearchParams(searchParams);
-    params.set("task", created.id);
+    params.set("task", created[0].id);
     params.delete("due");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
@@ -400,9 +408,15 @@ function TaskForm({
       repeat,
     };
     if (task) {
-      await updateTask(task.id, patch);
+      const revert = await updateTask(task.id, patch);
       setSaving(false);
       setSaved(true);
+      if (revert) {
+        const label = statuses.find((s) => s.key === status)?.label ?? status;
+        toast(`Task spostato in «${label}»`, {
+          action: { label: "Annulla", onClick: revert },
+        });
+      }
     } else {
       const created = await createTask(patch);
       setSaving(false);
@@ -613,7 +627,10 @@ function TaskForm({
             {titleField}
             {descriptionField}
           </form>
-          <div className="[&>section]:!px-0">{children}</div>
+          <div className="[&>section]:!px-0">
+            {task ? <ChecklistSection task={task} /> : null}
+            {children}
+          </div>
         </div>
         <aside className="order-first flex min-h-0 flex-col overflow-y-auto border-b border-border-soft bg-[#fafbfd] p-5 lg:order-none lg:border-b-0 lg:border-l">
           <div className="space-y-4">{fieldsGrid}</div>
@@ -641,8 +658,115 @@ function TaskForm({
         {saveRow}
         {task ? <TaskMeta task={task} /> : null}
       </form>
+      {task ? <ChecklistSection task={task} /> : null}
       {children}
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Checklist: spunte vere con avanzamento (indipendenti dal Salva)     */
+/* ------------------------------------------------------------------ */
+
+function ChecklistSection({ task }: { task: Task }) {
+  const { toggleChecklistItem, addChecklistItem, removeChecklistItem } =
+    useAppStore();
+  const [text, setText] = React.useState("");
+  const items = task.checklist ?? [];
+  const done = items.filter((i) => i.done).length;
+  const pct = items.length > 0 ? Math.round((done / items.length) * 100) : 0;
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    addChecklistItem(task.id, text);
+    setText("");
+  };
+
+  return (
+    <section aria-label="Checklist" className="px-5 pb-2">
+      <Separator className="mb-4" />
+      <h3 className="flex items-center gap-2 text-[11px] font-bold tracking-[0.06em] text-ink-secondary uppercase">
+        <ListChecks className="size-3.5" />
+        Checklist
+        {items.length > 0 ? (
+          <span className="font-mono text-[11px] font-normal text-ink-muted">
+            {done}/{items.length}
+          </span>
+        ) : null}
+      </h3>
+
+      {items.length > 0 ? (
+        <div
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-border-soft"
+        >
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-300",
+              pct === 100 ? "bg-success" : "bg-brand-500",
+            )}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      ) : null}
+
+      <ul className="mt-2.5 space-y-0.5">
+        {items.map((item) => (
+          <li
+            key={item.id}
+            className="group/check flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-accent/50"
+          >
+            <input
+              type="checkbox"
+              id={`check-${item.id}`}
+              checked={item.done}
+              onChange={() => toggleChecklistItem(task.id, item.id)}
+              className="size-4 shrink-0 accent-(--brand-500)"
+            />
+            <label
+              htmlFor={`check-${item.id}`}
+              className={cn(
+                "min-w-0 flex-1 cursor-pointer text-sm text-ink",
+                item.done && "text-ink-muted line-through",
+              )}
+            >
+              {item.text}
+            </label>
+            <button
+              type="button"
+              onClick={() => removeChecklistItem(task.id, item.id)}
+              aria-label={`Rimuovi «${item.text}»`}
+              className="rounded-sm p-0.5 text-ink-faint opacity-0 outline-none transition-opacity group-hover/check:opacity-100 hover:text-danger-text focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <X className="size-3.5" />
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      <form onSubmit={submit} className="mt-2 flex gap-2">
+        <Input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Aggiungi una voce…"
+          aria-label="Nuova voce di checklist"
+          className="h-9 flex-1"
+        />
+        <Button
+          type="submit"
+          variant="outline"
+          size="sm"
+          disabled={!text.trim()}
+          className="h-9"
+        >
+          <Plus data-icon="inline-start" />
+          Aggiungi
+        </Button>
+      </form>
+    </section>
   );
 }
 
@@ -679,6 +803,7 @@ function TaskMeta({ task }: { task: Task }) {
       owner.id,
       `Promemoria: il task «${task.title}» aspetta un tuo aggiornamento.`,
       task.id,
+      "sollecito",
     );
     setSending(false);
     toast(`Promemoria inviato a ${owner.full_name.split(" ")[0]}`);
@@ -809,6 +934,8 @@ function TaskMeta({ task }: { task: Task }) {
         )
       ) : null}
 
+      {task.batch_id ? <PackSiblings task={task} /> : null}
+
       <p className="font-mono text-xs text-ink-muted">
         Creato da {creator?.full_name ?? "—"}
       </p>
@@ -834,6 +961,51 @@ function TaskMeta({ task }: { task: Task }) {
           Sollecita {owner.full_name.split(" ")[0]}
         </Button>
       ) : null}
+    </div>
+  );
+}
+
+/** Task fratelli dello stesso pacchetto (template multi-task). */
+function PackSiblings({ task }: { task: Task }) {
+  const { tasks } = useAppStore();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const siblings = tasks
+    .filter((t) => t.batch_id === task.batch_id && t.id !== task.id)
+    .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""));
+  if (siblings.length === 0) return null;
+
+  const hrefFor = (id: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("task", id);
+    return `${pathname}?${params.toString()}`;
+  };
+
+  return (
+    <div className="space-y-1 rounded-xl border border-border-soft bg-white p-2.5">
+      <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.05em] text-ink-secondary uppercase">
+        <Package className="size-3.5" />
+        Pacchetto · altri {siblings.length} task
+      </p>
+      <ul className="space-y-0.5">
+        {siblings.map((s) => (
+          <li key={s.id}>
+            <Link
+              href={hrefFor(s.id)}
+              scroll={false}
+              className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[13px] text-ink outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <StatusPip status={s.status} className="size-3" />
+              <span className="min-w-0 flex-1 truncate">{s.title}</span>
+              {s.due_date ? (
+                <span className="shrink-0 font-mono text-[11px] text-ink-muted">
+                  {formatDue(s.due_date)}
+                </span>
+              ) : null}
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -986,9 +1158,10 @@ function LinksSection({ taskId }: { taskId: string }) {
 /* ------------------------------------------------------------------ */
 
 function CommentSection({ taskId }: { taskId: string }) {
-  const { comments, profiles, addComment } = useAppStore();
+  const { comments, events, profiles, statuses, addComment } = useAppStore();
   const [body, setBody] = React.useState("");
   const [sending, setSending] = React.useState(false);
+  const [showActivity, setShowActivity] = React.useState(true);
 
   const quoteComment = (text: string, authorName: string) => {
     const excerpt = text.replace(/\n+/g, " ").slice(0, 140);
@@ -1000,6 +1173,53 @@ function CommentSection({ taskId }: { taskId: string }) {
   const list = comments
     .filter((c) => c.task_id === taskId)
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+  const taskEvents = events.filter((e) => e.task_id === taskId);
+
+  /** Cronologia e commenti fusi in un'unica timeline. */
+  const timeline: (
+    | { kind: "comment"; at: string; comment: (typeof list)[number] }
+    | { kind: "event"; at: string; event: (typeof taskEvents)[number] }
+  )[] = [
+    ...list.map((comment) => ({
+      kind: "comment" as const,
+      at: comment.created_at,
+      comment,
+    })),
+    ...(showActivity
+      ? taskEvents.map((event) => ({
+          kind: "event" as const,
+          at: event.created_at,
+          event,
+        }))
+      : []),
+  ].sort((a, b) => a.at.localeCompare(b.at));
+
+  const nameOf = (id: string) =>
+    profiles.find((p) => p.id === id)?.full_name.split(" ")[0] ?? "Qualcuno";
+  const statusLabel = (key: string | null | undefined) =>
+    statuses.find((s) => s.key === key)?.label ?? key ?? "—";
+  const priorityLabel = (key: string | null | undefined) =>
+    key === "high" ? "Alta" : key === "low" ? "Bassa" : "Normale";
+
+  const describeEvent = (ev: (typeof taskEvents)[number]): string => {
+    switch (ev.type) {
+      case "created":
+        return `${nameOf(ev.actor_id)} ha creato il task`;
+      case "status_changed":
+        return `${nameOf(ev.actor_id)}: ${statusLabel(ev.from)} → ${statusLabel(ev.to)}`;
+      case "due_changed":
+        return `${nameOf(ev.actor_id)} ha spostato la scadenza: ${ev.from ? formatDue(ev.from) : "—"} → ${ev.to ? formatDue(ev.to) : "—"}`;
+      case "owner_changed":
+        return `${nameOf(ev.actor_id)} ha riassegnato a ${nameOf(ev.to ?? "")}`;
+      case "priority_changed":
+        return `${nameOf(ev.actor_id)}: priorità ${priorityLabel(ev.to)}`;
+      case "archived":
+        return "Archiviato automaticamente (Fatto da più di 14 giorni)";
+      case "restored":
+        return `${nameOf(ev.actor_id)} l'ha ripristinato dall'archivio`;
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1014,36 +1234,71 @@ function CommentSection({ taskId }: { taskId: string }) {
     <section aria-label="Commenti" className="px-5 pb-6">
       <Separator className="mb-4" />
       <h3 className="flex items-center gap-2 text-[11px] font-bold tracking-[0.06em] text-ink-secondary uppercase">
-        Commenti
+        Commenti e attività
         <span className="inline-flex min-w-5 items-center justify-center rounded-full border border-border px-1.5 font-mono text-[11px] font-normal text-ink-muted">
           {list.length}
         </span>
+        <button
+          type="button"
+          onClick={() => setShowActivity((v) => !v)}
+          aria-pressed={showActivity}
+          className="ml-auto inline-flex items-center gap-1 rounded-sm text-[11px] font-medium normal-case tracking-normal text-ink-faint outline-none transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <History className="size-3" />
+          {showActivity ? "Nascondi cronologia" : "Mostra cronologia"}
+        </button>
       </h3>
 
-      <div className="mt-3 space-y-4">
-        {list.length === 0 ? (
+      <div className="mt-3 space-y-3">
+        {timeline.length === 0 ? (
           <p className="text-[13px] text-ink-muted">
             Nessun commento. Scrivi il primo.
           </p>
         ) : (
           (() => {
             let lastDay = "";
-            return list.map((comment) => {
-              const author = profiles.find((p) => p.id === comment.author_id);
-              const day = comment.created_at.slice(0, 10);
+            return timeline.map((entry) => {
+              const day = entry.at.slice(0, 10);
               const showSeparator = day !== lastDay;
               lastDay = day;
+              const separator = showSeparator ? (
+                <div className="flex items-center gap-3 pt-1">
+                  <span className="h-px flex-1 bg-border-soft" />
+                  <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold tracking-[0.05em] text-ink-muted uppercase">
+                    {dayLabel(entry.at)}
+                  </span>
+                  <span className="h-px flex-1 bg-border-soft" />
+                </div>
+              ) : null;
+
+              if (entry.kind === "event") {
+                return (
+                  <React.Fragment key={entry.event.id}>
+                    {separator}
+                    <p className="flex items-baseline gap-2 pl-1 text-[12px] text-ink-muted">
+                      <History
+                        aria-hidden
+                        className="size-3 shrink-0 translate-y-0.5"
+                      />
+                      <span className="min-w-0 flex-1">
+                        {describeEvent(entry.event)}
+                      </span>
+                      <span
+                        className="shrink-0 font-mono text-[10px]"
+                        title={formatFullDateTime(entry.at)}
+                      >
+                        {formatTime(entry.at)}
+                      </span>
+                    </p>
+                  </React.Fragment>
+                );
+              }
+
+              const comment = entry.comment;
+              const author = profiles.find((p) => p.id === comment.author_id);
               return (
                 <React.Fragment key={comment.id}>
-                  {showSeparator ? (
-                    <div className="flex items-center gap-3 pt-1">
-                      <span className="h-px flex-1 bg-border-soft" />
-                      <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-bold tracking-[0.05em] text-ink-muted uppercase">
-                        {dayLabel(comment.created_at)}
-                      </span>
-                      <span className="h-px flex-1 bg-border-soft" />
-                    </div>
-                  ) : null}
+                  {separator}
                   <div className="group/comment flex gap-2.5">
                     <AvatarInitials
                       name={author?.full_name ?? "?"}

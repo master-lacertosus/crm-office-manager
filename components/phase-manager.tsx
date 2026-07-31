@@ -58,9 +58,12 @@ export function PhaseManager() {
                   size="icon-sm"
                   aria-label={`Rimuovi la fase ${meta.label}`}
                   onClick={() => {
-                    removeCustomStatus(meta.key);
+                    const revert = removeCustomStatus(meta.key);
                     toast(
                       `Fase «${meta.label}» rimossa: i task tornano in Da fare`,
+                      revert
+                        ? { action: { label: "Annulla", onClick: revert } }
+                        : undefined,
                     );
                   }}
                 >

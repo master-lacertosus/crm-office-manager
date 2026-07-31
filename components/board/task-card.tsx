@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
-import { Repeat } from "lucide-react";
+import { ListChecks, Repeat } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
@@ -61,6 +61,7 @@ export function CardVisual({
       <div className="mt-2 flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1.5">
           <DueChip iso={task.due_date} status={task.status} />
+          <ChecklistChip task={task} />
           {task.repeat !== "none" ? (
             <Repeat
               aria-label="Ricorrente"
@@ -75,13 +76,36 @@ export function CardVisual({
   );
 }
 
+/** Avanzamento checklist («2/4»), verde quando completa. */
+export function ChecklistChip({ task }: { task: Task }) {
+  const items = task.checklist ?? [];
+  if (items.length === 0) return null;
+  const done = items.filter((i) => i.done).length;
+  const complete = done === items.length;
+  return (
+    <span
+      title={`Checklist: ${done} su ${items.length}`}
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 font-mono text-xs",
+        complete ? "text-success" : "text-ink-muted",
+      )}
+    >
+      <ListChecks aria-hidden className="size-3" strokeWidth={2} />
+      {done}/{items.length}
+    </span>
+  );
+}
+
 /** Card della board: click (o Invio) apre il pannello laterale. */
 export function TaskCard({
   task,
   suppressClickRef,
+  selected = false,
 }: {
   task: Task;
   suppressClickRef?: React.RefObject<boolean>;
+  /** Selezione da tastiera (frecce sulla board). */
+  selected?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -100,7 +124,11 @@ export function TaskCard({
           e.stopPropagation();
         }
       }}
-      className="block rounded-xl outline-none transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+      className={cn(
+        "block rounded-xl outline-none transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
+        selected &&
+          "ring-2 ring-brand-500 ring-offset-2 ring-offset-canvas",
+      )}
     >
       <CardVisual task={task} />
     </Link>
