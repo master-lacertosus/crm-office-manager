@@ -266,13 +266,13 @@ export function DashboardContent() {
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: [0.2, 0, 0, 1] }}
-        className="glass-hero flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center"
+        className="glass-hero flex flex-col justify-between gap-4 px-6 py-5 sm:flex-row sm:items-center"
       >
         <div className="relative">
           <p className="text-[13px] text-ink-muted first-letter:uppercase">
             {DATE_FMT.format(new Date())}
           </p>
-          <h2 className="mt-1 text-[30px]/10 font-bold tracking-[-0.018em] text-ink sm:text-[38px]/12">
+          <h2 className="mt-1 text-[28px]/9 font-bold tracking-[-0.018em] text-ink sm:text-[34px]/10">
             {greeting()},{" "}
             <span className="gradient-text">
               {currentUser.full_name.split(" ")[0]}
@@ -536,11 +536,26 @@ export function DashboardContent() {
               .filter((p) => p.is_active)
               .map((person) => {
                 const personTasks = tasks.filter(
-                  (t) => t.owner_id === person.id,
+                  (t) => t.owner_id === person.id && !t.archived_at,
                 );
                 const personOpen = personTasks.filter(
                   (t) => t.status !== "done",
                 ).length;
+                const personLate = personTasks.filter(
+                  (t) =>
+                    t.status !== "done" && t.due_date && t.due_date < today,
+                ).length;
+                // Etichetta di carico spiegata (solo presentazione)
+                const load =
+                  personLate > 0
+                    ? { label: "In ritardo", cls: "text-danger-text" }
+                    : personOpen === 0
+                      ? { label: "Disponibile", cls: "text-success-text" }
+                      : personOpen <= 2
+                        ? { label: "Bilanciato", cls: "text-ink-muted" }
+                        : personOpen <= 4
+                          ? { label: "Carico", cls: "text-warning-text" }
+                          : { label: "Sovraccarico", cls: "text-danger-text" };
                 return (
                   <li key={person.id}>
                     <Link
@@ -566,8 +581,18 @@ export function DashboardContent() {
                           );
                         })}
                       </span>
-                      <span className="w-14 text-right font-mono text-xs text-ink-muted">
-                        {personOpen} aperti
+                      <span
+                        className="w-24 text-right"
+                        title={`${personOpen} task aperti${personLate > 0 ? `, ${personLate} in ritardo` : ""}`}
+                      >
+                        <span className="block font-mono text-xs text-ink-muted">
+                          {personOpen} aperti
+                        </span>
+                        <span
+                          className={cn("block text-[10px] font-semibold", load.cls)}
+                        >
+                          {load.label}
+                        </span>
                       </span>
                     </Link>
                   </li>
