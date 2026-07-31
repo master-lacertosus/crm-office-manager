@@ -72,10 +72,10 @@ function NavLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex h-9.5 items-center gap-3 rounded-xl px-2.5 text-sm outline-none transition-all",
+        "relative flex h-9.5 items-center gap-3 rounded-lg px-2.5 text-sm outline-none transition-all",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         active
-          ? "nav-tile-active font-semibold"
+          ? "btn-glow font-semibold text-white"
           : "text-ink-secondary hover:bg-white/70 hover:text-ink",
         labelVisibility === "lg" && "md:justify-center lg:justify-start",
       )}

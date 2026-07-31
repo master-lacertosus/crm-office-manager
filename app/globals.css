@@ -403,15 +403,8 @@
     background-color: var(--brand-550);
   }
 
-  /* Tessera di navigazione attiva: stessa famiglia flat-glass. */
-  .nav-tile-active {
-    background-color: var(--brand-500);
-    color: #ffffff;
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.25),
-      inset 0 0 0 1px rgb(255 255 255 / 0.12),
-      0 3px 10px -3px rgb(255 107 0 / 0.35);
-  }
+  /* La tessera di navigazione attiva usa direttamente .btn-glow:
+     un'unica ricetta per tutte le CTA arancio (niente varianti quasi-uguali). */
 
   /* Sollevamento all'hover: elevazione e2 (card interattive). */
   .hover-lift {
