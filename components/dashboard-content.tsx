@@ -180,16 +180,22 @@ export function DashboardContent() {
   const thisWeek = open
     .filter((t) => t.due_date && t.due_date >= today && t.due_date <= weekEnd)
     .sort(byDue);
-  const mine = open
-    .filter((t) => t.owner_id === currentUser.id && !snoozes[t.id])
-    .sort(byDue);
+  const mineAll = open.filter(
+    (t) => t.owner_id === currentUser.id && !snoozes[t.id],
+  );
+  // Il lavoro attivo prima; il backlog (non ancora impegnato) in coda,
+  // sotto la sua etichetta — così il blocco non mente mai.
+  const mine = mineAll.filter((t) => t.status !== "backlog").sort(byDue);
+  const mineBacklog = mineAll
+    .filter((t) => t.status === "backlog")
+    .sort((a, b) => a.position - b.position);
   const mineDone = tasks.filter(
     (t) => t.owner_id === currentUser.id && t.status === "done",
   ).length;
   const percent =
-    mine.length + mineDone === 0
+    mineAll.length + mineDone === 0
       ? 0
-      : Math.round((mineDone / (mine.length + mineDone)) * 100);
+      : Math.round((mineDone / (mineAll.length + mineDone)) * 100);
   const latestAlerts = notifications.slice(0, 3);
   const focusTasks = focusIds
     .map((id) => tasks.find((t) => t.id === id))
@@ -412,8 +418,12 @@ export function DashboardContent() {
         </Section>
 
         {/* I miei task */}
-        <Section title="I miei task aperti" count={mine.length} seeAllHref="/tasks">
-          {mine.length === 0 ? (
+        <Section
+          title="I miei task aperti"
+          count={mineAll.length}
+          seeAllHref="/tasks"
+        >
+          {mineAll.length === 0 ? (
             <EmptyState
               icon={CircleCheck}
               title="Nessun task assegnato a te"
@@ -425,6 +435,16 @@ export function DashboardContent() {
               {mine.map((t) => (
                 <TaskRow key={t.id} task={t} focusable />
               ))}
+              {mineBacklog.length > 0 ? (
+                <>
+                  <p className="mt-2 mb-1 px-2.5 text-[10px] font-bold tracking-[0.06em] text-ink-faint uppercase">
+                    In backlog · non ancora pianificati
+                  </p>
+                  {mineBacklog.map((t) => (
+                    <TaskRow key={t.id} task={t} focusable />
+                  ))}
+                </>
+              ) : null}
             </div>
           )}
           <Link
