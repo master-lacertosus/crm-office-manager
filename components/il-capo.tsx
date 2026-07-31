@@ -30,12 +30,19 @@ interface CapoContext {
   minute: number;
 }
 
+/**
+ * Frase unica del Cavaliere (richiesta cliente 31/07/2026). Rimettere a
+ * null per riattivare l'intero repertorio contestuale e assurdo.
+ */
+const FIXED_MESSAGE: string | null = "IL CAVALIERE VI OSSERVA.";
+
 const clock = (h: number, m: number) => {
   const total = (((h * 60 + m) % 1440) + 1440) % 1440;
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 };
 
 function pickMessage(ctx: CapoContext): string {
+  if (FIXED_MESSAGE) return FIXED_MESSAGE;
   const pool: { text: string; weight: number }[] = [];
   const add = (text: string, weight = 1) => pool.push({ text, weight });
 
@@ -361,7 +368,9 @@ export function IlCapo() {
       return;
     }
     if (done > doneCountRef.current && !offUntilToday() && Math.random() < 0.5) {
-      show(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
+      show(
+        FIXED_MESSAGE ?? PRAISE[Math.floor(Math.random() * PRAISE.length)],
+      );
     }
     doneCountRef.current = done;
   }, [tasks, show]);
