@@ -120,7 +120,9 @@ export function StatTile({
         ) : null}
       </div>
       {children ? (
-        <div className="w-24 shrink-0 self-center">{children}</div>
+        <div className="hidden w-24 shrink-0 self-center sm:block">
+          {children}
+        </div>
       ) : href ? (
         <ChevronRight aria-hidden className="size-4 shrink-0 text-ink-faint" />
       ) : null}

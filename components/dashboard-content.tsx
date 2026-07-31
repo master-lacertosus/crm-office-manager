@@ -70,7 +70,7 @@ function ProgressRing({
   const target = C * (1 - percent / 100);
 
   return (
-    <div className="relative size-[140px] shrink-0 rounded-full bg-[linear-gradient(180deg,#ffffff_0%,#f7f9fc_100%)] shadow-[0_12px_34px_rgb(15_23_42/0.1),inset_0_1px_0_rgb(255_255_255/0.95),inset_0_0_0_1px_rgb(255_255_255/0.6)]">
+    <div className="relative mx-auto size-[140px] shrink-0 rounded-full bg-[linear-gradient(180deg,#ffffff_0%,#f7f9fc_100%)] shadow-[0_12px_34px_rgb(15_23_42/0.1),inset_0_1px_0_rgb(255_255_255/0.95),inset_0_0_0_1px_rgb(255_255_255/0.6)] sm:mx-0">
       <svg viewBox="0 0 140 140" className="size-[140px] -rotate-90">
         <defs>
           <linearGradient id="ring-brand" x1="0" y1="0" x2="1" y2="1">
