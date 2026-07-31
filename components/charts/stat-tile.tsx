@@ -76,7 +76,7 @@ export function StatTile({
       transition={{ type: "spring", stiffness: 320, damping: 26 }}
       style={aurora ? ({ "--aurora": aurora } as React.CSSProperties) : undefined}
       className={cn(
-        "card-soft flex items-center gap-3.5 p-4",
+        "card-soft flex min-w-0 items-center gap-3.5 p-4",
         aurora && "tile-aurora",
         href && "transition-shadow hover:shadow-sm",
         className,

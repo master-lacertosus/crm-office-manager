@@ -223,6 +223,14 @@
 
   body {
     @apply bg-canvas text-foreground antialiased;
+    /* Guardia mobile: nessuno scroll orizzontale di pagina — le aree a
+       scorrimento intenzionale (board, carico) gestiscono il proprio. */
+    overflow-x: clip;
+  }
+
+  /* Gli item di griglia non allargano mai il viewport (min-width:auto). */
+  .grid > * {
+    min-width: 0;
   }
 }
 
