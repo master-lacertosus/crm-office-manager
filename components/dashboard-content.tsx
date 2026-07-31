@@ -388,7 +388,9 @@ export function DashboardContent() {
         </StatTile>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      {/* Composizione asimmetrica: il Focus è compatto, gli Avvisi sono
+          il modulo più denso — le larghezze seguono il contenuto. */}
+      <div className="grid gap-4 lg:grid-cols-[3fr_4.5fr_3.5fr]">
         {/* Focus di oggi */}
         <Section title="Focus di oggi" count={focusTasks.length}>
           {focusTasks.length === 0 ? (
@@ -528,7 +530,7 @@ export function DashboardContent() {
         </Section>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-[4fr_3fr_4fr]">
         {/* Polso del team */}
         <Section title="Polso del team" count={profiles.filter((p) => p.is_active).length}>
           <ul className="space-y-2">
