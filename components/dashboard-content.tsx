@@ -53,7 +53,17 @@ const DATE_FMT = new Intl.DateTimeFormat("it-IT", {
 });
 
 /** Anello di avanzamento personale (mockup: arancio pieno su traccia chiara). */
-function ProgressRing({ percent, delta }: { percent: number; delta: number }) {
+function ProgressRing({
+  percent,
+  delta,
+  done,
+  total,
+}: {
+  percent: number;
+  delta: number;
+  done: number;
+  total: number;
+}) {
   const reduced = useReducedMotion();
   const R = 50;
   const C = 2 * Math.PI * R;
@@ -122,8 +132,14 @@ function ProgressRing({ percent, delta }: { percent: number; delta: number }) {
           {percent}
           <span className="align-top text-[15px] font-bold text-ink-muted">%</span>
         </p>
-        <p className="rounded-full bg-brand-50 px-2 py-px text-[9px] font-bold tracking-[0.1em] text-brand-700 uppercase">
-          chiusi
+        <p className="rounded-full bg-brand-50 px-2 py-px text-[9px] font-bold tracking-[0.08em] text-brand-700 uppercase">
+          efficienza sett.
+        </p>
+        <p
+          className="mt-0.5 font-mono text-[9.5px] text-ink-muted"
+          title={`${done} task completati su ${total} negli ultimi 7 giorni`}
+        >
+          {done} su {total}
         </p>
         <p
           className={cn(
@@ -223,8 +239,14 @@ export function DashboardContent() {
   const mineBacklog = mineAll
     .filter((t) => t.status === "backlog")
     .sort((a, b) => a.position - b.position);
+  // Efficienza SETTIMANALE: chiusi negli ultimi 7 giorni sul totale
+  // (chiusi 7g + aperti ora) — non più lo storico intero, che gonfiava.
   const mineDone = tasks.filter(
-    (t) => t.owner_id === currentUser.id && t.status === "done",
+    (t) =>
+      t.owner_id === currentUser.id &&
+      t.status === "done" &&
+      t.completed_at &&
+      t.completed_at.slice(0, 10) >= addDaysIso(-6),
   ).length;
   const percent =
     mineAll.length + mineDone === 0
@@ -294,7 +316,12 @@ export function DashboardContent() {
           </Button>
         </div>
         <div className="relative">
-          <ProgressRing percent={percent} delta={analytics.done7Delta} />
+          <ProgressRing
+            percent={percent}
+            delta={analytics.done7Delta}
+            done={mineDone}
+            total={mineDone + mineAll.length}
+          />
         </div>
       </motion.section>
 
@@ -365,12 +392,22 @@ export function DashboardContent() {
         {/* Focus di oggi */}
         <Section title="Focus di oggi" count={focusTasks.length}>
           {focusTasks.length === 0 ? (
-            <EmptyState
-              icon={Star}
-              title="Scegli fino a 3 task"
-              hint="Usa la stella accanto ai tuoi task per metterli a fuoco."
-              className="py-6"
-            />
+            <div className="py-4">
+              <EmptyState
+                icon={Star}
+                title="Definisci il focus di oggi"
+                hint="Seleziona fino a 3 attività prioritarie con la stella: il team vede su cosa sei concentrato."
+                className="py-2"
+              />
+              <p className="mt-2 text-center">
+                <Link
+                  href="/tasks"
+                  className="inline-flex items-center gap-1 rounded-md text-[13px] font-semibold text-brand-700 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  Vai ai task →
+                </Link>
+              </p>
+            </div>
           ) : (
             <div className="-mx-1 flex flex-col">
               {focusTasks.map((t) => (
