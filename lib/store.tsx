@@ -89,6 +89,8 @@ function nextOccurrence(task: Task): Task | null {
 
 interface AppStore {
   currentUser: Profile;
+  /** Demo: cambia l'utente corrente («Vedi come…»). */
+  switchUser: (profileId: string) => void;
   profiles: Profile[];
   projects: Project[];
   tasks: Task[];
@@ -158,6 +160,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     React.useState<TaskLink[]>(MOCK_TASK_LINKS);
   const [focusIds, setFocusIds] = React.useState<string[]>([]);
   const [customStatuses, setCustomStatuses] = React.useState<CustomStatus[]>([]);
+  const [currentUserId, setCurrentUserId] =
+    React.useState<string>(CURRENT_USER_ID);
   const [projectComments, setProjectComments] = React.useState<
     ProjectComment[]
   >(MOCK_PROJECT_COMMENTS);
@@ -258,7 +262,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   ];
 
   const currentUser =
-    profiles.find((p) => p.id === CURRENT_USER_ID) ?? profiles[0];
+    profiles.find((p) => p.id === currentUserId) ?? profiles[0];
 
   const myNotifications = notifications
     .filter((n) => n.to_user_id === currentUser.id)
@@ -266,6 +270,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   const store: AppStore = {
     currentUser,
+
+    switchUser(profileId) {
+      setCurrentUserId(profileId);
+    },
     profiles,
     projects,
     tasks,
