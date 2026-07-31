@@ -84,7 +84,7 @@ export function StatTile({
     >
       {icon}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[11px] font-semibold tracking-[0.05em] text-ink-muted uppercase">
+        <p className="text-[11px] font-semibold tracking-[0.05em] text-ink-muted uppercase sm:truncate">
           {label}
         </p>
         <p
