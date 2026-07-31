@@ -6,6 +6,7 @@ import type {
   ProjectComment,
   Task,
   TaskComment,
+  WorkspaceTemplate,
 } from "@/lib/types";
 
 /**
@@ -101,6 +102,107 @@ export const MOCK_PROJECTS: Project[] = [
       "Refresh di copy e fotografia per le schede dei power rack e delle rig.",
     is_archived: false,
     created_by: U.lorenzo,
+  },
+];
+
+/**
+ * Attività standard del mese: partenza realistica per i responsabili,
+ * modificabile da Impostazioni → Workspace (persistita in locale).
+ */
+export const MOCK_TEMPLATES: WorkspaceTemplate[] = [
+  {
+    id: "tpl-newsletter-promo",
+    name: "Newsletter Promo",
+    description:
+      "Checklist:\n- soggetto e preheader\n- offerta del mese\n- blocco novità\n- CTA e link tracciati\n- test invio",
+    project_id: null,
+    owner_id: U.enrico,
+    priority: "high",
+    repeat: "monthly",
+    due_day: 5,
+    links: [
+      {
+        url: "https://docs.google.com/document/d/linee-guida-newsletter",
+        label: "Linee guida",
+      },
+    ],
+  },
+  {
+    id: "tpl-articolo-blog",
+    name: "Pubblicazione articolo blog",
+    description:
+      "Checklist:\n- scelta argomento e keyword\n- bozza e revisione\n- immagini ottimizzate\n- SEO on-page\n- pubblicazione e condivisione",
+    project_id: null,
+    owner_id: U.francesco,
+    priority: "normal",
+    repeat: "biweekly",
+    due_day: 8,
+    links: [],
+  },
+  {
+    id: "tpl-newsletter-commerciale",
+    name: "Newsletter reparto Commerciale",
+    description:
+      "Checklist:\n- input dal commerciale (offerte B2B)\n- listino aggiornato\n- revisione responsabile\n- invio segmento aziende",
+    project_id: null,
+    owner_id: U.enrico,
+    priority: "normal",
+    repeat: "monthly",
+    due_day: 15,
+    links: [],
+  },
+  {
+    id: "tpl-rubrica-arena",
+    name: "Rubrica Lacertosus Arena",
+    description:
+      "Checklist:\n- selezione atleta/box del mese\n- intervista e materiale foto\n- montaggio contenuti social\n- pubblicazione rubrica",
+    project_id: null,
+    owner_id: U.klea,
+    priority: "normal",
+    repeat: "monthly",
+    due_day: 20,
+    links: [],
+  },
+  {
+    id: "tpl-video-youtuber",
+    name: "Video YouTuber",
+    description:
+      "Checklist:\n- accordo con il creator\n- brief prodotto e talking points\n- revisione bozza video\n- pubblicazione e repost",
+    project_id: null,
+    owner_id: U.riccardo,
+    priority: "normal",
+    repeat: "monthly",
+    due_day: 25,
+    links: [],
+  },
+  {
+    id: "tpl-shooting",
+    name: "Shooting prodotto",
+    description:
+      "Checklist:\n- lista referenze prodotto\n- still life fondo bianco\n- dettagli (zigrinatura, saldature)\n- 3 angolazioni per variante\n- consegna in cartella condivisa",
+    project_id: null,
+    owner_id: U.riccardo,
+    priority: "normal",
+    repeat: "none",
+    due_day: null,
+    links: [
+      {
+        url: "https://drive.google.com/drive/folders/reference-shooting",
+        label: "Cartella reference",
+      },
+    ],
+  },
+  {
+    id: "tpl-lancio",
+    name: "Lancio prodotto",
+    description:
+      "Checklist:\n- scheda prodotto online\n- foto e video caricati\n- newsletter dedicata\n- post social programmati\n- ADV attive",
+    project_id: null,
+    owner_id: U.sara,
+    priority: "high",
+    repeat: "none",
+    due_day: null,
+    links: [],
   },
 ];
 

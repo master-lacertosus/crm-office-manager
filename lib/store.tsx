@@ -2,9 +2,13 @@
 
 import * as React from "react";
 
-import { addDaysIso, shiftIsoDays, shiftIsoMonths, todayIso } from "@/lib/format";
+import {
+  nextMonthlyIso,
+  shiftIsoDays,
+  shiftIsoMonths,
+  todayIso,
+} from "@/lib/format";
 import { extractMentionIds } from "@/lib/mentions";
-import { TASK_TEMPLATES } from "@/lib/templates";
 import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
 import {
   CURRENT_USER_ID,
@@ -15,6 +19,7 @@ import {
   MOCK_PROJECT_COMMENTS,
   MOCK_TASKS,
   MOCK_TASK_LINKS,
+  MOCK_TEMPLATES,
 } from "@/lib/mock-data";
 import type {
   AppNotification,
@@ -26,6 +31,7 @@ import type {
   Task,
   TaskComment,
   TaskLink,
+  WorkspaceTemplate,
 } from "@/lib/types";
 
 /** Vista salvata dei task (querystring di filtri+vista), persistita in locale. */
@@ -66,7 +72,13 @@ type NewTask = Pick<Task, "title" | "owner_id"> &
   Partial<
     Pick<
       Task,
-      "description" | "status" | "priority" | "project_id" | "due_date" | "repeat"
+      | "description"
+      | "status"
+      | "priority"
+      | "project_id"
+      | "due_date"
+      | "repeat"
+      | "template_id"
     >
   >;
 
@@ -78,9 +90,9 @@ function nextOccurrence(task: Task): Task | null {
     id: crypto.randomUUID(),
     status: "todo",
     due_date:
-      task.repeat === "weekly"
-        ? shiftIsoDays(task.due_date, 7)
-        : shiftIsoMonths(task.due_date, 1),
+      task.repeat === "monthly"
+        ? shiftIsoMonths(task.due_date, 1)
+        : shiftIsoDays(task.due_date, task.repeat === "weekly" ? 7 : 14),
     position: Date.now(),
     completed_at: null,
     created_at: new Date().toISOString(),
@@ -128,8 +140,19 @@ interface AppStore {
   /** Flusso problemi. */
   reportProblem: (taskId: string, reason: string) => Promise<void>;
   resolveProblem: (taskId: string) => void;
-  /** Template di task: crea un task pronto (con link) e lo restituisce. */
-  createTaskFromTemplate: (templateId: string) => Promise<Task | null>;
+  /** Attività ricorrenti configurabili (persistite in locale). */
+  templates: WorkspaceTemplate[];
+  addTemplate: (input: Omit<WorkspaceTemplate, "id" | "links">) => void;
+  updateTemplate: (
+    id: string,
+    patch: Partial<Omit<WorkspaceTemplate, "id">>,
+  ) => void;
+  removeTemplate: (id: string) => void;
+  /** Crea un task dal template (scadenza/responsabile personalizzabili). */
+  createTaskFromTemplate: (
+    templateId: string,
+    overrides?: { due_date?: string | null; owner_id?: string },
+  ) => Promise<Task | null>;
   /** Viste salvate (filtri della pagina Task), persistite in locale. */
   savedViews: SavedView[];
   addSavedView: (name: string, params: string) => void;
@@ -167,9 +190,14 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   >(MOCK_PROJECT_COMMENTS);
   const [snoozes, setSnoozes] = React.useState<Record<string, string>>({});
   const [savedViews, setSavedViews] = React.useState<SavedView[]>([]);
+  const [templates, setTemplates] =
+    React.useState<WorkspaceTemplate[]>(MOCK_TEMPLATES);
   const escalatedRef = React.useRef(new Set<string>());
 
-  /* Viste salvate: carica e persisti in localStorage */
+  /* Viste salvate e template: carica e persisti in localStorage. Il flag
+     "loaded" evita che il primo salvataggio (stato iniziale) sovrascriva
+     quanto memorizzato prima che la lettura sia avvenuta. */
+  const viewsLoadedRef = React.useRef(false);
   React.useEffect(() => {
     queueMicrotask(() => {
       try {
@@ -178,15 +206,38 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       } catch {
         /* ignora */
       }
+      viewsLoadedRef.current = true;
     });
   }, []);
   React.useEffect(() => {
+    if (!viewsLoadedRef.current) return;
     try {
       localStorage.setItem("saved-views", JSON.stringify(savedViews));
     } catch {
       /* ignora */
     }
   }, [savedViews]);
+
+  const templatesLoadedRef = React.useRef(false);
+  React.useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const raw = localStorage.getItem("workspace-templates");
+        if (raw) setTemplates(JSON.parse(raw));
+      } catch {
+        /* ignora */
+      }
+      templatesLoadedRef.current = true;
+    });
+  }, []);
+  React.useEffect(() => {
+    if (!templatesLoadedRef.current) return;
+    try {
+      localStorage.setItem("workspace-templates", JSON.stringify(templates));
+    } catch {
+      /* ignora */
+    }
+  }, [templates]);
 
   /* Risveglio degli snooze scaduti: il task torna con un avviso */
   React.useEffect(() => {
@@ -293,6 +344,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         due_date: input.due_date ?? null,
         position: Date.now(),
         repeat: input.repeat ?? "none",
+        template_id: input.template_id ?? null,
         completed_at: null,
         created_at: new Date().toISOString(),
       };
@@ -558,23 +610,47 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       );
     },
 
-    async createTaskFromTemplate(templateId) {
-      const tpl = TASK_TEMPLATES.find((t) => t.id === templateId);
+    templates,
+
+    addTemplate(input) {
+      setTemplates((prev) => [
+        ...prev,
+        { ...input, id: crypto.randomUUID(), links: [] },
+      ]);
+    },
+
+    updateTemplate(id, patch) {
+      setTemplates((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+      );
+    },
+
+    removeTemplate(id) {
+      setTemplates((prev) => prev.filter((t) => t.id !== id));
+    },
+
+    async createTaskFromTemplate(templateId, overrides) {
+      const tpl = templates.find((t) => t.id === templateId);
       if (!tpl) return null;
       await wait();
       const task: Task = {
         id: crypto.randomUUID(),
-        title: tpl.title,
-        description: tpl.description,
+        title: tpl.name,
+        description: tpl.description || null,
         status: "todo",
         priority: tpl.priority,
-        owner_id: currentUser.id,
+        owner_id: overrides?.owner_id ?? tpl.owner_id ?? currentUser.id,
         created_by: currentUser.id,
-        project_id: null,
+        project_id: tpl.project_id,
         due_date:
-          tpl.dueOffsetDays !== null ? addDaysIso(tpl.dueOffsetDays) : null,
+          overrides?.due_date !== undefined
+            ? overrides.due_date
+            : tpl.due_day !== null
+              ? nextMonthlyIso(tpl.due_day)
+              : null,
         position: Date.now(),
         repeat: tpl.repeat,
+        template_id: tpl.id,
         completed_at: null,
         created_at: new Date().toISOString(),
       };

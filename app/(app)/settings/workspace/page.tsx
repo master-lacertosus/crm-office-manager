@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Compass, KeyRound, MailPlus, UserX } from "lucide-react";
 
 import { PhaseManager } from "@/components/phase-manager";
+import { TemplateManager } from "@/components/template-manager";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Workspace" };
@@ -40,6 +41,8 @@ export default function WorkspaceSettingsPage() {
           </Link>
         </Button>
       </div>
+
+      <TemplateManager />
 
       <PhaseManager />
 

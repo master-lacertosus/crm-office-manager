@@ -36,6 +36,17 @@ export function shiftIsoMonths(iso: string, months: number): string {
   return toIso(d);
 }
 
+/** Prossima ricorrenza del giorno `day` del mese (oggi incluso). */
+export function nextMonthlyIso(day: number): string {
+  const now = new Date();
+  const clamped = Math.min(Math.max(day, 1), 28);
+  const d =
+    now.getDate() <= clamped
+      ? new Date(now.getFullYear(), now.getMonth(), clamped)
+      : new Date(now.getFullYear(), now.getMonth() + 1, clamped);
+  return toIso(d);
+}
+
 /** Differenza in giorni tra due ISO (b - a). */
 export function diffIsoDays(a: string, b: string): number {
   const [ya, ma, da] = a.split("-").map(Number);

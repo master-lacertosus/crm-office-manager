@@ -47,6 +47,18 @@ trappole di complessità.
 > 48h. Con Supabase: colonne additive su tasks (problem_reason/since),
 > tabelle project_comments, saved_views, task_snoozes; reazioni/decisioni
 > come colonne su comments.
+>
+> **Quinto emendamento (31/07/2026, pianificazione mensile):** i template
+> di task diventano **attività ricorrenti configurabili** dai responsabili
+> (nome, descrizione, responsabile predefinito, progetto, priorità,
+> ripetizione, giorno del mese proposto) gestite da Impostazioni →
+> Workspace e persistite in locale nella fase placeholder. Nuovo
+> **pianificatore «Ricorrenti»** nella pagina Task (solo admin, anche via
+> ⌘K o /tasks?plan=1): segnala le attività standard già in corso e lancia
+> le mancanti con data e responsabile regolabili. Ricorrenza estesa con
+> **«Ogni 2 settimane»** (biweekly). Con Supabase: tabella additiva
+> `workspace_templates`, colonna `tasks.template_id` (FK nullable) e
+> nuovo valore nel CHECK di `tasks.repeat`.
 
 ---
 

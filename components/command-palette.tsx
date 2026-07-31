@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   ListTodo,
   Plus,
+  Repeat,
   Search,
   Settings,
   Shield,
@@ -40,7 +41,7 @@ interface Item {
  */
 export function CommandPalette() {
   const router = useRouter();
-  const { tasks, projects, profiles } = useAppStore();
+  const { tasks, projects, profiles, currentUser } = useAppStore();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [active, setActive] = React.useState(0);
@@ -70,6 +71,18 @@ export function CommandPalette() {
   const items = React.useMemo<Item[]>(() => {
     const nav: Item[] = [
       { id: "new", group: "Azioni", label: "Nuovo task", icon: Plus, run: () => go("/tasks?task=new") },
+      ...(currentUser.role === "admin"
+        ? [
+            {
+              id: "plan",
+              group: "Azioni",
+              label: "Pianifica ricorrenti",
+              hint: "attività standard del mese",
+              icon: Repeat,
+              run: () => go("/tasks?plan=1"),
+            } satisfies Item,
+          ]
+        : []),
       {
         id: "capo",
         group: "Azioni",
@@ -119,7 +132,7 @@ export function CommandPalette() {
         run: () => go(`/tasks?owner=${p.id}`),
       }));
     return [...nav, ...taskItems, ...projectItems, ...peopleItems];
-  }, [tasks, projects, profiles, go]);
+  }, [tasks, projects, profiles, currentUser.role, go]);
 
   const q = query.trim().toLowerCase();
   const visible = q

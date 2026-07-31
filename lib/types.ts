@@ -36,7 +36,17 @@ export type TaskPriority = "low" | "normal" | "high";
 
 /** Ricorrenza "furba": al completamento il task si ricrea con la scadenza
  *  spostata avanti. Niente motore di ricorrenza completo (per scelta). */
-export type TaskRepeat = "none" | "weekly" | "monthly";
+export type TaskRepeat = "none" | "weekly" | "biweekly" | "monthly";
+
+/** Etichette e salto di scadenza per ogni ricorrenza. */
+export const REPEAT_META: Record<
+  Exclude<TaskRepeat, "none">,
+  { label: string; phrase: string; days: number | "month" }
+> = {
+  weekly: { label: "Settimanale", phrase: "una settimana", days: 7 },
+  biweekly: { label: "Ogni 2 settimane", phrase: "due settimane", days: 14 },
+  monthly: { label: "Mensile", phrase: "un mese", days: "month" },
+};
 
 export type Role = "admin" | "member";
 
@@ -76,8 +86,29 @@ export interface Task {
   due_date: string | null;
   position: number;
   repeat: TaskRepeat;
+  /** Template ricorrente da cui è nato (per la pianificazione mensile). */
+  template_id?: string | null;
   completed_at: string | null;
   created_at: string;
+}
+
+/**
+ * Attività standard del mese, configurata dai responsabili: richiamabile
+ * dal pianificatore ricorrenti o come base nel form di creazione task.
+ */
+export interface WorkspaceTemplate {
+  id: string;
+  /** Nome dell'attività: diventa il titolo del task creato. */
+  name: string;
+  description: string;
+  project_id: string | null;
+  /** Responsabile predefinito (null = chi crea il task). */
+  owner_id: string | null;
+  priority: TaskPriority;
+  repeat: TaskRepeat;
+  /** Giorno del mese proposto come scadenza (1–28), per la pianificazione. */
+  due_day: number | null;
+  links: { url: string; label: string }[];
 }
 
 /** Allegato-link (fase senza Supabase Storage: si allegano URL). */

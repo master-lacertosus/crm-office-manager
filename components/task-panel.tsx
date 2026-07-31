@@ -28,7 +28,6 @@ import {
   formatTime,
   todayIso,
 } from "@/lib/format";
-import { TASK_TEMPLATES } from "@/lib/templates";
 import {
   CommentActions,
   CommentBody,
@@ -36,6 +35,7 @@ import {
 } from "@/components/comment-bits";
 import { panel, scrim } from "@/lib/motion";
 import { useAppStore } from "@/lib/store";
+import { REPEAT_META } from "@/lib/types";
 import type { Task, TaskRepeat } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
@@ -344,6 +344,7 @@ function TaskForm({
     createTask,
     updateTask,
     statuses,
+    templates,
     createTaskFromTemplate,
   } = useAppStore();
   const toast = useToast();
@@ -351,7 +352,7 @@ function TaskForm({
   const applyTemplate = async (templateId: string) => {
     const created = await createTaskFromTemplate(templateId);
     if (!created) return;
-    toast("Task creato dal template: completa il titolo");
+    toast(`«${created.title}» creato dal template`);
     const params = new URLSearchParams(searchParams);
     params.set("task", created.id);
     params.delete("due");
@@ -411,24 +412,25 @@ function TaskForm({
     }
   };
 
-  const templatePicker = !task ? (
-    <div className="space-y-2">
-      <Label>Parti da un template</Label>
-      <div className="flex flex-wrap gap-1.5">
-        {TASK_TEMPLATES.map((tpl) => (
-          <Button
-            key={tpl.id}
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => applyTemplate(tpl.id)}
-          >
-            {tpl.name}
-          </Button>
-        ))}
+  const templatePicker =
+    !task && templates.length > 0 ? (
+      <div className="space-y-2">
+        <Label>Parti da un template</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {templates.map((tpl) => (
+            <Button
+              key={tpl.id}
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => applyTemplate(tpl.id)}
+            >
+              {tpl.name}
+            </Button>
+          ))}
+        </div>
       </div>
-    </div>
-  ) : null;
+    ) : null;
 
   const titleField = (
     <div className="space-y-2">
@@ -576,8 +578,11 @@ function TaskForm({
             onChange={(e) => setRepeat(e.target.value as TaskRepeat)}
           >
             <option value="none">Nessuna</option>
-            <option value="weekly">Settimanale</option>
-            <option value="monthly">Mensile</option>
+            {Object.entries(REPEAT_META).map(([key, meta]) => (
+              <option key={key} value={key}>
+                {meta.label}
+              </option>
+            ))}
           </NativeSelect>
         </div>
         {repeat !== "none" ? (
@@ -588,8 +593,7 @@ function TaskForm({
             )}
           >
             Al completamento si ricrea da solo con la scadenza spostata di{" "}
-            {repeat === "weekly" ? "una settimana" : "un mese"} (serve una
-            scadenza).
+            {REPEAT_META[repeat].phrase} (serve una scadenza).
           </p>
         ) : null}
     </div>
