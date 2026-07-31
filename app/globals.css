@@ -357,8 +357,8 @@
     background:
       repeating-radial-gradient(
         140% 100% at 115% 50%,
-        rgb(255 107 0 / 0.09) 0 1.5px,
-        transparent 1.5px 26px
+        rgb(255 107 0 / 0.055) 0 1px,
+        transparent 1px 22px
       );
     pointer-events: none;
   }
