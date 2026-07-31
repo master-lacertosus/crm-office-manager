@@ -388,25 +388,29 @@
     background: linear-gradient(90deg, transparent, rgb(240 146 38 / 0.5) 30%, rgb(109 40 217 / 0.35) 70%, transparent);
   }
 
-  /* Bottone primario (mockup): gradiente arancio, testo bianco, glow */
+  /* Bottone primario: arancio PIATTO con tocco di vetro — luce interna
+     sottile, hairline chiara, ombra tinta minima. Niente gradiente
+     verticale né glow (revisione 31/07: "flat glass premium"). */
   .btn-glow {
-    background-image: linear-gradient(180deg, #ff8a1f 0%, var(--brand-500) 55%, #f05a00 100%);
+    background-color: var(--brand-500);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.35),
-      0 10px 24px -8px rgb(255 107 0 / 0.55);
+      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      inset 0 0 0 1px rgb(255 255 255 / 0.14),
+      0 1px 2px rgb(15 23 42 / 0.08),
+      0 4px 12px -4px rgb(255 107 0 / 0.3);
   }
   .btn-glow:hover {
-    background-image: linear-gradient(180deg, #ff7f0d 0%, var(--brand-550) 55%, #e05300 100%);
+    background-color: var(--brand-550);
   }
 
-  /* Tessera di navigazione attiva (reference H.Care): la voce corrente è
-     una tessera arancio piena con alone — l'unico blocco pieno del telaio. */
+  /* Tessera di navigazione attiva: stessa famiglia flat-glass. */
   .nav-tile-active {
-    background-image: linear-gradient(180deg, #ff8a1f 0%, var(--brand-500) 58%, #f05a00 100%);
+    background-color: var(--brand-500);
     color: #ffffff;
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.4),
-      0 8px 20px -6px rgb(255 107 0 / 0.5);
+      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      inset 0 0 0 1px rgb(255 255 255 / 0.12),
+      0 3px 10px -3px rgb(255 107 0 / 0.35);
   }
 
   /* Sollevamento all'hover: elevazione e2 (card interattive). */
