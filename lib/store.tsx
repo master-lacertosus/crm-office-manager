@@ -270,7 +270,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   /* Bump di STATE_VERSION = reset pulito ai seed (schema cambiato).     */
   /* ------------------------------------------------------------------ */
   const STATE_KEY = "office-state";
-  const STATE_VERSION = 1;
+  // v2 (31/07): timestamp dei seed ancorati (fix idratazione #418) —
+  // il bump azzera i dati demo persistiti, come concordato.
+  const STATE_VERSION = 2;
   const stateLoadedRef = React.useRef(false);
   React.useEffect(() => {
     queueMicrotask(() => {

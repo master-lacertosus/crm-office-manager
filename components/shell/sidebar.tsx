@@ -271,7 +271,7 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
 /** Sidebar fissa: 240px da lg, rail icone 64px su md, assente sotto md. */
 export function Sidebar() {
   return (
-    <aside className="glass-chrome sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-white/60 md:flex md:w-16 lg:w-60 print:hidden">
+    <aside className="glass-chrome sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-white/60 md:flex md:w-16 lg:top-4 lg:h-[calc(100dvh-2rem)] lg:w-60 print:hidden">
       <Wordmark compact />
       <nav
         aria-label="Navigazione principale"

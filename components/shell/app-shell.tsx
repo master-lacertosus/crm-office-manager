@@ -24,7 +24,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <ShellContext.Provider
       value={{ openDrawer: () => setDrawerOpen(true) }}
     >
-      <div className="flex min-h-dvh w-full">
+      {/* Cornice flottante (da lg): l'app galleggia sul fondale aurora —
+          la firma della reference. Gli sticky interni compensano il
+          margine con top-4; overflow-clip non crea scroll context. */}
+      <div className="flex min-h-dvh w-full lg:m-4 lg:min-h-[calc(100dvh-2rem)] lg:w-[calc(100%-2rem)] lg:overflow-clip lg:rounded-[28px] lg:border lg:border-white/70 lg:bg-white/50 lg:shadow-[0_1px_2px_rgb(15_23_42/0.04),0_28px_90px_rgb(15_23_42/0.16),inset_0_1px_0_rgb(255_255_255/0.9)]">
         <Sidebar />
         <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
         <div className="flex min-w-0 flex-1 flex-col">{children}</div>

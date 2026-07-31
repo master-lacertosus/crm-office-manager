@@ -247,8 +247,16 @@ export const MOCK_TEMPLATES: WorkspaceTemplate[] = [
   },
 ];
 
+/* Ancora temporale: le 9:00 di oggi. Server e client (stesso giorno)
+   generano timestamp IDENTICI ⇒ niente mismatch di idratazione (#418). */
+const ANCHOR_MS = (() => {
+  const d = new Date();
+  d.setHours(9, 0, 0, 0);
+  return d.getTime();
+})();
+
 const t = (offsetMin: number) =>
-  new Date(Date.now() - offsetMin * 60_000).toISOString();
+  new Date(ANCHOR_MS - offsetMin * 60_000).toISOString();
 
 const CURRENT_TASKS: Task[] = [
   {
@@ -480,7 +488,7 @@ const HISTORY: { tasks: Task[]; events: TaskEvent[] } = (() => {
       n++;
       const owner = owners[Math.floor(rnd() * owners.length)];
       const completedMs =
-        Date.now() - day * 86_400_000 - Math.floor(rnd() * 9) * 3_600_000;
+        ANCHOR_MS - day * 86_400_000 - Math.floor(rnd() * 9) * 3_600_000;
       const leadDays = 2 + Math.floor(rnd() * 6);
       const createdMs = completedMs - leadDays * 86_400_000;
       const id = `hist-${String(n).padStart(3, "0")}`;
