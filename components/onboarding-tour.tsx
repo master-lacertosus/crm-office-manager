@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
   AtSign,
@@ -55,10 +55,13 @@ const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
 /** Intro guidata per i nuovi utenti (riapribile con ?tour=1). */
 export function OnboardingTour() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
   const forced = searchParams.get("tour") === "1";
   const suppressed = searchParams.get("tour") === "0";
   const [open, setOpen] = React.useState(false);
   const [step, setStep] = React.useState(0);
+  const checkedStorageRef = React.useRef(false);
 
   React.useEffect(() => {
     if (suppressed) return; // demo/test: niente tour
@@ -67,8 +70,17 @@ export function OnboardingTour() {
         setStep(0);
         setOpen(true);
       });
+      // Toglie subito ?tour=1 dall'URL: se restasse, «Rivedi il tour»
+      // smetterebbe di rispondere (stesso URL → nessuna navigazione) e
+      // ogni ricarica o back lo farebbe ripartire da solo.
+      const params = new URLSearchParams(searchParams);
+      params.delete("tour");
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
       return;
     }
+    if (checkedStorageRef.current) return; // solo al primo mount
+    checkedStorageRef.current = true;
     queueMicrotask(() => {
       try {
         if (!localStorage.getItem(STORAGE_KEY)) setOpen(true);
@@ -76,7 +88,7 @@ export function OnboardingTour() {
         /* senza storage niente tour automatico */
       }
     });
-  }, [forced, suppressed]);
+  }, [forced, suppressed, searchParams, pathname, router]);
 
   const finish = () => {
     try {
