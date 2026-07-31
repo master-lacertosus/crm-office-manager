@@ -60,8 +60,8 @@ function ProgressRing({ percent, delta }: { percent: number; delta: number }) {
   const target = C * (1 - percent / 100);
 
   return (
-    <div className="relative size-[132px] shrink-0 rounded-full bg-white shadow-[0_10px_30px_rgb(15_23_42/0.08),inset_0_1px_0_rgb(255_255_255/0.9)]">
-      <svg viewBox="0 0 132 132" className="size-[132px] -rotate-90">
+    <div className="relative size-[140px] shrink-0 rounded-full bg-[linear-gradient(180deg,#ffffff_0%,#f7f9fc_100%)] shadow-[0_12px_34px_rgb(15_23_42/0.1),inset_0_1px_0_rgb(255_255_255/0.95),inset_0_0_0_1px_rgb(255_255_255/0.6)]">
+      <svg viewBox="0 0 140 140" className="size-[140px] -rotate-90">
         <defs>
           <linearGradient id="ring-brand" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="#ff9d47" />
@@ -69,17 +69,29 @@ function ProgressRing({ percent, delta }: { percent: number; delta: number }) {
             <stop offset="100%" stopColor="#f05a00" />
           </linearGradient>
         </defs>
+        {/* quadrante a tacche (manometro d'officina) */}
         <circle
-          cx="66"
-          cy="66"
+          cx="70"
+          cy="70"
+          r={R + 11}
+          fill="none"
+          stroke="#dde5ee"
+          strokeWidth="3"
+          strokeDasharray="1 8.1"
+          strokeLinecap="round"
+        />
+        {/* binario incassato */}
+        <circle
+          cx="70"
+          cy="70"
           r={R}
           fill="none"
-          stroke="#f1f5f9"
+          stroke="#edf1f7"
           strokeWidth="11"
         />
         <motion.circle
-          cx="66"
-          cy="66"
+          cx="70"
+          cy="70"
           r={R}
           fill="none"
           stroke="url(#ring-brand)"
@@ -89,25 +101,37 @@ function ProgressRing({ percent, delta }: { percent: number; delta: number }) {
           initial={{ strokeDashoffset: reduced ? target : C }}
           animate={{ strokeDashoffset: target }}
           transition={{ duration: 1, ease: [0.2, 0, 0, 1] }}
-          style={{
-            filter: "drop-shadow(0 3px 6px rgb(255 107 0 / 0.35))",
-          }}
+          style={{ filter: "drop-shadow(0 3px 6px rgb(255 107 0 / 0.35))" }}
+        />
+        {/* punta luminosa a fine arco (stile activity ring) */}
+        <motion.circle
+          cx={70 + R * Math.cos((percent / 100) * 2 * Math.PI)}
+          cy={70 + R * Math.sin((percent / 100) * 2 * Math.PI)}
+          r="4"
+          fill="#ffffff"
+          stroke="#ff6b00"
+          strokeWidth="2.5"
+          initial={{ opacity: reduced ? 1 : 0, scale: reduced ? 1 : 0.4 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: reduced ? 0 : 0.85, duration: 0.25 }}
+          style={{ filter: "drop-shadow(0 0 6px rgb(255 107 0 / 0.6))" }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <p className="text-[26px]/7 font-bold tracking-[-0.01em] text-ink">
-          {percent}%
+        <p className="text-[30px]/8 font-extrabold tracking-[-0.02em] text-ink tabular-nums">
+          {percent}
+          <span className="align-top text-[15px] font-bold text-ink-muted">%</span>
         </p>
-        <p className="text-[10px] font-semibold tracking-[0.08em] text-ink-muted uppercase">
+        <p className="rounded-full bg-brand-50 px-2 py-px text-[9px] font-bold tracking-[0.1em] text-brand-700 uppercase">
           chiusi
         </p>
         <p
           className={cn(
-            "mt-0.5 font-mono text-[10px]",
+            "mt-1 rounded-full px-1.5 py-px font-mono text-[9.5px] font-medium",
             delta > 0
-              ? "text-success-text"
+              ? "bg-success-soft text-success-text"
               : delta < 0
-                ? "text-danger-text"
+                ? "bg-danger-soft text-danger-text"
                 : "text-ink-muted",
           )}
         >
