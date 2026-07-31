@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
@@ -231,21 +232,34 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
     <div
       className={cn(
-        "flex h-14 items-center gap-2.5 px-3",
+        "flex h-14 items-center px-3.5",
         compact && "md:justify-center lg:justify-start",
       )}
     >
+      {/* mark compatto per la rail ridotta */}
       <span
         aria-hidden
-        className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground"
+        className={cn(
+          "hidden size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white",
+          compact && "md:flex lg:hidden",
+        )}
       >
         L
       </span>
+      {/* wordmark ufficiale */}
       <div className={cn("leading-none", compact && "md:hidden lg:block")}>
-        <p className="text-[13px] font-semibold tracking-tight text-ink">
-          LACERTOSUS
+        <Image
+          src="/lacertosus-logo.svg"
+          alt="Lacertosus"
+          width={850}
+          height={96}
+          priority
+          unoptimized
+          className="h-[13px] w-auto"
+        />
+        <p className="mt-1.5 font-mono text-[10px] text-ink-muted">
+          Office OS
         </p>
-        <p className="mt-0.5 font-mono text-[10px] text-ink-muted">Office OS</p>
       </div>
     </div>
   );
