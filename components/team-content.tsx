@@ -108,8 +108,13 @@ export function TeamContent() {
               >
                 <AvatarInitials name={profile.full_name} size="lg" />
                 <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-2 text-sm font-medium text-ink">
+                  <p className="flex flex-wrap items-center gap-x-2 text-sm font-medium text-ink">
                     {profile.full_name}
+                    {profile.title ? (
+                      <span className="text-xs font-normal text-ink-secondary">
+                        · {profile.title}
+                      </span>
+                    ) : null}
                     {profile.id === currentUser.id ? (
                       <span className="text-xs font-normal text-ink-muted">
                         (tu)

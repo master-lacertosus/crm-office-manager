@@ -45,6 +45,8 @@ export interface Profile {
   full_name: string;
   email: string;
   role: Role;
+  /** Qualifica mostrata accanto al nome (es. «Responsabile · Webmaster»). */
+  title?: string;
   is_active: boolean;
 }
 

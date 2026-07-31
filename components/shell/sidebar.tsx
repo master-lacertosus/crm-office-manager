@@ -209,8 +209,9 @@ function UserFooter({ compact = false }: { compact?: boolean }) {
           <span className="block truncate text-[13px] font-semibold text-ink">
             {currentUser.full_name}
           </span>
-          <span className="block text-xs text-ink-muted">
-            {currentUser.role === "admin" ? "Admin" : "Member"}
+          <span className="block truncate text-xs text-ink-muted">
+            {currentUser.title ??
+              (currentUser.role === "admin" ? "Admin" : "Member")}
           </span>
         </span>
         <ChevronDown
