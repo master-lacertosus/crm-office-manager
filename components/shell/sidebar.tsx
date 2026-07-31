@@ -243,7 +243,7 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
       <span
         aria-hidden
         className={cn(
-          "hidden size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white",
+          "hidden size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25),inset_0_0_0_1px_rgb(255_255_255/0.12)]",
           compact && "md:flex lg:hidden",
         )}
       >
