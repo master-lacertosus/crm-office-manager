@@ -422,6 +422,14 @@
     transform: translateY(0) scale(0.985);
   }
 
+  /* Micro-feedback sulle spunte (checklist, planner): pressione 120ms. */
+  input[type="checkbox"] {
+    transition: transform 120ms var(--ease-out);
+  }
+  input[type="checkbox"]:active {
+    transform: scale(0.88);
+  }
+
   /* Lucentezza "a gemma" per pip e pallini colorati: luce dall'alto. */
   .gem {
     background-image: linear-gradient(
