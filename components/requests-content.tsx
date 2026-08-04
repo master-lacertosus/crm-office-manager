@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
+  CalendarClock,
   Check,
   Inbox,
   MailPlus,
@@ -11,12 +13,13 @@ import {
   X,
 } from "lucide-react";
 
-import { formatDue, timeAgo } from "@/lib/format";
+import { diffIsoDays, formatDue, timeAgo, todayIso } from "@/lib/format";
 import { useAppStore } from "@/lib/store";
 import type { TaskRequest } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { EmptyState } from "@/components/empty-state";
+import { PriorityBadge } from "@/components/priority-badge";
 import { useToast } from "@/components/toaster";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,6 +58,8 @@ function NewRequestForm() {
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [projectId, setProjectId] = React.useState("");
+  const [neededBy, setNeededBy] = React.useState("");
+  const [urgent, setUrgent] = React.useState(false);
   const [sending, setSending] = React.useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -65,11 +70,15 @@ function NewRequestForm() {
       title,
       description,
       project_id: projectId || null,
+      requested_due: neededBy || null,
+      priority: urgent ? "high" : "normal",
     });
     setSending(false);
     setTitle("");
     setDescription("");
     setProjectId("");
+    setNeededBy("");
+    setUrgent(false);
     toast("Richiesta inviata: i responsabili la vedranno subito.");
   };
 
@@ -108,17 +117,39 @@ function NewRequestForm() {
       <textarea
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="Contesto utile a chi decide: perché serve, entro quando, materiali…"
+        placeholder="Contesto utile a chi decide: perché serve, materiali, riferimenti…"
         aria-label="Descrizione della richiesta"
         rows={2}
         maxLength={500}
         className="w-full resize-y rounded-lg border border-input bg-white px-3 py-2 text-sm outline-none placeholder:text-ink-faint focus-visible:ring-2 focus-visible:ring-ring"
       />
-      <div className="flex justify-end">
-        <Button type="submit" disabled={!title.trim() || sending}>
-          <Send data-icon="inline-start" />
-          {sending ? "Invio…" : "Invia richiesta"}
-        </Button>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <label className="flex items-center gap-1.5 text-[13px] text-ink-secondary">
+          Serve entro
+          <Input
+            type="date"
+            value={neededBy}
+            min={todayIso()}
+            onChange={(e) => setNeededBy(e.target.value)}
+            aria-label="Serve entro (facoltativo)"
+            className="h-9 w-36 shrink-0"
+          />
+        </label>
+        <label className="flex cursor-pointer items-center gap-1.5 text-[13px] text-ink-secondary select-none">
+          <input
+            type="checkbox"
+            checked={urgent}
+            onChange={(e) => setUrgent(e.target.checked)}
+            className="size-3.5 accent-brand-500"
+          />
+          Urgente
+        </label>
+        <span className="ml-auto">
+          <Button type="submit" disabled={!title.trim() || sending}>
+            <Send data-icon="inline-start" />
+            {sending ? "Invio…" : "Invia richiesta"}
+          </Button>
+        </span>
       </div>
     </form>
   );
@@ -128,13 +159,22 @@ function NewRequestForm() {
 function PendingCard({ req }: { req: TaskRequest }) {
   const { profiles, projects, approveRequest, rejectRequest } = useAppStore();
   const toast = useToast();
+  const router = useRouter();
   const requester = profiles.find((p) => p.id === req.requester_id);
   const [owner, setOwner] = React.useState(req.requester_id);
-  const [due, setDue] = React.useState("");
+  // «Serve entro» del richiedente pre-compila la scadenza del task.
+  const [due, setDue] = React.useState(req.requested_due ?? "");
   const [projectId, setProjectId] = React.useState(req.project_id ?? "");
   const [rejecting, setRejecting] = React.useState(false);
   const [reason, setReason] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+
+  // Da quanti giorni aspetta: oltre i 3 l'attesa diventa un segnale.
+  const waitingDays = Math.max(
+    0,
+    diffIsoDays(req.created_at.slice(0, 10), todayIso()),
+  );
+  const stale = waitingDays >= 3;
 
   const approve = async () => {
     if (busy) return;
@@ -148,7 +188,12 @@ function PendingCard({ req }: { req: TaskRequest }) {
     if (task) {
       const name =
         profiles.find((p) => p.id === owner)?.full_name.split(" ")[0] ?? "";
-      toast(`Task creato e assegnato a ${name}`);
+      toast(`Task creato e assegnato a ${name}`, {
+        action: {
+          label: "Apri task",
+          onClick: () => router.push(`/tasks?task=${task.id}`),
+        },
+      });
     }
   };
 
@@ -161,15 +206,32 @@ function PendingCard({ req }: { req: TaskRequest }) {
   };
 
   return (
-    <div className="card-soft space-y-3 p-4">
+    <div
+      className={cn(
+        "card-soft space-y-3 p-4",
+        stale && "border-warning/50",
+      )}
+    >
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
         <AvatarInitials name={requester?.full_name ?? "?"} size="sm" />
         <span className="text-[13px] font-medium text-ink">
           {requester?.full_name ?? "—"}
         </span>
-        <span className="font-mono text-[11px] text-ink-muted">
-          {timeAgo(req.created_at)}
+        <span
+          className={cn(
+            "font-mono text-[11px]",
+            stale ? "font-semibold text-warning-text" : "text-ink-muted",
+          )}
+        >
+          {stale ? `in attesa da ${waitingDays} g` : timeAgo(req.created_at)}
         </span>
+        {req.priority === "high" ? <PriorityBadge /> : null}
+        {req.requested_due ? (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-status-todo-soft px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-status-todo-text">
+            <CalendarClock aria-hidden className="size-3" />
+            serve entro {formatDue(req.requested_due)}
+          </span>
+        ) : null}
         {req.project_id ? (
           <Badge className="min-w-0 shrink text-ellipsis">
             {projects.find((p) => p.id === req.project_id)?.name}
@@ -283,10 +345,22 @@ function PendingCard({ req }: { req: TaskRequest }) {
 
 /** Riga compatta nello storico / nelle proprie richieste. */
 function RequestRow({ req, showRequester }: { req: TaskRequest; showRequester?: boolean }) {
-  const { profiles } = useAppStore();
+  const { profiles, currentUser, withdrawRequest } = useAppStore();
+  const toast = useToast();
   const requester = profiles.find((p) => p.id === req.requester_id);
   const decider = profiles.find((p) => p.id === req.decided_by);
   const owner = profiles.find((p) => p.id === req.owner_id);
+  const canWithdraw =
+    req.status === "pending" && req.requester_id === currentUser.id;
+
+  const withdraw = () => {
+    const undo = withdrawRequest(req.id);
+    if (undo) {
+      toast(`Richiesta «${req.title}» ritirata`, {
+        action: { label: "Annulla", onClick: undo },
+      });
+    }
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-accent/60">
@@ -294,12 +368,18 @@ function RequestRow({ req, showRequester }: { req: TaskRequest; showRequester?: 
         <AvatarInitials name={requester?.full_name ?? "?"} size="sm" />
       ) : null}
       <span className="min-w-0 flex-1 basis-48">
-        <span className="block truncate text-sm font-medium text-ink">
-          {req.title}
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="min-w-0 truncate text-sm font-medium text-ink">
+            {req.title}
+          </span>
+          {req.priority === "high" ? <PriorityBadge iconOnly /> : null}
         </span>
         <span className="block truncate text-[11px] text-ink-muted">
           {showRequester ? `${requester?.full_name.split(" ")[0]} · ` : ""}
           {timeAgo(req.created_at)}
+          {req.status === "pending" && req.requested_due
+            ? ` — serve entro ${formatDue(req.requested_due)}`
+            : ""}
           {req.status === "rejected" && req.rejection_reason
             ? ` — ${req.rejection_reason}`
             : ""}
@@ -326,6 +406,17 @@ function RequestRow({ req, showRequester }: { req: TaskRequest; showRequester?: 
           Vedi task
           <ArrowRight aria-hidden className="size-3" />
         </Link>
+      ) : null}
+      {canWithdraw ? (
+        <button
+          type="button"
+          onClick={withdraw}
+          aria-label={`Ritira la richiesta «${req.title}»`}
+          title="Ritira la richiesta"
+          className="rounded-md p-1 text-ink-faint outline-none transition-colors hover:bg-danger-soft hover:text-danger-text focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <X aria-hidden className="size-3.5" />
+        </button>
       ) : null}
     </div>
   );

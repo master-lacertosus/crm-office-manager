@@ -220,6 +220,11 @@ export interface TaskRequest {
   requester_id: string;
   created_at: string;
   status: RequestStatus;
+  /** «Serve entro» indicato dal richiedente: pre-compila la scadenza
+   *  in approvazione. Facoltativo (assente nei dati salvati più vecchi). */
+  requested_due?: string | null;
+  /** Urgenza proposta dal richiedente; passa al task all'approvazione. */
+  priority?: TaskPriority;
   /** Decisione (solo responsabili). */
   decided_by: string | null;
   decided_at: string | null;

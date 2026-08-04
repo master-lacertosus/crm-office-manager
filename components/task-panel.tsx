@@ -780,6 +780,7 @@ function TaskMeta({ task }: { task: Task }) {
     unsnoozeTask,
     reportProblem,
     resolveProblem,
+    requests,
   } = useAppStore();
   const toast = useToast();
   const [sending, setSending] = React.useState(false);
@@ -789,6 +790,11 @@ function TaskMeta({ task }: { task: Task }) {
 
   const creator = profiles.find((p) => p.id === task.created_by);
   const owner = profiles.find((p) => p.id === task.owner_id);
+  // Provenienza: se il task è nato da una richiesta approvata.
+  const sourceRequest = requests.find((r) => r.task_id === task.id);
+  const sourceRequester = sourceRequest
+    ? profiles.find((p) => p.id === sourceRequest.requester_id)
+    : null;
   const canRemind =
     owner && owner.id !== currentUser.id && task.status !== "done";
   const snoozedUntil = snoozes[task.id];
@@ -939,6 +945,12 @@ function TaskMeta({ task }: { task: Task }) {
       <p className="font-mono text-xs text-ink-muted">
         Creato da {creator?.full_name ?? "—"}
       </p>
+      {sourceRequest ? (
+        <p className="font-mono text-xs text-ink-muted">
+          Nato dalla richiesta di {sourceRequester?.full_name ?? "—"} ·{" "}
+          {formatDue(sourceRequest.created_at.slice(0, 10))}
+        </p>
+      ) : null}
       {task.status === "done" && task.completed_at ? (
         <p className="font-mono text-xs text-success-text">
           Completato il {formatDue(task.completed_at.slice(0, 10))}
