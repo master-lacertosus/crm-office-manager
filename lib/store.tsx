@@ -123,6 +123,52 @@ const makeEvent = (
   created_at: new Date().toISOString(),
 });
 
+/** Chiave dell'episodio di blocco: task + inizio problema. Risolto e
+ *  ri-segnalato = episodio nuovo → l'avviso agli admin riparte. */
+const problemEpisodeKey = (t: Task) => `${t.id}:${t.problem_since}`;
+
+/** Soglie di escalation (promemoria one-shot ai responsabili). */
+const PROBLEM_ESCALATION_MS = 48 * 3600_000;
+const REQUEST_ESCALATION_MS = 3 * 86_400_000;
+
+/** Collassa gli avvisi di sistema identici (stesso destinatario, task e
+ *  testo) accumulati dal vecchio bug dei marcatori non persistiti: resta
+ *  l'originale più vecchio. Menzioni e solleciti (azioni umane, ripetibili
+ *  di proposito) non vengono mai toccati. */
+function dedupeSystemNotifications(
+  list: AppNotification[],
+): AppNotification[] {
+  const seen = new Set<string>();
+  return list.filter((n) => {
+    if ((n.kind ?? "sistema") !== "sistema") return true;
+    const key = `${n.to_user_id}|${n.task_id ?? ""}|${n.message}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** Prima apertura senza marcatori salvati: considera già segnalato ciò che
+ *  è oltre soglia — lo era di sicuro (i doppioni in campanella lo provano). */
+const seedEscalatedProblems = (tasks: Task[], now: number): string[] =>
+  tasks
+    .filter(
+      (t) =>
+        t.status === "alert" &&
+        t.problem_since &&
+        now - new Date(t.problem_since).getTime() > PROBLEM_ESCALATION_MS,
+    )
+    .map(problemEpisodeKey);
+
+const seedEscalatedRequests = (requests: TaskRequest[], now: number): string[] =>
+  requests
+    .filter(
+      (r) =>
+        r.status === "pending" &&
+        now - new Date(r.created_at).getTime() > REQUEST_ESCALATION_MS,
+    )
+    .map((r) => r.id);
+
 /** Eventi di cronologia derivati da una modifica (campi tracciati). */
 function diffTaskEvents(before: Task, after: Task, actorId: string): TaskEvent[] {
   const out: TaskEvent[] = [];
@@ -287,7 +333,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = React.useState<TaskEvent[]>(MOCK_EVENTS);
   const [requests, setRequests] =
     React.useState<TaskRequest[]>(MOCK_REQUESTS);
+  /* Marcatori «già segnalato» delle escalation: il ref fa da guardia
+     sincrona dentro la sessione, lo stato è lo specchio PERSISTITO — senza,
+     ogni ricarica ri-generava le stesse notifiche all'infinito. */
+  const [escalatedProblems, setEscalatedProblems] = React.useState<string[]>([]);
+  const [escalatedRequests, setEscalatedRequests] = React.useState<string[]>([]);
   const escalatedRef = React.useRef(new Set<string>());
+  const requestsEscalatedRef = React.useRef(new Set<string>());
 
   /* ------------------------------------------------------------------ */
   /* Persistenza locale dell'intero workspace (fase placeholder).        */
@@ -310,13 +362,29 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             if (data.tasks) setTasks(data.tasks);
             if (data.events) setEvents(data.events);
             if (data.comments) setComments(data.comments);
-            if (data.notifications) setNotifications(data.notifications);
+            if (data.notifications) {
+              // Bonifica one-shot dei doppioni storici del vecchio bug.
+              setNotifications(dedupeSystemNotifications(data.notifications));
+            }
             if (data.taskLinks) setTaskLinks(data.taskLinks);
             if (data.projectComments) setProjectComments(data.projectComments);
             if (data.snoozes) setSnoozes(data.snoozes);
             if (data.focusIds) setFocusIds(data.focusIds);
             if (data.customStatuses) setCustomStatuses(data.customStatuses);
             if (data.requests) setRequests(data.requests);
+            // Marcatori di escalation: caricati, o dedotti alla prima
+            // apertura post-fix (campo assente nello stato salvato).
+            const now = Date.now();
+            const problems: string[] = Array.isArray(data.escalatedProblems)
+              ? data.escalatedProblems
+              : seedEscalatedProblems(data.tasks ?? [], now);
+            const staleReqs: string[] = Array.isArray(data.escalatedRequests)
+              ? data.escalatedRequests
+              : seedEscalatedRequests(data.requests ?? [], now);
+            escalatedRef.current = new Set(problems);
+            requestsEscalatedRef.current = new Set(staleReqs);
+            setEscalatedProblems(problems);
+            setEscalatedRequests(staleReqs);
           }
         }
       } catch {
@@ -344,6 +412,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             focusIds,
             customStatuses,
             requests,
+            escalatedProblems,
+            escalatedRequests,
           }),
         );
       } catch {
@@ -370,6 +440,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     focusIds,
     customStatuses,
     requests,
+    escalatedProblems,
+    escalatedRequests,
   ]);
 
   /* Auto-archivio: i Fatto completati da più di 14 giorni escono dalla
@@ -473,17 +545,23 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   /* Richieste dimenticate: in attesa da più di 3 giorni → promemoria
      one-shot ai responsabili (stesso pattern dell'escalation problemi). */
-  const requestsEscalatedRef = React.useRef(new Set<string>());
   React.useEffect(() => {
     const now = Date.now();
-    const stale = requests.filter(
+    const overdue = requests.filter(
       (r) =>
         r.status === "pending" &&
-        now - new Date(r.created_at).getTime() > 3 * 86_400_000 &&
-        !requestsEscalatedRef.current.has(r.id),
+        now - new Date(r.created_at).getTime() > REQUEST_ESCALATION_MS,
     );
-    if (stale.length === 0) return;
+    if (overdue.length === 0) return;
     queueMicrotask(() => {
+      // Il «già segnalato» si valuta QUI: la microtask gira dopo quella di
+      // idratazione, quindi i marcatori persistiti sono già caricati.
+      const stale = overdue.filter(
+        (r) => !requestsEscalatedRef.current.has(r.id),
+      );
+      if (stale.length === 0) return;
+      for (const r of stale) requestsEscalatedRef.current.add(r.id);
+      setEscalatedRequests((prev) => [...prev, ...stale.map((r) => r.id)]);
       const admins = MOCK_PROFILES.filter(
         (p) => p.is_active && p.role === "admin",
       );
@@ -505,22 +583,33 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           }));
         }),
       ]);
-      for (const r of stale) requestsEscalatedRef.current.add(r.id);
     });
   }, [requests]);
 
-  /* Escalation: problemi fermi da più di 48h → avviso agli admin */
+  /* Escalation: problemi fermi da più di 48h → avviso one-shot agli admin
+     per EPISODIO di blocco (task + problem_since): sbloccato e ri-segnalato
+     riparte, ricaricare la pagina no. */
   React.useEffect(() => {
     const now = Date.now();
-    const stale = tasks.filter(
+    const overdue = tasks.filter(
       (t) =>
         t.status === "alert" &&
         t.problem_since &&
-        now - new Date(t.problem_since).getTime() > 48 * 3600_000 &&
-        !escalatedRef.current.has(t.id),
+        now - new Date(t.problem_since).getTime() > PROBLEM_ESCALATION_MS,
     );
-    if (stale.length === 0) return;
+    if (overdue.length === 0) return;
     queueMicrotask(() => {
+      // Il «già segnalato» si valuta QUI: la microtask gira dopo quella di
+      // idratazione, quindi i marcatori persistiti sono già caricati.
+      const stale = overdue.filter(
+        (t) => !escalatedRef.current.has(problemEpisodeKey(t)),
+      );
+      if (stale.length === 0) return;
+      for (const t of stale) escalatedRef.current.add(problemEpisodeKey(t));
+      setEscalatedProblems((prev) => [
+        ...prev,
+        ...stale.map(problemEpisodeKey),
+      ]);
       const admins = MOCK_PROFILES.filter((p) => p.is_active && p.role === "admin");
       setNotifications((prev) => [
         ...prev,
@@ -540,7 +629,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           }));
         }),
       ]);
-      for (const t of stale) escalatedRef.current.add(t.id);
     });
   }, [tasks]);
 
