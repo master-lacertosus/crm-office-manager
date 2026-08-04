@@ -60,7 +60,10 @@ cerca qui**. Se una primitiva esiste, si usa; se manca, si estende qui.
 
 ## Esempi dalla dashboard
 
-- KPI: `<StatTile label="In ritardo" value={n} tone="danger" aurora=… href=…/>`
+- KPI: `<StatTile label="In ritardo" value={n} tone="danger" aurora=… href=…/>` —
+  i `children` (es. `<Sparkline/>`) sono la fascia trend a tutta larghezza sul
+  fondo della card; con la griglia `auto-rows-fr` ogni riga di tile resta alla
+  stessa altezza
 - Sezione: `<Section title="Focus di oggi" count={n} seeAllHref=…>…`
 - Stato: `<StatusLabel status={task.status}/>` · Priorità: `<PriorityBadge iconOnly/>`
 - Vuoto: `<EmptyState icon={Star} title=… hint=…/>` + azione nel chiamante
