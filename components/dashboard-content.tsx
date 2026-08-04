@@ -448,7 +448,9 @@ export function DashboardContent() {
                           {timeAgo(n.created_at)}
                         </span>
                       </span>
-                      <span className="mt-0.5 line-clamp-2 block text-[13px]/[18px] text-ink-secondary">
+                      {/* niente `block`: sovrascriverebbe il display
+                          -webkit-box che fa funzionare il line-clamp */}
+                      <span className="mt-0.5 line-clamp-2 text-[13px]/[18px] text-ink-secondary">
                         {n.message}
                       </span>
                     </span>

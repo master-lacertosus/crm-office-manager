@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Manrope } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { TruncationTitles } from "@/components/truncation-titles";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -37,6 +38,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <div aria-hidden className="aura-layer print:hidden" />
+        <TruncationTitles />
         <Providers>{children}</Providers>
       </body>
     </html>
