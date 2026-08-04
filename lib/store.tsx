@@ -18,6 +18,7 @@ import {
   MOCK_PROFILES,
   MOCK_PROJECTS,
   MOCK_PROJECT_COMMENTS,
+  MOCK_REQUESTS,
   MOCK_TASKS,
   MOCK_TASK_LINKS,
   MOCK_TEMPLATES,
@@ -34,6 +35,7 @@ import type {
   TaskComment,
   TaskEvent,
   TaskLink,
+  TaskRequest,
   WorkspaceTemplate,
 } from "@/lib/types";
 
@@ -236,6 +238,21 @@ interface AppStore {
   markTaskNotificationsRead: (taskId: string) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
+  /** Richieste di task: chiunque propone, i responsabili decidono. */
+  requests: TaskRequest[];
+  createRequest: (input: {
+    title: string;
+    description?: string;
+    project_id?: string | null;
+  }) => Promise<TaskRequest>;
+  /** Approva (solo admin): crea il task collegato e avvisa richiedente
+   *  e assegnatario. Restituisce il task, o null se già decisa. */
+  approveRequest: (
+    id: string,
+    opts: { owner_id: string; due_date?: string | null; project_id?: string | null },
+  ) => Promise<Task | null>;
+  /** Rifiuta (solo admin) con motivo; il richiedente riceve l'avviso. */
+  rejectRequest: (id: string, reason: string) => Promise<void>;
 }
 
 const StoreContext = React.createContext<AppStore | null>(null);
@@ -261,6 +278,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [templates, setTemplates] =
     React.useState<WorkspaceTemplate[]>(MOCK_TEMPLATES);
   const [events, setEvents] = React.useState<TaskEvent[]>(MOCK_EVENTS);
+  const [requests, setRequests] =
+    React.useState<TaskRequest[]>(MOCK_REQUESTS);
   const escalatedRef = React.useRef(new Set<string>());
 
   /* ------------------------------------------------------------------ */
@@ -290,6 +309,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             if (data.snoozes) setSnoozes(data.snoozes);
             if (data.focusIds) setFocusIds(data.focusIds);
             if (data.customStatuses) setCustomStatuses(data.customStatuses);
+            if (data.requests) setRequests(data.requests);
           }
         }
       } catch {
@@ -316,6 +336,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             snoozes,
             focusIds,
             customStatuses,
+            requests,
           }),
         );
       } catch {
@@ -333,6 +354,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     snoozes,
     focusIds,
     customStatuses,
+    requests,
   ]);
 
   /* Auto-archivio: i Fatto completati da più di 14 giorni escono dalla
@@ -1140,6 +1162,160 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             : n,
         ),
       );
+    },
+
+    requests,
+
+    async createRequest(input) {
+      await wait();
+      const request: TaskRequest = {
+        id: crypto.randomUUID(),
+        title: input.title.trim(),
+        description: input.description?.trim() || null,
+        requester_id: currentUser.id,
+        created_at: new Date().toISOString(),
+        status: "pending",
+        decided_by: null,
+        decided_at: null,
+        rejection_reason: null,
+        owner_id: null,
+        due_date: null,
+        project_id: input.project_id ?? null,
+        task_id: null,
+      };
+      setRequests((prev) => [...prev, request]);
+      // Avvisa i responsabili (non chi ha inviato, se è admin anche lui)
+      const admins = profiles.filter(
+        (p) => p.is_active && p.role === "admin" && p.id !== currentUser.id,
+      );
+      setNotifications((prev) => [
+        ...prev,
+        ...admins.map((admin) => ({
+          id: crypto.randomUUID(),
+          to_user_id: admin.id,
+          from_user_id: currentUser.id,
+          message: `📥 Nuova richiesta di task: «${request.title}»`,
+          task_id: null,
+          kind: "sistema" as const,
+          created_at: new Date().toISOString(),
+          read_at: null,
+        })),
+      ]);
+      return request;
+    },
+
+    async approveRequest(id, opts) {
+      await wait();
+      const req = requests.find((r) => r.id === id);
+      if (!req || req.status !== "pending") return null;
+      const nowIso = new Date().toISOString();
+      const task: Task = {
+        id: crypto.randomUUID(),
+        title: req.title,
+        description: req.description,
+        status: "todo",
+        priority: "normal",
+        owner_id: opts.owner_id,
+        created_by: currentUser.id,
+        project_id: opts.project_id ?? req.project_id ?? null,
+        due_date: opts.due_date ?? null,
+        position: Date.now(),
+        repeat: "none",
+        completed_at: null,
+        created_at: nowIso,
+      };
+      setTasks((prev) => [...prev, task]);
+      setEvents((prev) => [
+        ...prev,
+        makeEvent(task.id, currentUser.id, "created"),
+      ]);
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                status: "approved" as const,
+                decided_by: currentUser.id,
+                decided_at: nowIso,
+                owner_id: task.owner_id,
+                due_date: task.due_date,
+                project_id: task.project_id,
+                task_id: task.id,
+              }
+            : r,
+        ),
+      );
+      // Avvisi: al richiedente e all'assegnatario (senza doppioni né auto-avvisi)
+      const ownerName =
+        profiles.find((p) => p.id === task.owner_id)?.full_name.split(" ")[0] ??
+        "un collega";
+      const toNotify = new Map<string, string>();
+      if (req.requester_id !== currentUser.id) {
+        toNotify.set(
+          req.requester_id,
+          `✅ Richiesta approvata: «${req.title}» è ora un task assegnato a ${ownerName}.`,
+        );
+      }
+      if (task.owner_id !== currentUser.id && task.owner_id !== req.requester_id) {
+        toNotify.set(
+          task.owner_id,
+          `Ti è stato assegnato un task dalla richiesta di ${
+            profiles.find((p) => p.id === req.requester_id)?.full_name.split(" ")[0] ?? "un collega"
+          }: «${req.title}»`,
+        );
+      }
+      if (toNotify.size > 0) {
+        setNotifications((prev) => [
+          ...prev,
+          ...[...toNotify].map(([toId, message]) => ({
+            id: crypto.randomUUID(),
+            to_user_id: toId,
+            from_user_id: currentUser.id,
+            message,
+            task_id: task.id,
+            kind: "sistema" as const,
+            created_at: nowIso,
+            read_at: null,
+          })),
+        ]);
+      }
+      return task;
+    },
+
+    async rejectRequest(id, reason) {
+      await wait();
+      const req = requests.find((r) => r.id === id);
+      if (!req || req.status !== "pending") return;
+      const trimmed = reason.trim();
+      const nowIso = new Date().toISOString();
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                status: "rejected" as const,
+                decided_by: currentUser.id,
+                decided_at: nowIso,
+                rejection_reason: trimmed || null,
+              }
+            : r,
+        ),
+      );
+      if (req.requester_id !== currentUser.id) {
+        setNotifications((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            to_user_id: req.requester_id,
+            from_user_id: currentUser.id,
+            message: `❌ Richiesta rifiutata: «${req.title}»${trimmed ? ` — ${trimmed}` : ""}`,
+            task_id: null,
+            kind: "sistema" as const,
+            created_at: nowIso,
+            read_at: null,
+          },
+        ]);
+      }
     },
   };
 

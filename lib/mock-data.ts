@@ -7,6 +7,7 @@ import type {
   Task,
   TaskComment,
   TaskEvent,
+  TaskRequest,
   WorkspaceTemplate,
 } from "@/lib/types";
 
@@ -644,6 +645,57 @@ export const MOCK_NOTIFICATIONS: AppNotification[] = [
     kind: "sistema",
     created_at: t(60 * 26),
     read_at: t(60 * 20),
+  },
+];
+
+/** Richieste di task: due in attesa (coda dei responsabili) e una
+ *  rifiutata di recente, così lo storico non parte vuoto. */
+export const MOCK_REQUESTS: TaskRequest[] = [
+  {
+    id: "00000000-0000-4000-8000-000000000501",
+    title: "Shooting foto nuovi manubri PRO",
+    description:
+      "Servono scatti still life e lifestyle per le schede prodotto della linea manubri PRO in arrivo.",
+    requester_id: U.riccardo,
+    created_at: t(60 * 30),
+    status: "pending",
+    decided_by: null,
+    decided_at: null,
+    rejection_reason: null,
+    owner_id: null,
+    due_date: null,
+    project_id: null,
+    task_id: null,
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000502",
+    title: "Reel Instagram lancio panca OKTA",
+    description: "Breve reel di lancio con le clip già girate in palestra.",
+    requester_id: U.klea,
+    created_at: t(60 * 6),
+    status: "pending",
+    decided_by: null,
+    decided_at: null,
+    rejection_reason: null,
+    owner_id: null,
+    due_date: null,
+    project_id: P.rebranding,
+    task_id: null,
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000503",
+    title: "Gadget aziendali per la fiera",
+    description: "Borracce e t-shirt brandizzate per lo stand.",
+    requester_id: U.matteo,
+    created_at: t(60 * 24 * 4),
+    status: "rejected",
+    decided_by: U.sara,
+    decided_at: t(60 * 24 * 3),
+    rejection_reason: "Budget Q3 già chiuso: riproponila a ottobre.",
+    owner_id: null,
+    due_date: null,
+    project_id: null,
+    task_id: null,
   },
 ];
 
