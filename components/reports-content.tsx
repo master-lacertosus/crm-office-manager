@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { Download, Printer } from "lucide-react";
 
@@ -13,8 +13,8 @@ import {
   monthRangeIso,
   todayIso,
 } from "@/lib/format";
+import { updateSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
 import { BarList } from "@/components/charts/bar-list";
 import { Sparkline } from "@/components/charts/sparkline";
 import { StatTile } from "@/components/charts/stat-tile";
@@ -23,6 +23,7 @@ import { TrendChart } from "@/components/charts/trend-chart";
 import { useToast } from "@/components/toaster";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Segmented, SegmentedButton } from "@/components/ui/segmented";
 
 function Card({
   title,
@@ -89,7 +90,6 @@ function resolveRange(
 export function ReportsContent() {
   const { tasks, profiles, projects, statuses } = useAppStore();
   const reduced = useReducedMotion();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const toast = useToast();
 
@@ -106,21 +106,14 @@ export function ReportsContent() {
   );
 
   const setPreset = (key: PresetKey, custom?: { from: string; to: string }) => {
-    const params = new URLSearchParams(searchParams);
-    if (key === "30") params.delete("range");
-    else params.set("range", key);
-    if (key === "custom" && custom) {
-      params.set("from", custom.from);
-      params.set("to", custom.to);
-    } else {
-      params.delete("from");
-      params.delete("to");
-    }
-    const qs = params.toString();
-    // Aggiornamento parametri sulla stessa pagina: in Next 16 la via
-    // canonica è l'History API nativa (il router la integra e sincronizza
-    // useSearchParams); router.replace su rotta statica scarta i parametri.
-    window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
+    updateSearch(
+      {
+        range: key === "30" ? null : key,
+        from: key === "custom" && custom ? custom.from : null,
+        to: key === "custom" && custom ? custom.to : null,
+      },
+      { replace: true },
+    );
   };
 
   const a = buildAnalytics(
@@ -200,23 +193,17 @@ export function ReportsContent() {
     <div className="flex-1 space-y-4 px-4 py-4 sm:px-6">
       {/* Selettore periodo + azioni */}
       <div className="flex flex-wrap items-center gap-2 print:hidden">
-        <div className="flex flex-wrap gap-0.5 rounded-xl border border-border bg-white p-0.5 shadow-xs">
+        <Segmented className="flex-wrap">
           {PRESETS.map(({ key, label }) => (
-            <button
+            <SegmentedButton
               key={key}
+              active={preset === key}
               onClick={() => setPreset(key)}
-              aria-pressed={preset === key}
-              className={cn(
-                "rounded-md px-2.5 py-1 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-                preset === key
-                  ? "bg-brand-50 text-brand-700"
-                  : "text-ink-secondary hover:text-ink",
-              )}
             >
               {label}
-            </button>
+            </SegmentedButton>
           ))}
-        </div>
+        </Segmented>
         <div className="flex items-center gap-1.5">
           <Input
             type="date"

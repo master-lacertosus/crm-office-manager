@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { Scale, Users } from "lucide-react";
 
 import { addDaysIso, dueUrgency, todayIso } from "@/lib/format";
 import { useAppStore } from "@/lib/store";
@@ -12,53 +10,6 @@ import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
 import { PriorityBadge } from "@/components/priority-badge";
 import { StatusPip } from "@/components/status-pip";
-
-/** Toggle Persone/Carico per la pagina Team (?view=carico). */
-export function TeamViewToggle() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const view = searchParams.get("view") === "carico" ? "carico" : "persone";
-
-  const hrefFor = (target: "persone" | "carico") => {
-    const params = new URLSearchParams(searchParams);
-    if (target === "carico") params.set("view", "carico");
-    else params.delete("view");
-    const qs = params.toString();
-    return qs ? `${pathname}?${qs}` : pathname;
-  };
-
-  const base =
-    "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring";
-
-  return (
-    <div className="flex gap-0.5 rounded-xl border border-border bg-white p-0.5 shadow-xs">
-      <Link
-        href={hrefFor("persone")}
-        className={cn(
-          base,
-          view === "persone"
-            ? "bg-brand-50 text-brand-700"
-            : "text-ink-secondary hover:text-ink",
-        )}
-      >
-        <Users aria-hidden className="size-3.5" />
-        Persone
-      </Link>
-      <Link
-        href={hrefFor("carico")}
-        className={cn(
-          base,
-          view === "carico"
-            ? "bg-brand-50 text-brand-700"
-            : "text-ink-secondary hover:text-ink",
-        )}
-      >
-        <Scale aria-hidden className="size-3.5" />
-        Carico
-      </Link>
-    </div>
-  );
-}
 
 /**
  * Vista carico di lavoro: una colonna per persona con i task aperti in

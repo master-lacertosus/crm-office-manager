@@ -334,29 +334,38 @@
   }
 
   /* Aure che respirano: due blob extra in lentissimo movimento
-     (la media query globale reduced-motion li ferma da sola). */
+     (la media query globale reduced-motion li ferma da sola).
+     La sfocatura è "cotta" nel radial-gradient invece che in filter:
+     blur(90px) — stessa morbidezza, ma la GPU compone solo un layer
+     leggero che trasla, senza ricalcolare blur enormi a ogni frame. */
   .aura-layer::before,
   .aura-layer::after {
     content: "";
     position: absolute;
-    border-radius: 9999px;
-    filter: blur(90px);
     will-change: transform;
   }
   .aura-layer::before {
-    width: 560px;
-    height: 560px;
-    left: -140px;
-    top: 18%;
-    background: rgb(240 146 38 / 0.18);
+    width: 800px;
+    height: 800px;
+    left: -260px;
+    top: calc(18% - 120px);
+    background: radial-gradient(
+      closest-side,
+      rgb(240 146 38 / 0.18) 52%,
+      transparent 100%
+    );
     animation: aura-drift 46s ease-in-out infinite alternate;
   }
   .aura-layer::after {
-    width: 660px;
-    height: 660px;
-    right: -180px;
-    bottom: -10%;
-    background: rgb(109 40 217 / 0.14);
+    width: 900px;
+    height: 900px;
+    right: -300px;
+    bottom: calc(-10% - 120px);
+    background: radial-gradient(
+      closest-side,
+      rgb(109 40 217 / 0.14) 52%,
+      transparent 100%
+    );
     animation: aura-drift 58s ease-in-out infinite alternate-reverse;
   }
   @keyframes aura-drift {

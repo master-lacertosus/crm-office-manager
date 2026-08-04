@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { LayoutGroup, motion } from "motion/react";
+import { useSearchParams } from "next/navigation";
+import { LayoutGroup, motion, useMotionValue } from "motion/react";
 import {
   Check,
   ChevronsLeftRight,
@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 
+import { updateSearch } from "@/lib/shallow-nav";
 import { MAX_CUSTOM_STATUSES, useAppStore } from "@/lib/store";
 import {
   CUSTOM_STATUS_PRESETS,
@@ -35,10 +36,6 @@ import { Button } from "@/components/ui/button";
 interface DragState {
   task: Task;
   width: number;
-  x: number;
-  y: number;
-  offsetX: number;
-  offsetY: number;
   target: string;
   insertIndex: number;
 }
@@ -91,21 +88,18 @@ export function Board({ projectId }: { projectId?: string }) {
     currentUser,
   } = useAppStore();
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const toast = useToast();
 
   const ownerFilter = searchParams.get("owner");
   const projectFilter = projectId ?? searchParams.get("project");
 
-  const visible = tasks.filter((task) => {
-    if (task.archived_at) return false;
-    if (ownerFilter && task.owner_id !== ownerFilter) return false;
-    if (projectFilter && task.project_id !== projectFilter) return false;
-    return true;
-  });
-
   const byStatus = React.useMemo(() => {
+    const visible = tasks.filter((task) => {
+      if (task.archived_at) return false;
+      if (ownerFilter && task.owner_id !== ownerFilter) return false;
+      if (projectFilter && task.project_id !== projectFilter) return false;
+      return true;
+    });
     const map = new Map<string, Task[]>();
     for (const meta of statuses) {
       map.set(
@@ -116,7 +110,7 @@ export function Board({ projectId }: { projectId?: string }) {
       );
     }
     return map;
-  }, [visible, statuses]);
+  }, [tasks, ownerFilter, projectFilter, statuses]);
 
   const { collapsed, toggle: toggleCollapsed } = useCollapsedPhases();
   const collapsedRef = React.useRef(collapsed);
@@ -132,6 +126,14 @@ export function Board({ projectId }: { projectId?: string }) {
   React.useEffect(() => {
     dragRef.current = drag;
   }, [drag]);
+  /** Posizione del ghost: motion value scritti dal pointermove — il
+   *  transform viaggia fuori da React, trascinare non re-renderizza. */
+  const ghostX = useMotionValue(0);
+  const ghostY = useMotionValue(0);
+  /** Chiusura d'emergenza: se la board smonta a drag in corso, i listener
+   *  globali e il loop di auto-scroll vengono comunque rilasciati. */
+  const finishRef = React.useRef<(() => void) | null>(null);
+  React.useEffect(() => () => finishRef.current?.(), []);
 
   /* «/» → filtro responsabile */
   React.useEffect(() => {
@@ -241,25 +243,33 @@ export function Board({ projectId }: { projectId?: string }) {
         window.scrollBy(0, vy);
         if (window.scrollY !== before) scrolled = true;
       }
-      // le colonne scivolano sotto il puntatore fermo: ricalcola il target,
-      // ma re-renderizza solo se è cambiato davvero
-      if (scrolled) {
-        const { target, insertIndex } = hitTest(pointer.x, pointer.y, task);
-        setDrag((d) =>
-          d && (d.target !== target || d.insertIndex !== insertIndex)
-            ? { ...d, target, insertIndex }
-            : d,
-        );
-      }
+      // le colonne scivolano sotto il puntatore fermo: ricalcola il target
+      if (scrolled) syncLane(pointer.x, pointer.y);
       raf = requestAnimationFrame(autoScroll);
+    };
+
+    const offsetX = start.x - rect.left;
+    const offsetY = start.y - rect.top;
+
+    /** Aggiorna lane e punto di inserimento solo quando cambiano davvero. */
+    const syncLane = (clientX: number, clientY: number) => {
+      const { target, insertIndex } = hitTest(clientX, clientY, task);
+      setDrag((d) =>
+        d && d.target === target && d.insertIndex === insertIndex
+          ? d
+          : { task, width: rect.width, target, insertIndex },
+      );
     };
 
     const onMove = (ev: PointerEvent) => {
       pointer.x = ev.clientX;
       pointer.y = ev.clientY;
-      const dx = ev.clientX - start.x;
-      const dy = ev.clientY - start.y;
-      if (!started && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+      if (
+        !started &&
+        Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < DRAG_THRESHOLD
+      ) {
+        return;
+      }
 
       if (!started) {
         started = true;
@@ -270,17 +280,12 @@ export function Board({ projectId }: { projectId?: string }) {
         if (scrollRef.current) scrollRef.current.style.scrollSnapType = "none";
         raf = requestAnimationFrame(autoScroll);
       }
-      const { target, insertIndex } = hitTest(ev.clientX, ev.clientY, task);
-      setDrag({
-        task,
-        width: rect.width,
-        x: ev.clientX,
-        y: ev.clientY,
-        offsetX: start.x - rect.left,
-        offsetY: start.y - rect.top,
-        target,
-        insertIndex,
-      });
+      // Prima la lettura (hit test), poi la scrittura del transform — che
+      // Motion applica fuori da React, coalescata al frame: trascinare non
+      // re-renderizza finché non cambia la destinazione.
+      syncLane(ev.clientX, ev.clientY);
+      ghostX.set(ev.clientX - offsetX);
+      ghostY.set(ev.clientY - offsetY);
     };
 
     const finish = (commit: boolean) => {
@@ -324,6 +329,7 @@ export function Board({ projectId }: { projectId?: string }) {
       setTimeout(() => {
         suppressClickRef.current = false;
       }, 0);
+      finishRef.current = null;
     };
 
     const onUp = () => finish(true);
@@ -334,6 +340,7 @@ export function Board({ projectId }: { projectId?: string }) {
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("keydown", onKey);
+    finishRef.current = () => finish(false);
   };
 
   /* Tastiera: frecce selezionano, Invio apre, Shift+←/→ sposta di fase. */
@@ -379,9 +386,7 @@ export function Board({ projectId }: { projectId?: string }) {
       if (e.key === "Enter") {
         if (!selectedId || !pos) return;
         e.preventDefault();
-        const params = new URLSearchParams(searchParams);
-        params.set("task", selectedId);
-        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+        updateSearch({ task: selectedId });
         return;
       }
 
@@ -460,7 +465,7 @@ export function Board({ projectId }: { projectId?: string }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedId, searchParams, pathname, router, moveTask, toast]);
+  }, [selectedId, moveTask, toast]);
 
   /* La card selezionata resta in vista */
   React.useEffect(() => {
@@ -499,24 +504,17 @@ export function Board({ projectId }: { projectId?: string }) {
 
         {canAddPhase ? <AddPhaseLane onAdd={addCustomStatus} /> : null}
 
-        {/* ghost del drag */}
+        {/* ghost del drag: x/y sono motion value scritti dal pointermove */}
         {drag ? (
-          <div
-            className="pointer-events-none fixed z-50"
-            style={{
-              left: drag.x - drag.offsetX,
-              top: drag.y - drag.offsetY,
-              width: drag.width,
-            }}
+          <motion.div
+            className="pointer-events-none fixed top-0 left-0 z-50"
+            style={{ x: ghostX, y: ghostY, width: drag.width }}
+            initial={{ rotate: 0, scale: 1 }}
+            animate={{ rotate: 1.5, scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 380, damping: 28 }}
           >
-            <motion.div
-              initial={{ rotate: 0, scale: 1 }}
-              animate={{ rotate: 1.5, scale: 1.02 }}
-              transition={{ type: "spring", stiffness: 380, damping: 28 }}
-            >
-              <CardVisual task={drag.task} className="shadow-sm" />
-            </motion.div>
-          </div>
+            <CardVisual task={drag.task} className="shadow-sm" />
+          </motion.div>
         ) : null}
       </div>
     </LayoutGroup>

@@ -1,8 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-
 import { ListChecks, Repeat } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
@@ -11,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { dueUrgency } from "@/lib/format";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
+import { SearchLink } from "@/components/search-link";
 import { PriorityBadge } from "@/components/priority-badge";
 import { useStatusMeta } from "@/components/status-pip";
 import { Badge } from "@/components/ui/badge";
@@ -108,16 +106,9 @@ export function TaskCard({
   /** Selezione da tastiera (frecce sulla board). */
   selected?: boolean;
 }) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const params = new URLSearchParams(searchParams);
-  params.set("task", task.id);
-
   return (
-    <Link
-      href={`${pathname}?${params.toString()}`}
-      scroll={false}
+    <SearchLink
+      params={{ task: task.id }}
       draggable={false}
       onClickCapture={(e) => {
         if (suppressClickRef?.current) {
@@ -132,6 +123,6 @@ export function TaskCard({
       )}
     >
       <CardVisual task={task} />
-    </Link>
+    </SearchLink>
   );
 }

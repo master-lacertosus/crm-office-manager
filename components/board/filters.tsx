@@ -1,7 +1,8 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
+import { updateSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
 import { NativeSelect } from "@/components/ui/native-select";
 
@@ -19,18 +20,10 @@ export function BoardFilters({
   idPrefix?: string;
 }) {
   const { profiles, projects } = useAppStore();
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const setParam = (key: "owner" | "project", value: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (value) {
-      params.set(key, value);
-    } else {
-      params.delete(key);
-    }
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    updateSearch({ [key]: value || null }, { replace: true });
   };
 
   return (

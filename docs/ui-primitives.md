@@ -58,6 +58,19 @@ cerca qui**. Se una primitiva esiste, si usa; se manca, si estende qui.
 6. Niente nuove dipendenze npm (ambiente bloccato): icone extra si
    disegnano in `shell/nav-icons.tsx` (duotone: fill 16% + tratto 1.75).
 
+## Dashboard componibile
+
+I blocchi sotto l'hero (KPI + 6 sezioni) sono un layout per utente:
+ordine, larghezza a preset (S=3 · M=4 · L=5 · XL=6 colonne su 12, `lg`+)
+e visibilità vivono in `lib/dashboard-layout.ts` (localStorage
+`dashboard-layout`, pattern «loaded flag», validato al load). La modalità
+«Personalizza» (`components/dashboard-customize.tsx`) offre: drag con
+maniglia e FLIP (`layout="position"`), resize del bordo destro che scatta
+sui preset, chip S–XL, occhio per nascondere, frecce su/giù sotto `lg`
+(che sono anche il percorso tastiera richiesto dal §10 del design system),
+annunci `aria-live`, contenuto `inert` durante l'editing, «Ripristina».
+Il blocco KPI è `fullWidth`: spostabile ma non ridimensionabile.
+
 ## Esempi dalla dashboard
 
 - KPI: `<StatTile label="In ritardo" value={n} tone="danger" aurora=… href=…/>` —

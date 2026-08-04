@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ChevronRight, Repeat } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
@@ -10,23 +9,18 @@ import { AvatarInitials } from "@/components/avatar-initials";
 import { ChecklistChip } from "@/components/board/task-card";
 import { DueChip } from "@/components/due-chip";
 import { PriorityBadge } from "@/components/priority-badge";
+import { SearchLink } from "@/components/search-link";
 import { StatusPip } from "@/components/status-pip";
 import { Badge } from "@/components/ui/badge";
 
 function Row({ task }: { task: Task }) {
   const { profiles, projects } = useAppStore();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const owner = profiles.find((p) => p.id === task.owner_id);
   const project = projects.find((p) => p.id === task.project_id);
 
-  const params = new URLSearchParams(searchParams);
-  params.set("task", task.id);
-
   return (
-    <Link
-      href={`${pathname}?${params.toString()}`}
-      scroll={false}
+    <SearchLink
+      params={{ task: task.id }}
       className="flex h-12 items-center gap-3 border-t border-border-soft px-3 outline-none transition-colors first:border-t-0 hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring sm:px-4"
     >
       <StatusPip status={task.status} />
@@ -64,7 +58,7 @@ function Row({ task }: { task: Task }) {
         ) : null}
       </span>
       <ChevronRight aria-hidden className="size-4 shrink-0 text-ink-faint" />
-    </Link>
+    </SearchLink>
   );
 }
 
