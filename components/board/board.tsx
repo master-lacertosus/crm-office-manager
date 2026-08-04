@@ -88,7 +88,12 @@ export function Board({ projectId }: { projectId?: string }) {
       const tag = (document.activeElement?.tagName ?? "").toLowerCase();
       if (e.key === "/" && !["input", "textarea", "select"].includes(tag)) {
         e.preventDefault();
-        document.getElementById("filter-owner")?.focus();
+        // Due istanze dei filtri (header su xl, sotto-barra sotto):
+        // focalizza quella effettivamente visibile.
+        ["bar-owner", "sub-owner"]
+          .map((id) => document.getElementById(id))
+          .find((el) => el && el.offsetParent !== null)
+          ?.focus();
       }
     };
     window.addEventListener("keydown", onKey);

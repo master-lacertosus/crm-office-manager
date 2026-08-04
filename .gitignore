@@ -44,3 +44,6 @@ supabase/.temp
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# artefatti audit responsive (screenshot)
+/scripts/.audit/

@@ -26,13 +26,25 @@ export default async function TasksPage({
         title="Task"
         actions={
           <Suspense>
-            <TasksViewToggle />
-            <BoardFilters />
+            {/* Su lg+ toggle e filtri stanno nell'header; sotto passano
+                alla sotto-barra scrollabile qui sotto (una sola istanza
+                visibile per volta, id distinti per non collidere). */}
+            <div className="hidden items-center gap-2 xl:flex">
+              <TasksViewToggle />
+              <BoardFilters idPrefix="bar" />
+            </div>
             <RecurringPlanner />
             <NewTaskButton />
           </Suspense>
         }
       />
+      {/* Sotto-barra mobile/tablet: scorre in orizzontale, non sfora la pagina. */}
+      <div className="flex min-w-0 items-center gap-2 overflow-x-auto border-b border-white/60 px-4 py-2 sm:px-6 xl:hidden">
+        <Suspense>
+          <TasksViewToggle />
+          <BoardFilters idPrefix="sub" />
+        </Suspense>
+      </div>
       <Suspense>
         <SavedViews />
       </Suspense>

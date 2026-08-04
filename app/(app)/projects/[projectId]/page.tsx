@@ -82,12 +82,25 @@ export default async function ProjectPage({
         title={project.name}
         actions={
           <Suspense>
-            <ViewToggle projectId={project.id} view={activeView} />
-            {activeView === "board" ? <BoardFilters lockProject /> : null}
+            <div className="hidden items-center gap-2 xl:flex">
+              <ViewToggle projectId={project.id} view={activeView} />
+              {activeView === "board" ? (
+                <BoardFilters lockProject idPrefix="bar" />
+              ) : null}
+            </div>
             <NewTaskButton />
           </Suspense>
         }
       />
+      {/* Sotto-barra mobile/tablet: scorre in orizzontale, non sfora la pagina. */}
+      <div className="flex min-w-0 items-center gap-2 overflow-x-auto border-b border-white/60 px-4 py-2 sm:px-6 xl:hidden">
+        <Suspense>
+          <ViewToggle projectId={project.id} view={activeView} />
+          {activeView === "board" ? (
+            <BoardFilters lockProject idPrefix="sub" />
+          ) : null}
+        </Suspense>
+      </div>
       {project.description ? (
         <p className="border-b border-border-soft px-4 py-2.5 text-[13px] text-ink-secondary sm:px-6">
           {project.description}
