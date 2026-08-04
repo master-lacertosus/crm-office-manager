@@ -3,7 +3,13 @@
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LayoutGroup, motion } from "motion/react";
-import { Check, Plus, X } from "lucide-react";
+import {
+  Check,
+  ChevronsLeftRight,
+  ChevronsRightLeft,
+  Plus,
+  X,
+} from "lucide-react";
 
 import { MAX_CUSTOM_STATUSES, useAppStore } from "@/lib/store";
 import {
@@ -21,6 +27,9 @@ import { Button } from "@/components/ui/button";
  * Board a corsie: ogni fase è una lane con fondo proprio (chiarezza),
  * fasi core + «Problema» + fino a 3 fasi custom aggiungibili in coda.
  * Drag-and-drop artigianale invariato; «/» va al filtro responsabile.
+ * Ogni fase è comprimibile in una strip verticale (persistito per
+ * utente): utile per le fasi vuote e per gli schermi stretti. Una strip
+ * resta bersaglio valido del drag (il task entra in cima alla fase).
  */
 
 interface DragState {
@@ -35,6 +44,42 @@ interface DragState {
 }
 
 const DRAG_THRESHOLD = 6;
+
+const COLLAPSE_KEY = "board-collapsed-phases";
+
+/** Fasi compresse, persistite in localStorage (stesso pattern dello store:
+ *  flag «loaded» per non sovrascrivere il salvato col primo render). */
+function useCollapsedPhases() {
+  const [collapsed, setCollapsed] = React.useState<string[]>([]);
+  const loadedRef = React.useRef(false);
+  React.useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const data = JSON.parse(localStorage.getItem(COLLAPSE_KEY) ?? "[]");
+        if (Array.isArray(data)) {
+          setCollapsed(data.filter((k): k is string => typeof k === "string"));
+        }
+      } catch {
+        /* ignora */
+      }
+      loadedRef.current = true;
+    });
+  }, []);
+  React.useEffect(() => {
+    if (!loadedRef.current) return;
+    try {
+      localStorage.setItem(COLLAPSE_KEY, JSON.stringify(collapsed));
+    } catch {
+      /* ignora */
+    }
+  }, [collapsed]);
+  const toggle = React.useCallback((key: string) => {
+    setCollapsed((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
+  }, []);
+  return { collapsed, toggle };
+}
 
 export function Board({ projectId }: { projectId?: string }) {
   const {
@@ -72,6 +117,12 @@ export function Board({ projectId }: { projectId?: string }) {
     }
     return map;
   }, [visible, statuses]);
+
+  const { collapsed, toggle: toggleCollapsed } = useCollapsedPhases();
+  const collapsedRef = React.useRef(collapsed);
+  React.useEffect(() => {
+    collapsedRef.current = collapsed;
+  }, [collapsed]);
 
   const columnRefs = React.useRef(new Map<string, HTMLElement>());
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -304,9 +355,12 @@ export function Board({ projectId }: { projectId?: string }) {
 
       const order = statusesRef.current.map((s) => s.key);
       const byLane = byStatusRef.current;
+      // Le fasi compresse non mostrano card: la navigazione le salta.
+      const hidden = new Set(collapsedRef.current);
       const findPos = (id: string | null) => {
         if (!id) return null;
         for (let li = 0; li < order.length; li++) {
+          if (hidden.has(order[li])) continue;
           const idx = (byLane.get(order[li]) ?? []).findIndex(
             (t) => t.id === id,
           );
@@ -333,9 +387,10 @@ export function Board({ projectId }: { projectId?: string }) {
 
       e.preventDefault();
 
-      // nessuna selezione: parte dalla prima card disponibile
+      // nessuna selezione: parte dalla prima card visibile
       if (!pos) {
         for (const key of order) {
+          if (hidden.has(key)) continue;
           const first = (byLane.get(key) ?? [])[0];
           if (first) {
             setSelectedId(first.id);
@@ -352,7 +407,14 @@ export function Board({ projectId }: { projectId?: string }) {
       if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
         if (!task) return;
         const dir = e.key === "ArrowLeft" ? -1 : 1;
-        const targetLane = pos.lane + dir;
+        let targetLane = pos.lane + dir;
+        while (
+          targetLane >= 0 &&
+          targetLane < order.length &&
+          hidden.has(order[targetLane])
+        ) {
+          targetLane += dir;
+        }
         if (targetLane < 0 || targetLane >= order.length) return;
         const target = order[targetLane];
         const targetTasks = (byLane.get(target) ?? []).filter(
@@ -386,6 +448,7 @@ export function Board({ projectId }: { projectId?: string }) {
           li >= 0 && li < order.length;
           li += dir
         ) {
+          if (hidden.has(order[li])) continue;
           const cand = byLane.get(order[li]) ?? [];
           if (cand.length > 0) {
             next = cand[Math.min(pos.idx, cand.length - 1)];
@@ -423,6 +486,8 @@ export function Board({ projectId }: { projectId?: string }) {
             tasks={byStatus.get(meta.key) ?? []}
             drag={drag}
             selectedId={selectedId}
+            collapsed={collapsed.includes(meta.key)}
+            onToggle={() => toggleCollapsed(meta.key)}
             registerRef={(el) => {
               if (el) columnRefs.current.set(meta.key, el);
               else columnRefs.current.delete(meta.key);
@@ -463,6 +528,8 @@ function Column({
   tasks,
   drag,
   selectedId,
+  collapsed,
+  onToggle,
   registerRef,
   onCardPointerDown,
   suppressClickRef,
@@ -471,11 +538,61 @@ function Column({
   tasks: Task[];
   drag: DragState | null;
   selectedId: string | null;
+  collapsed: boolean;
+  onToggle: () => void;
   registerRef: (el: HTMLElement | null) => void;
   onCardPointerDown: (e: React.PointerEvent, task: Task) => void;
   suppressClickRef: React.RefObject<boolean>;
 }) {
   const isTarget = drag?.target === meta.key;
+
+  /* Fase compressa: strip verticale. Resta registrata per l'hit-test del
+     drag (rilasciarci sopra sposta il task in cima alla fase) e si riapre
+     con un click ovunque. */
+  if (collapsed) {
+    return (
+      <section
+        ref={registerRef}
+        aria-label={meta.label}
+        className={cn(
+          "flex w-11 shrink-0 snap-start flex-col rounded-2xl p-1 shadow-[inset_0_1px_0_rgb(255_255_255/0.65)] transition-[background,box-shadow]",
+          meta.kind === "alert" ? "bg-[#FEF2F2]/80" : "bg-[#EDF1F7]/70",
+          isTarget &&
+            "bg-brand-50 ring-1 ring-brand-300/70 shadow-[inset_0_1px_0_rgb(255_255_255/0.65),0_10px_34px_-10px_rgb(255_107_0/0.4)]",
+        )}
+      >
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={false}
+          aria-label={`Espandi fase ${meta.label}`}
+          title={`Espandi «${meta.label}»`}
+          className="flex flex-1 flex-col items-center gap-2.5 rounded-xl pt-2.5 pb-2 outline-none transition-colors hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <StatusPip status={meta.key} className="size-3.5" />
+          <span
+            className={cn(
+              "font-mono text-xs",
+              tasks.length === 0 ? "text-ink-faint" : "text-ink-muted",
+            )}
+          >
+            {tasks.length}
+          </span>
+          <span
+            className="text-[11px] font-bold tracking-[0.05em] uppercase [writing-mode:vertical-rl]"
+            style={{ color: meta.text }}
+          >
+            {meta.label}
+          </span>
+          <ChevronsLeftRight
+            aria-hidden
+            className="mt-auto size-3.5 text-ink-faint"
+          />
+        </button>
+      </section>
+    );
+  }
+
   const display = drag ? tasks.filter((t) => t.id !== drag.task.id) : tasks;
 
   const items: React.ReactNode[] = [];
@@ -531,6 +648,16 @@ function Column({
           </h2>
         </span>
         <span className="font-mono text-xs text-ink-muted">{tasks.length}</span>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded
+          aria-label={`Comprimi fase ${meta.label}`}
+          title={`Comprimi «${meta.label}»`}
+          className="ml-auto rounded-md p-1 text-ink-faint outline-none transition-colors hover:bg-white/60 hover:text-ink focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ChevronsRightLeft aria-hidden className="size-3.5" />
+        </button>
       </header>
       <div className="flex flex-1 flex-col gap-2">
         {items.length === 0 ? (
