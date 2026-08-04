@@ -244,7 +244,11 @@ interface AppStore {
     title: string;
     description?: string;
     project_id?: string | null;
+    requested_due?: string | null;
+    priority?: Task["priority"];
   }) => Promise<TaskRequest>;
+  /** Ritira una propria richiesta ancora in attesa; restituisce l'annulla. */
+  withdrawRequest: (id: string) => (() => void) | null;
   /** Approva (solo admin): crea il task collegato e avvisa richiedente
    *  e assegnatario. Restituisce il task, o null se già decisa. */
   approveRequest: (
@@ -455,6 +459,44 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snoozes]);
+
+  /* Richieste dimenticate: in attesa da più di 3 giorni → promemoria
+     one-shot ai responsabili (stesso pattern dell'escalation problemi). */
+  const requestsEscalatedRef = React.useRef(new Set<string>());
+  React.useEffect(() => {
+    const now = Date.now();
+    const stale = requests.filter(
+      (r) =>
+        r.status === "pending" &&
+        now - new Date(r.created_at).getTime() > 3 * 86_400_000 &&
+        !requestsEscalatedRef.current.has(r.id),
+    );
+    if (stale.length === 0) return;
+    queueMicrotask(() => {
+      const admins = MOCK_PROFILES.filter(
+        (p) => p.is_active && p.role === "admin",
+      );
+      setNotifications((prev) => [
+        ...prev,
+        ...stale.flatMap((req) => {
+          const days = Math.floor(
+            (now - new Date(req.created_at).getTime()) / 86_400_000,
+          );
+          return admins.map((admin) => ({
+            id: crypto.randomUUID(),
+            to_user_id: admin.id,
+            from_user_id: req.requester_id,
+            message: `⏳ Richiesta in attesa da ${days} g: «${req.title}»`,
+            task_id: null,
+            kind: "sistema" as const,
+            created_at: new Date().toISOString(),
+            read_at: null,
+          }));
+        }),
+      ]);
+      for (const r of stale) requestsEscalatedRef.current.add(r.id);
+    });
+  }, [requests]);
 
   /* Escalation: problemi fermi da più di 48h → avviso agli admin */
   React.useEffect(() => {
@@ -1175,6 +1217,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         requester_id: currentUser.id,
         created_at: new Date().toISOString(),
         status: "pending",
+        requested_due: input.requested_due ?? null,
+        priority: input.priority ?? "normal",
         decided_by: null,
         decided_at: null,
         rejection_reason: null,
@@ -1214,7 +1258,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         title: req.title,
         description: req.description,
         status: "todo",
-        priority: "normal",
+        priority: req.priority ?? "normal",
         owner_id: opts.owner_id,
         created_by: currentUser.id,
         project_id: opts.project_id ?? req.project_id ?? null,
@@ -1280,6 +1324,26 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         ]);
       }
       return task;
+    },
+
+    withdrawRequest(id) {
+      const req = requests.find((r) => r.id === id);
+      if (
+        !req ||
+        req.status !== "pending" ||
+        req.requester_id !== currentUser.id
+      ) {
+        return null;
+      }
+      const index = requests.findIndex((r) => r.id === id);
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+      return () => {
+        setRequests((prev) => {
+          const next = [...prev];
+          next.splice(Math.min(index, next.length), 0, req);
+          return next;
+        });
+      };
     },
 
     async rejectRequest(id, reason) {
