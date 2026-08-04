@@ -73,7 +73,7 @@ export function ProjectBacheca({ projectId }: { projectId: string }) {
   return (
     <div className="grid flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[1fr_320px]">
       {/* Thread */}
-      <section aria-label="Discussione di progetto" className="card-soft p-5">
+      <section aria-label="Discussione di progetto" className="card-soft min-w-0 p-5">
         <h2 className="text-[11px] font-bold tracking-[0.05em] text-ink-secondary uppercase">
           Bacheca
         </h2>

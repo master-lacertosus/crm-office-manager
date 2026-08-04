@@ -149,7 +149,8 @@ export function WorkloadChart({
 
       <ChartTip tip={tip} />
 
-      <table className="sr-only">
+      <div className="sr-only">
+      <table>
         <caption>Carico di lavoro per persona e fase</caption>
         <thead>
           <tr>
@@ -170,6 +171,7 @@ export function WorkloadChart({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

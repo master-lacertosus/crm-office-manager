@@ -45,14 +45,18 @@ export function TaskRow({
         {task.title}
       </span>
       {task.priority === "high" ? (
-        <PriorityBadge className="hidden sm:inline-flex" />
+        <PriorityBadge className="hidden @[16rem]:inline-flex" />
       ) : null}
       {project ? (
-        <Badge className="hidden sm:inline-flex">{project.name}</Badge>
+        <Badge className="hidden min-w-0 shrink text-ellipsis @[22rem]:inline-flex">
+          {project.name}
+        </Badge>
       ) : null}
       <DueChip iso={task.due_date} status={task.status} />
       {showOwner && owner ? (
-        <AvatarInitials name={owner.full_name} size="sm" />
+        <span className="hidden shrink-0 @[17rem]:inline-flex">
+          <AvatarInitials name={owner.full_name} size="sm" />
+        </span>
       ) : null}
       {focusable ? (
         <button

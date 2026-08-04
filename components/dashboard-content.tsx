@@ -190,7 +190,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="card-soft p-4">
+    <section className="@container card-soft min-w-0 p-4">
       <header className="flex items-center gap-2 pb-2.5">
         <h2 className="text-[11px] font-semibold tracking-[0.05em] text-ink-secondary uppercase">
           {title}

@@ -616,7 +616,7 @@ function TaskForm({
   if (expanded) {
     return (
       <div className="grid h-full min-h-0 lg:grid-cols-[1fr_320px]">
-        <div className="min-h-0 space-y-6 overflow-y-auto p-6">
+        <div className="min-h-0 min-w-0 space-y-6 overflow-y-auto p-6">
           <form
             id="task-form"
             onSubmit={submit}

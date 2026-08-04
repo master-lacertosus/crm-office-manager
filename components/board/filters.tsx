@@ -9,7 +9,15 @@ import { NativeSelect } from "@/components/ui/native-select";
  * Filtri della board, persistiti nell'URL (?owner=&project=).
  * `lockProject`: nella pagina progetto il filtro progetto è implicito.
  */
-export function BoardFilters({ lockProject = false }: { lockProject?: boolean }) {
+export function BoardFilters({
+  lockProject = false,
+  idPrefix = "flt",
+}: {
+  lockProject?: boolean;
+  /** Prefisso per gli id dei campi: unico per ogni istanza in pagina
+   *  (header desktop vs sotto-barra mobile) così le label restano valide. */
+  idPrefix?: string;
+}) {
   const { profiles, projects } = useAppStore();
   const router = useRouter();
   const pathname = usePathname();
@@ -27,11 +35,11 @@ export function BoardFilters({ lockProject = false }: { lockProject?: boolean })
 
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor="filter-owner" className="sr-only">
+      <label htmlFor={`${idPrefix}-owner`} className="sr-only">
         Filtra per responsabile
       </label>
       <NativeSelect
-        id="filter-owner"
+        id={`${idPrefix}-owner`}
         className="w-40"
         value={searchParams.get("owner") ?? ""}
         onChange={(e) => setParam("owner", e.target.value)}
@@ -48,11 +56,11 @@ export function BoardFilters({ lockProject = false }: { lockProject?: boolean })
 
       {!lockProject ? (
         <>
-          <label htmlFor="filter-project" className="sr-only">
+          <label htmlFor={`${idPrefix}-project`} className="sr-only">
             Filtra per progetto
           </label>
           <NativeSelect
-            id="filter-project"
+            id={`${idPrefix}-project`}
             className="hidden w-44 sm:inline-flex"
             value={searchParams.get("project") ?? ""}
             onChange={(e) => setParam("project", e.target.value)}

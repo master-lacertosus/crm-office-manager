@@ -211,7 +211,7 @@ export function CalendarView() {
         ) : null}
         <span
           className={cn(
-            "truncate text-[12px]/[16px] font-semibold",
+            "min-w-0 flex-1 truncate text-[12px]/[16px] font-semibold",
             overdue ? "text-danger-text" : "text-ink",
             task.status === "done" && "text-ink-muted line-through",
           )}
@@ -389,7 +389,7 @@ export function CalendarView() {
               className="h-3.5 w-[3px] shrink-0 rounded-full"
               style={{ background: statusColor(drag.task.status) }}
             />
-            <span className="truncate text-[12px] font-semibold text-ink">
+            <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-ink">
               {drag.task.title}
             </span>
           </div>

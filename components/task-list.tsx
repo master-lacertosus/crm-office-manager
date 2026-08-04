@@ -30,12 +30,14 @@ function Row({ task }: { task: Task }) {
       className="flex h-12 items-center gap-3 border-t border-border-soft px-3 outline-none transition-colors first:border-t-0 hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring sm:px-4"
     >
       <StatusPip status={task.status} />
-      <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
-        {task.title}
+      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+        <span className="min-w-0 truncate text-sm font-medium text-ink">
+          {task.title}
+        </span>
         {task.repeat !== "none" ? (
           <Repeat
             aria-label="Ricorrente"
-            className="ml-1.5 inline size-3 text-ink-faint"
+            className="size-3 shrink-0 text-ink-faint"
           />
         ) : null}
       </span>
