@@ -226,6 +226,11 @@ interface AppStore {
   removeSavedView: (id: string) => void;
   addComment: (taskId: string, body: string) => Promise<void>;
   updateProfileName: (id: string, fullName: string) => Promise<void>;
+  /** Aggiorna nome e/o qualifica del profilo (Impostazioni › Profilo). */
+  updateProfile: (
+    id: string,
+    patch: { full_name?: string; title?: string | null },
+  ) => Promise<void>;
   notifications: AppNotification[];
   unreadCount: number;
   sendNotification: (
@@ -1153,6 +1158,24 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       await wait();
       setProfiles((prev) =>
         prev.map((p) => (p.id === id ? { ...p, full_name: fullName.trim() } : p)),
+      );
+    },
+
+    async updateProfile(id, patch) {
+      await wait();
+      setProfiles((prev) =>
+        prev.map((p) => {
+          if (p.id !== id) return p;
+          const next = { ...p };
+          if (patch.full_name !== undefined) {
+            next.full_name = patch.full_name.trim();
+          }
+          if (patch.title !== undefined) {
+            const t = patch.title?.trim();
+            next.title = t ? t : undefined;
+          }
+          return next;
+        }),
       );
     },
 

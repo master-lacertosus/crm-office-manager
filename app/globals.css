@@ -212,6 +212,31 @@
   --sidebar-ring: var(--brand-600);
 }
 
+/*
+ * Densità interfaccia (Impostazioni › Aspetto). Tailwind v4 deriva ogni
+ * spaziatura da --spacing: rimappandolo si riscala l'intera UI in modo
+ * coerente. «Comodo» è il default (0.25rem) e non porta attributo.
+ */
+[data-density="compact"] {
+  --spacing: 0.22rem;
+}
+[data-density="spacious"] {
+  --spacing: 0.28rem;
+}
+
+/*
+ * Movimento ridotto manuale (Impostazioni › Aspetto): affianca MotionConfig
+ * neutralizzando anche animazioni e transizioni puramente CSS.
+ */
+[data-reduce-motion="1"] *,
+[data-reduce-motion="1"] *::before,
+[data-reduce-motion="1"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
 @layer base {
   * {
     @apply border-border;

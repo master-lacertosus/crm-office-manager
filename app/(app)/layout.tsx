@@ -6,6 +6,7 @@ import { OnboardingTour } from "@/components/onboarding-tour";
 import { AppShell } from "@/components/shell/app-shell";
 import { TaskPanelHost } from "@/components/task-panel";
 import { ToastProvider } from "@/components/toaster";
+import { PreferencesProvider } from "@/lib/preferences";
 import { AppStoreProvider } from "@/lib/store";
 
 /**
@@ -19,22 +20,24 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AppStoreProvider>
-      <ToastProvider>
-        <AppShell>
-          {children}
-          <Suspense>
-            <TaskPanelHost />
-          </Suspense>
-          <CommandPalette />
-          <Suspense>
-            <IlCapo />
-          </Suspense>
-          <Suspense>
-            <OnboardingTour />
-          </Suspense>
-        </AppShell>
-      </ToastProvider>
-    </AppStoreProvider>
+    <PreferencesProvider>
+      <AppStoreProvider>
+        <ToastProvider>
+          <AppShell>
+            {children}
+            <Suspense>
+              <TaskPanelHost />
+            </Suspense>
+            <CommandPalette />
+            <Suspense>
+              <IlCapo />
+            </Suspense>
+            <Suspense>
+              <OnboardingTour />
+            </Suspense>
+          </AppShell>
+        </ToastProvider>
+      </AppStoreProvider>
+    </PreferencesProvider>
   );
 }
