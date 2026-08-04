@@ -1,20 +1,27 @@
 "use client";
 
 import * as React from "react";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, ShieldCheck, User } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
 import { AvatarInitials } from "@/components/avatar-initials";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function ProfileForm() {
-  const { currentUser, updateProfileName } = useAppStore();
+  const { currentUser, updateProfile } = useAppStore();
   const [name, setName] = React.useState(currentUser.full_name);
+  const [title, setTitle] = React.useState(currentUser.title ?? "");
   const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  const isAdmin = currentUser.role === "admin";
+  const dirty =
+    name.trim() !== currentUser.full_name ||
+    title.trim() !== (currentUser.title ?? "");
 
   React.useEffect(() => {
     if (!saved) return;
@@ -30,22 +37,33 @@ export function ProfileForm() {
     }
     setError(null);
     setSaving(true);
-    await updateProfileName(currentUser.id, name);
+    await updateProfile(currentUser.id, { full_name: name, title });
     setSaving(false);
     setSaved(true);
   };
 
   return (
-    <form
-      onSubmit={submit}
-      noValidate
-      className="card-soft space-y-4 p-4"
-    >
+    <form onSubmit={submit} noValidate className="card-soft space-y-5 p-4">
       <div className="flex items-center gap-3">
         <AvatarInitials name={name.trim() || currentUser.full_name} size="lg" />
-        <p className="text-[13px] text-ink-muted">
-          Avatar a iniziali: si genera dal nome, nessun upload nell&rsquo;MVP.
-        </p>
+        <div className="min-w-0">
+          <p className="flex items-center gap-2">
+            <span className="truncate text-sm font-semibold text-ink">
+              {name.trim() || currentUser.full_name}
+            </span>
+            <Badge variant={isAdmin ? "brand" : "outline"}>
+              {isAdmin ? (
+                <ShieldCheck aria-hidden />
+              ) : (
+                <User aria-hidden />
+              )}
+              {isAdmin ? "Responsabile" : "Membro"}
+            </Badge>
+          </p>
+          <p className="mt-0.5 text-[13px] text-ink-muted">
+            Avatar a iniziali: si genera dal nome, nessun upload nell&rsquo;MVP.
+          </p>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -65,6 +83,20 @@ export function ProfileForm() {
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="profile-title">Qualifica</Label>
+        <Input
+          id="profile-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="es. Responsabile · Webmaster"
+          maxLength={60}
+        />
+        <p className="text-[13px] text-ink-muted">
+          Appare accanto al tuo nome nel team e nello standup.
+        </p>
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="profile-email">Email</Label>
         <Input id="profile-email" value={currentUser.email} disabled />
         <p className="text-[13px] text-ink-muted">
@@ -73,7 +105,7 @@ export function ProfileForm() {
       </div>
 
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={saving} aria-busy={saving}>
+        <Button type="submit" disabled={saving || !dirty} aria-busy={saving}>
           {saving ? <LoaderCircle className="animate-spin" /> : null}
           Salva modifiche
         </Button>

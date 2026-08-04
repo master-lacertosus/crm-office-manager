@@ -7,7 +7,9 @@ import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: "/settings/profile", label: "Profilo" },
+  { href: "/settings/appearance", label: "Aspetto" },
   { href: "/settings/workspace", label: "Workspace" },
+  { href: "/settings/about", label: "Info" },
 ];
 
 export function SettingsTabs() {
@@ -15,7 +17,7 @@ export function SettingsTabs() {
   return (
     <nav
       aria-label="Sezioni impostazioni"
-      className="flex gap-1 border-b border-border-soft px-4 sm:px-6"
+      className="flex gap-1 overflow-x-auto border-b border-border-soft px-4 sm:px-6"
     >
       {TABS.map((tab) => {
         const active = pathname === tab.href;
