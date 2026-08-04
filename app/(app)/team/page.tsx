@@ -1,19 +1,15 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { TeamContent } from "@/components/team-content";
-import { TeamViewToggle, WorkloadView } from "@/components/workload-view";
+import { TeamViews, TeamViewToggle } from "@/components/team-views";
 import { Topbar } from "@/components/shell/topbar";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Team" };
 
-export default async function TeamPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ view?: string }>;
-}) {
-  const { view } = await searchParams;
+/** La vista (?view=) è letta lato client in TeamViews: la route resta
+ *  statica (prefetch completo) e il toggle è istantaneo. */
+export default function TeamPage() {
   return (
     <>
       <Topbar
@@ -29,13 +25,9 @@ export default async function TeamPage({
           </>
         }
       />
-      {view === "carico" ? (
-        <Suspense>
-          <WorkloadView />
-        </Suspense>
-      ) : (
-        <TeamContent />
-      )}
+      <Suspense>
+        <TeamViews />
+      </Suspense>
     </>
   );
 }

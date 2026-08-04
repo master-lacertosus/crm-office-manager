@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { CheckCircle2, Package, Repeat, Settings2, X } from "lucide-react";
 
 import { nextMonthlyIso } from "@/lib/format";
 import { pop, scrim } from "@/lib/motion";
+import { updateSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
 import { REPEAT_META } from "@/lib/types";
 import type { Task } from "@/lib/types";
@@ -40,7 +41,6 @@ export function RecurringPlanner() {
     createTaskFromTemplate,
   } = useAppStore();
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const toast = useToast();
 
@@ -56,11 +56,8 @@ export function RecurringPlanner() {
   React.useEffect(() => {
     if (!forced) return;
     queueMicrotask(() => setOpen(true));
-    const params = new URLSearchParams(searchParams);
-    params.delete("plan");
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [forced, searchParams, pathname, router]);
+    updateSearch({ plan: null }, { replace: true });
+  }, [forced]);
 
   /* Un template è «attivo» se ha già un task aperto nato da lui */
   const activeByTemplate = React.useMemo(() => {

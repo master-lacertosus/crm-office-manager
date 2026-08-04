@@ -4,58 +4,29 @@ import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 
 import { MOCK_PROJECTS } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
-import { Board } from "@/components/board/board";
-import { BoardFilters } from "@/components/board/filters";
 import { NewTaskButton } from "@/components/new-task-button";
-import { ProjectBacheca } from "@/components/project-bacheca";
-import { ProjectTimeline } from "@/components/project-timeline";
+import {
+  ProjectViewControls,
+  ProjectViews,
+} from "@/components/project-views";
 import { Topbar } from "@/components/shell/topbar";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Progetto" };
 
-function ViewToggle({
-  projectId,
-  view,
-}: {
-  projectId: string;
-  view: "board" | "timeline" | "bacheca";
-}) {
-  const base =
-    "rounded-md px-2.5 py-1 text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring";
-  const tab = (target: string, label: string, active: boolean) => (
-    <Link
-      href={`/projects/${projectId}${target ? `?view=${target}` : ""}`}
-      className={cn(
-        base,
-        active ? "bg-brand-50 text-brand-700" : "text-ink-secondary hover:text-ink",
-      )}
-    >
-      {label}
-    </Link>
-  );
-  return (
-    <div className="flex gap-0.5 rounded-xl border border-border bg-white p-0.5 shadow-xs">
-      {tab("", "Board", view === "board")}
-      {tab("timeline", "Timeline", view === "timeline")}
-      {tab("bacheca", "Bacheca", view === "bacheca")}
-    </div>
-  );
+/** I progetti demo sono noti a build time: la route diventa statica e i
+ *  link dalla lista progetti si prefetchano per intero. */
+export function generateStaticParams() {
+  return MOCK_PROJECTS.map((p) => ({ projectId: p.id }));
 }
 
 export default async function ProjectPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ view?: string }>;
 }) {
   const { projectId } = await params;
-  const { view } = await searchParams;
   const project = MOCK_PROJECTS.find((p) => p.id === projectId);
-  const activeView =
-    view === "timeline" ? "timeline" : view === "bacheca" ? "bacheca" : "board";
 
   if (!project) {
     return (
@@ -83,10 +54,7 @@ export default async function ProjectPage({
         actions={
           <Suspense>
             <div className="hidden items-center gap-2 xl:flex">
-              <ViewToggle projectId={project.id} view={activeView} />
-              {activeView === "board" ? (
-                <BoardFilters lockProject idPrefix="bar" />
-              ) : null}
+              <ProjectViewControls idPrefix="bar" />
             </div>
             <NewTaskButton />
           </Suspense>
@@ -95,10 +63,7 @@ export default async function ProjectPage({
       {/* Sotto-barra mobile/tablet: scorre in orizzontale, non sfora la pagina. */}
       <div className="flex min-w-0 items-center gap-2 overflow-x-auto border-b border-white/60 px-4 py-2 sm:px-6 xl:hidden">
         <Suspense>
-          <ViewToggle projectId={project.id} view={activeView} />
-          {activeView === "board" ? (
-            <BoardFilters lockProject idPrefix="sub" />
-          ) : null}
+          <ProjectViewControls idPrefix="sub" />
         </Suspense>
       </div>
       {project.description ? (
@@ -107,13 +72,7 @@ export default async function ProjectPage({
         </p>
       ) : null}
       <Suspense>
-        {activeView === "timeline" ? (
-          <ProjectTimeline projectId={project.id} />
-        ) : activeView === "bacheca" ? (
-          <ProjectBacheca projectId={project.id} />
-        ) : (
-          <Board projectId={project.id} />
-        )}
+        <ProjectViews projectId={project.id} />
       </Suspense>
     </>
   );

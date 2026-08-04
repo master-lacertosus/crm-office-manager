@@ -1,10 +1,5 @@
-import { Suspense } from "react";
-
-import { CommandPalette } from "@/components/command-palette";
-import { IlCapo } from "@/components/il-capo";
-import { OnboardingTour } from "@/components/onboarding-tour";
 import { AppShell } from "@/components/shell/app-shell";
-import { TaskPanelHost } from "@/components/task-panel";
+import { LazyOverlays } from "@/components/shell/lazy-overlays";
 import { ToastProvider } from "@/components/toaster";
 import { PreferencesProvider } from "@/lib/preferences";
 import { AppStoreProvider } from "@/lib/store";
@@ -25,16 +20,7 @@ export default function AppLayout({
         <ToastProvider>
           <AppShell>
             {children}
-            <Suspense>
-              <TaskPanelHost />
-            </Suspense>
-            <CommandPalette />
-            <Suspense>
-              <IlCapo />
-            </Suspense>
-            <Suspense>
-              <OnboardingTour />
-            </Suspense>
+            <LazyOverlays />
           </AppShell>
         </ToastProvider>
       </AppStoreProvider>

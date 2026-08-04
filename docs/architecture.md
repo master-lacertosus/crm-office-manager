@@ -83,9 +83,11 @@ trappole di complessità.
 > Con Supabase: tabelle additive `task_events`, colonne
 > `tasks.batch_id/archived_at/checklist(jsonb)`,
 > `notifications.kind`, `workspace_templates.pack/checklist (jsonb)`.
-> Nota Next 16: per aggiornare i parametri della stessa pagina si usa
-> `window.history.replaceState` nativo (integrato dal router);
-> `router.replace` che AGGIUNGE parametri su rotta statica li scarta.
+> Nota Next 16: per aggiornare i parametri della stessa pagina si usa la
+> History API nativa (integrata dal router); `router.replace` che
+> AGGIUNGE parametri su rotta statica li scarta. Il meccanismo canonico
+> è `lib/shallow-nav.ts` (`updateSearch` a patch) e, per i link,
+> `components/search-link.tsx` — mai History API a mano nei componenti.
 
 ---
 

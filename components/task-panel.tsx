@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
   AlarmClockOff,
@@ -38,6 +37,7 @@ import {
   DecisionBadge,
 } from "@/components/comment-bits";
 import { panel, scrim } from "@/lib/motion";
+import { updateSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
 import { REPEAT_META } from "@/lib/types";
 import type { Task, TaskRepeat } from "@/lib/types";
@@ -45,6 +45,7 @@ import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { PriorityBadge } from "@/components/priority-badge";
+import { SearchLink } from "@/components/search-link";
 import { StatusLabel, StatusPip } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
 import { cn } from "@/lib/utils";
@@ -60,8 +61,6 @@ import { Textarea } from "@/components/ui/textarea";
 /* ------------------------------------------------------------------ */
 
 export function TaskPanelHost() {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const taskParam = searchParams.get("task");
   // Default: vista GRANDE (richiesta cliente). ?tv=peek forza il pannello;
@@ -92,11 +91,8 @@ export function TaskPanelHost() {
   }, []);
 
   const close = React.useCallback(() => {
-    const params = new URLSearchParams(searchParams);
-    params.delete("task");
-    const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [router, pathname, searchParams]);
+    updateSearch({ task: null });
+  }, []);
 
   React.useEffect(() => {
     if (!taskParam) return;
@@ -169,8 +165,6 @@ function PanelBody({
   onClose: () => void;
 }) {
   const { tasks, projects, statuses } = useAppStore();
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const isNew = taskParam === "new";
   const task = isNew ? null : tasks.find((t) => t.id === taskParam);
@@ -198,15 +192,9 @@ function PanelBody({
   }, [tasks, statuses, ownerFilter, projectFilter]);
   const index = task ? ordered.indexOf(task.id) : -1;
 
-  const goTo = React.useCallback(
-    (id: string) => {
-      const params = new URLSearchParams(searchParams);
-      params.set("task", id);
-      params.delete("due");
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    },
-    [router, pathname, searchParams],
-  );
+  const goTo = React.useCallback((id: string) => {
+    updateSearch({ task: id, due: null }, { replace: true });
+  }, []);
 
   React.useEffect(() => {
     if (isNew || index < 0) return;
@@ -338,8 +326,6 @@ function TaskForm({
   expanded: boolean;
   children?: React.ReactNode;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const {
     profiles,
@@ -361,10 +347,7 @@ function TaskForm({
         ? `«${created[0].title}» creato dal template`
         : `Pacchetto creato: ${created.length} task collegati`,
     );
-    const params = new URLSearchParams(searchParams);
-    params.set("task", created[0].id);
-    params.delete("due");
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    updateSearch({ task: created[0].id, due: null }, { replace: true });
   };
 
   const [title, setTitle] = React.useState(task?.title ?? "");
@@ -420,9 +403,7 @@ function TaskForm({
     } else {
       const created = await createTask(patch);
       setSaving(false);
-      const params = new URLSearchParams(searchParams);
-      params.set("task", created.id);
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      updateSearch({ task: created.id }, { replace: true });
     }
   };
 
@@ -980,18 +961,10 @@ function TaskMeta({ task }: { task: Task }) {
 /** Task fratelli dello stesso pacchetto (template multi-task). */
 function PackSiblings({ task }: { task: Task }) {
   const { tasks } = useAppStore();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const siblings = tasks
     .filter((t) => t.batch_id === task.batch_id && t.id !== task.id)
     .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""));
   if (siblings.length === 0) return null;
-
-  const hrefFor = (id: string) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("task", id);
-    return `${pathname}?${params.toString()}`;
-  };
 
   return (
     <div className="space-y-1 rounded-xl border border-border-soft bg-white p-2.5">
@@ -1002,9 +975,8 @@ function PackSiblings({ task }: { task: Task }) {
       <ul className="space-y-0.5">
         {siblings.map((s) => (
           <li key={s.id}>
-            <Link
-              href={hrefFor(s.id)}
-              scroll={false}
+            <SearchLink
+              params={{ task: s.id }}
               className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[13px] text-ink outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring"
             >
               <StatusPip status={s.status} className="size-3" />
@@ -1014,7 +986,7 @@ function PackSiblings({ task }: { task: Task }) {
                   {formatDue(s.due_date)}
                 </span>
               ) : null}
-            </Link>
+            </SearchLink>
           </li>
         ))}
       </ul>

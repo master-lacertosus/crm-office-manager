@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
 import { Star } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
@@ -10,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
 import { PriorityBadge } from "@/components/priority-badge";
+import { SearchLink } from "@/components/search-link";
 import { StatusPip } from "@/components/status-pip";
 import { Badge } from "@/components/ui/badge";
 
@@ -25,19 +24,13 @@ export function TaskRow({
   focusable?: boolean;
 }) {
   const { profiles, projects, focusIds, toggleFocus } = useAppStore();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const owner = profiles.find((p) => p.id === task.owner_id);
   const project = projects.find((p) => p.id === task.project_id);
 
-  const params = new URLSearchParams(searchParams);
-  params.set("task", task.id);
-
   return (
-    <Link
-      href={`${pathname}?${params.toString()}`}
-      scroll={false}
+    <SearchLink
+      params={{ task: task.id }}
       className="flex h-11 items-center gap-3 rounded-lg px-2.5 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
     >
       <StatusPip status={task.status} />
@@ -85,6 +78,6 @@ export function TaskRow({
           />
         </button>
       ) : null}
-    </Link>
+    </SearchLink>
   );
 }

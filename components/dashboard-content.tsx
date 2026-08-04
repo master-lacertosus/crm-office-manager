@@ -2,16 +2,18 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   AlarmClockMinus,
   ArrowRight,
   CalendarClock,
+  Check,
   CheckCheck,
   CircleCheck,
   Eye,
   FolderOpen,
   Inbox,
+  SlidersHorizontal,
   Star,
   type LucideIcon,
 } from "lucide-react";
@@ -24,8 +26,20 @@ import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { Sparkline } from "@/components/charts/sparkline";
 import { StatTile } from "@/components/charts/stat-tile";
+import {
+  DashboardBlockShell,
+  DashboardEditBar,
+  useDashboardDnd,
+} from "@/components/dashboard-customize";
 import { EmptyState } from "@/components/empty-state";
 import { TaskRow } from "@/components/task-row";
+import { Button } from "@/components/ui/button";
+import {
+  BLOCK_META,
+  useDashboardLayout,
+  type DashboardBlockId,
+  type DashboardBlockSize,
+} from "@/lib/dashboard-layout";
 
 function byDue(a: Task, b: Task): number {
   if (!a.due_date && !b.due_date) return a.position - b.position;
@@ -185,7 +199,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="@container card-soft min-w-0 p-4">
+    <section className="@container card-soft h-full min-w-0 p-4">
       <header className="flex items-center gap-2 pb-2.5">
         <h2 className="text-[11px] font-semibold tracking-[0.05em] text-ink-secondary uppercase">
           {title}
@@ -250,65 +264,56 @@ export function DashboardContent() {
       (t): t is Task => Boolean(t) && t!.status !== "done" && !snoozes[t!.id],
     );
 
-  return (
-    <div className="flex-1 space-y-4 px-4 py-4 sm:px-6">
-      {/* Hero personale */}
-      <motion.section
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.28, ease: [0.2, 0, 0, 1] }}
-        className="glass-hero flex flex-col justify-between gap-4 px-6 py-5 sm:flex-row sm:items-center"
-      >
-        <div className="relative">
-          <p className="text-[13px] text-ink-muted first-letter:uppercase">
-            {DATE_FMT.format(new Date())}
-          </p>
-          <h2 className="mt-1 text-[28px]/9 font-bold tracking-[-0.018em] text-ink sm:text-[34px]/10">
-            {greeting()},{" "}
-            <span className="gradient-text">
-              {currentUser.full_name.split(" ")[0]}
-            </span>{" "}
-            <span aria-hidden>👋</span>
-          </h2>
-          <p className="mt-1.5 max-w-md text-sm text-ink-secondary">
-            {overdue.length > 0 ? (
-              <>
-                <span className="font-mono font-medium text-danger-text">
-                  {overdue.length}
-                </span>{" "}
-                task in ritardo e{" "}
-                <span className="font-mono font-medium text-status-review-text">
-                  {analytics.inReview}
-                </span>{" "}
-                in revisione chiedono attenzione oggi.
-              </>
-            ) : (
-              <>
-                Nessun ritardo:{" "}
-                <span className="font-mono font-medium text-status-review-text">
-                  {analytics.inReview}
-                </span>{" "}
-                task in revisione e{" "}
-                <span className="font-mono font-medium text-ink">
-                  {mine.length}
-                </span>{" "}
-                tuoi aperti.
-              </>
-            )}
-          </p>
-        </div>
-        <div className="relative">
-          <ProgressRing
-            percent={percent}
-            delta={analytics.done7Delta}
-            done={mineDone}
-            total={mineDone + mineAll.length}
-          />
-        </div>
-      </motion.section>
+  /* Layout componibile: ordine, larghezza e visibilità dei blocchi sono
+     dell'utente (localStorage); gli annunci aria-live doppiano ogni
+     modifica per screen reader. */
+  const { blocks, move, moveTo, setSize, toggleVisible, reset, isCustomized } =
+    useDashboardLayout();
+  const [editing, setEditing] = React.useState(false);
+  const [liveMsg, setLiveMsg] = React.useState("");
+  const titleOf = (id: DashboardBlockId) => BLOCK_META[id].title;
 
-      {/* KPI color-coded — auto-rows-fr: ogni riga di tile alla stessa altezza */}
-      <div className="grid auto-rows-fr grid-cols-2 gap-4 lg:grid-cols-4">
+  const {
+    draggingId,
+    overId,
+    registerItem,
+    begin: beginDrag,
+    update: updateDrag,
+    end: finishDrag,
+  } = useDashboardDnd((id, targetId) => {
+    const target = blocks.findIndex((b) => b.id === targetId);
+    if (target < 0) return;
+    const to = moveTo(id, target);
+    if (to !== null) {
+      setLiveMsg(
+        `«${titleOf(id)}» spostato in posizione ${to + 1} di ${blocks.length}`,
+      );
+    }
+  });
+  const handleMove = (id: DashboardBlockId, delta: -1 | 1) => {
+    const to = move(id, delta);
+    if (to !== null) {
+      setLiveMsg(
+        `«${titleOf(id)}» spostato in posizione ${to + 1} di ${blocks.length}`,
+      );
+    }
+  };
+  const handleSize = (id: DashboardBlockId, size: DashboardBlockSize) => {
+    setSize(id, size);
+    setLiveMsg(`«${titleOf(id)}»: larghezza ${size}`);
+  };
+  const handleToggleVisible = (id: DashboardBlockId) => {
+    const visible = toggleVisible(id);
+    setLiveMsg(`«${titleOf(id)}» ${visible ? "visibile" : "nascosto"}`);
+  };
+  const handleReset = () => {
+    reset();
+    setLiveMsg("Layout ripristinato");
+  };
+
+  const blockContent: Record<DashboardBlockId, React.ReactNode> = {
+    kpi: (
+      <div className="grid h-full auto-rows-fr grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
           label="Task aperti"
           value={analytics.open}
@@ -369,262 +374,375 @@ export function DashboardContent() {
           />
         </StatTile>
       </div>
-
-      {/* Composizione asimmetrica: il Focus è compatto, gli Avvisi sono
-          il modulo più denso — le larghezze seguono il contenuto. */}
-      <div className="grid gap-4 lg:grid-cols-[3fr_4.5fr_3.5fr]">
-        {/* Focus di oggi */}
-        <Section title="Focus di oggi" count={focusTasks.length}>
-          {focusTasks.length === 0 ? (
-            <div className="py-4">
-              <EmptyState
-                icon={Star}
-                title="Definisci il focus di oggi"
-                hint="Seleziona fino a 3 attività prioritarie con la stella: il team vede su cosa sei concentrato."
-                className="py-2"
-              />
-              <p className="mt-2 text-center">
-                <Link
-                  href="/tasks"
-                  className="inline-flex items-center gap-1 rounded-md text-[13px] font-semibold text-brand-700 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  Vai ai task →
-                </Link>
-              </p>
-            </div>
-          ) : (
-            <div className="-mx-1 flex flex-col">
-              {focusTasks.map((t) => (
-                <TaskRow key={t.id} task={t} focusable />
-              ))}
-            </div>
-          )}
-        </Section>
-
-        {/* Avvisi */}
-        <Section title="Avvisi recenti" count={latestAlerts.length}>
-          {latestAlerts.length === 0 ? (
+    ),
+    focus: (
+      <Section title="Focus di oggi" count={focusTasks.length}>
+        {focusTasks.length === 0 ? (
+          <div className="py-4">
             <EmptyState
-              icon={Inbox}
-              title="Nessun avviso"
-              hint="Quando un collega ti segnala qualcosa, appare qui."
-              className="py-6"
+              icon={Star}
+              title="Definisci il focus di oggi"
+              hint="Seleziona fino a 3 attività prioritarie con la stella: il team vede su cosa sei concentrato."
+              className="py-2"
             />
-          ) : (
-            <ul className="space-y-1">
-              {latestAlerts.map((n) => {
-                const sender = profiles.find((p) => p.id === n.from_user_id);
-                const inner = (
-                  <>
-                    <AvatarInitials
-                      name={sender?.full_name ?? "?"}
-                      size="sm"
-                      className="mt-0.5"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-baseline justify-between gap-2">
-                        <span className="truncate text-[13px] font-medium text-ink">
-                          {sender?.full_name ?? "—"}
-                        </span>
-                        <span className="shrink-0 font-mono text-[10px] text-ink-muted">
-                          {timeAgo(n.created_at)}
-                        </span>
+            <p className="mt-2 text-center">
+              <Link
+                href="/tasks"
+                className="inline-flex items-center gap-1 rounded-md text-[13px] font-semibold text-brand-700 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Vai ai task →
+              </Link>
+            </p>
+          </div>
+        ) : (
+          <div className="-mx-1 flex flex-col">
+            {focusTasks.map((t) => (
+              <TaskRow key={t.id} task={t} focusable />
+            ))}
+          </div>
+        )}
+      </Section>
+    ),
+    alerts: (
+      <Section title="Avvisi recenti" count={latestAlerts.length}>
+        {latestAlerts.length === 0 ? (
+          <EmptyState
+            icon={Inbox}
+            title="Nessun avviso"
+            hint="Quando un collega ti segnala qualcosa, appare qui."
+            className="py-6"
+          />
+        ) : (
+          <ul className="space-y-1">
+            {latestAlerts.map((n) => {
+              const sender = profiles.find((p) => p.id === n.from_user_id);
+              const inner = (
+                <>
+                  <AvatarInitials
+                    name={sender?.full_name ?? "?"}
+                    size="sm"
+                    className="mt-0.5"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-[13px] font-medium text-ink">
+                        {sender?.full_name ?? "—"}
                       </span>
-                      {/* niente `block`: sovrascriverebbe il display
-                          -webkit-box che fa funzionare il line-clamp */}
-                      <span className="mt-0.5 line-clamp-2 text-[13px]/[18px] text-ink-secondary">
-                        {n.message}
+                      <span className="shrink-0 font-mono text-[10px] text-ink-muted">
+                        {timeAgo(n.created_at)}
                       </span>
                     </span>
-                    {!n.read_at ? (
-                      <span
-                        aria-hidden
-                        className="mt-1.5 size-2 shrink-0 rounded-full bg-brand-500"
-                      />
-                    ) : null}
-                  </>
-                );
-                return (
-                  <li key={n.id}>
-                    {n.task_id ? (
-                      <Link
-                        href={`/tasks?task=${n.task_id}`}
-                        scroll={false}
-                        className={cn(
-                          "flex items-start gap-2.5 rounded-lg px-2 py-2 outline-none transition-colors hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring",
-                          !n.read_at && "bg-brand-50/70",
-                        )}
-                      >
-                        {inner}
-                      </Link>
-                    ) : (
-                      <div
-                        className={cn(
-                          "flex items-start gap-2.5 rounded-lg px-2 py-2",
-                          !n.read_at && "bg-brand-50/70",
-                        )}
-                      >
-                        {inner}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Section>
-
-        {/* I miei task */}
-        <Section
-          title="I miei task aperti"
-          count={mineAll.length}
-          seeAllHref="/tasks"
-        >
-          {mineAll.length === 0 ? (
-            <EmptyState
-              icon={CircleCheck}
-              title="Nessun task assegnato a te"
-              hint="Creane uno con «Nuovo task»."
-              className="py-6"
-            />
-          ) : (
-            <div className="-mx-1 flex flex-col">
-              {mine.map((t) => (
-                <TaskRow key={t.id} task={t} focusable />
-              ))}
-              {mineBacklog.length > 0 ? (
-                <>
-                  <p className="mt-2 mb-1 px-2.5 text-[10px] font-bold tracking-[0.06em] text-ink-faint uppercase">
-                    In backlog · non ancora pianificati
-                  </p>
-                  {mineBacklog.map((t) => (
-                    <TaskRow key={t.id} task={t} focusable />
-                  ))}
+                    {/* niente `block`: sovrascriverebbe il display
+                        -webkit-box che fa funzionare il line-clamp */}
+                    <span className="mt-0.5 line-clamp-2 text-[13px]/[18px] text-ink-secondary">
+                      {n.message}
+                    </span>
+                  </span>
+                  {!n.read_at ? (
+                    <span
+                      aria-hidden
+                      className="mt-1.5 size-2 shrink-0 rounded-full bg-brand-500"
+                    />
+                  ) : null}
                 </>
-              ) : null}
-            </div>
-          )}
-          <Link
-            href="/tasks"
-            className="mt-2 inline-flex items-center gap-1 rounded-sm text-[13px] font-medium text-brand-700 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Vai alla board
-            <ArrowRight aria-hidden className="size-3.5" />
-          </Link>
-        </Section>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[4fr_3fr_4fr]">
-        {/* Polso del team */}
-        <Section title="Polso del team" count={profiles.filter((p) => p.is_active).length}>
-          <ul className="space-y-2">
-            {profiles
-              .filter((p) => p.is_active)
-              .map((person) => {
-                const personTasks = tasks.filter(
-                  (t) => t.owner_id === person.id && !t.archived_at,
-                );
-                const personOpen = personTasks.filter(
-                  (t) => t.status !== "done",
-                ).length;
-                const personLate = personTasks.filter(
-                  (t) =>
-                    t.status !== "done" && t.due_date && t.due_date < today,
-                ).length;
-                // Etichetta di carico spiegata (solo presentazione)
-                const load =
-                  personLate > 0
-                    ? { label: "In ritardo", cls: "text-danger-text" }
-                    : personOpen === 0
-                      ? { label: "Disponibile", cls: "text-success-text" }
-                      : personOpen <= 2
-                        ? { label: "Bilanciato", cls: "text-ink-muted" }
-                        : personOpen <= 4
-                          ? { label: "Carico", cls: "text-warning-text" }
-                          : { label: "Sovraccarico", cls: "text-danger-text" };
-                return (
-                  <li key={person.id}>
+              );
+              return (
+                <li key={n.id}>
+                  {n.task_id ? (
                     <Link
-                      href={`/tasks?owner=${person.id}`}
-                      className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 outline-none transition-colors hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring"
+                      href={`/tasks?task=${n.task_id}`}
+                      scroll={false}
+                      className={cn(
+                        "flex items-start gap-2.5 rounded-lg px-2 py-2 outline-none transition-colors hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring",
+                        !n.read_at && "bg-brand-50/70",
+                      )}
                     >
-                      <AvatarInitials name={person.full_name} size="sm" />
-                      <span className="w-16 truncate text-[13px] font-medium text-ink">
-                        {person.full_name.split(" ")[0]}
-                      </span>
-                      <span className="flex h-[7px] flex-1 gap-[2px] overflow-hidden rounded-full bg-[#EDF1F7]">
-                        {statuses.map((meta) => {
-                          const count = personTasks.filter(
-                            (t) => t.status === meta.key,
-                          ).length;
-                          if (count === 0) return null;
-                          return (
-                            <span
-                              key={meta.key}
-                              title={`${meta.label}: ${count}`}
-                              style={{ flexGrow: count, background: meta.color }}
-                            />
-                          );
-                        })}
+                      {inner}
+                    </Link>
+                  ) : (
+                    <div
+                      className={cn(
+                        "flex items-start gap-2.5 rounded-lg px-2 py-2",
+                        !n.read_at && "bg-brand-50/70",
+                      )}
+                    >
+                      {inner}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Section>
+    ),
+    mine: (
+      <Section
+        title="I miei task aperti"
+        count={mineAll.length}
+        seeAllHref="/tasks"
+      >
+        {mineAll.length === 0 ? (
+          <EmptyState
+            icon={CircleCheck}
+            title="Nessun task assegnato a te"
+            hint="Creane uno con «Nuovo task»."
+            className="py-6"
+          />
+        ) : (
+          <div className="-mx-1 flex flex-col">
+            {mine.map((t) => (
+              <TaskRow key={t.id} task={t} focusable />
+            ))}
+            {mineBacklog.length > 0 ? (
+              <>
+                <p className="mt-2 mb-1 px-2.5 text-[10px] font-bold tracking-[0.06em] text-ink-faint uppercase">
+                  In backlog · non ancora pianificati
+                </p>
+                {mineBacklog.map((t) => (
+                  <TaskRow key={t.id} task={t} focusable />
+                ))}
+              </>
+            ) : null}
+          </div>
+        )}
+        <Link
+          href="/tasks"
+          className="mt-2 inline-flex items-center gap-1 rounded-sm text-[13px] font-medium text-brand-700 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Vai alla board
+          <ArrowRight aria-hidden className="size-3.5" />
+        </Link>
+      </Section>
+    ),
+    team: (
+      <Section
+        title="Polso del team"
+        count={profiles.filter((p) => p.is_active).length}
+      >
+        <ul className="space-y-2">
+          {profiles
+            .filter((p) => p.is_active)
+            .map((person) => {
+              const personTasks = tasks.filter(
+                (t) => t.owner_id === person.id && !t.archived_at,
+              );
+              const personOpen = personTasks.filter(
+                (t) => t.status !== "done",
+              ).length;
+              const personLate = personTasks.filter(
+                (t) =>
+                  t.status !== "done" && t.due_date && t.due_date < today,
+              ).length;
+              // Etichetta di carico spiegata (solo presentazione)
+              const load =
+                personLate > 0
+                  ? { label: "In ritardo", cls: "text-danger-text" }
+                  : personOpen === 0
+                    ? { label: "Disponibile", cls: "text-success-text" }
+                    : personOpen <= 2
+                      ? { label: "Bilanciato", cls: "text-ink-muted" }
+                      : personOpen <= 4
+                        ? { label: "Carico", cls: "text-warning-text" }
+                        : { label: "Sovraccarico", cls: "text-danger-text" };
+              return (
+                <li key={person.id}>
+                  <Link
+                    href={`/tasks?owner=${person.id}`}
+                    className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 outline-none transition-colors hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <AvatarInitials name={person.full_name} size="sm" />
+                    <span className="w-16 truncate text-[13px] font-medium text-ink">
+                      {person.full_name.split(" ")[0]}
+                    </span>
+                    <span className="flex h-[7px] flex-1 gap-[2px] overflow-hidden rounded-full bg-[#EDF1F7]">
+                      {statuses.map((meta) => {
+                        const count = personTasks.filter(
+                          (t) => t.status === meta.key,
+                        ).length;
+                        if (count === 0) return null;
+                        return (
+                          <span
+                            key={meta.key}
+                            title={`${meta.label}: ${count}`}
+                            style={{ flexGrow: count, background: meta.color }}
+                          />
+                        );
+                      })}
+                    </span>
+                    <span
+                      className="w-24 text-right"
+                      title={`${personOpen} task aperti${personLate > 0 ? `, ${personLate} in ritardo` : ""}`}
+                    >
+                      <span className="block font-mono text-xs text-ink-muted">
+                        {personOpen} aperti
                       </span>
                       <span
-                        className="w-24 text-right"
-                        title={`${personOpen} task aperti${personLate > 0 ? `, ${personLate} in ritardo` : ""}`}
+                        className={cn("block text-[10px] font-semibold", load.cls)}
                       >
-                        <span className="block font-mono text-xs text-ink-muted">
-                          {personOpen} aperti
-                        </span>
-                        <span
-                          className={cn("block text-[10px] font-semibold", load.cls)}
-                        >
-                          {load.label}
-                        </span>
+                        {load.label}
                       </span>
-                    </Link>
-                  </li>
-                );
-              })}
-          </ul>
-        </Section>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+        </ul>
+      </Section>
+    ),
+    overdue: (
+      <Section title="In ritardo" count={overdue.length} seeAllHref="/tasks">
+        {overdue.length === 0 ? (
+          <EmptyState
+            icon={CircleCheck}
+            title="Niente in ritardo"
+            hint="Ottimo ritmo."
+            className="py-6"
+          />
+        ) : (
+          <div className="-mx-1 flex flex-col">
+            {overdue.map((t) => (
+              <TaskRow key={t.id} task={t} showOwner />
+            ))}
+          </div>
+        )}
+      </Section>
+    ),
+    week: (
+      <Section
+        title="In scadenza questa settimana"
+        count={thisWeek.length}
+        seeAllHref="/calendar"
+      >
+        {thisWeek.length === 0 ? (
+          <EmptyState
+            icon={CalendarClock}
+            title="Nessuna scadenza in settimana"
+            hint="Pianifica dalla board."
+            className="py-6"
+          />
+        ) : (
+          <div className="-mx-1 flex flex-col">
+            {thisWeek.map((t) => (
+              <TaskRow key={t.id} task={t} showOwner />
+            ))}
+          </div>
+        )}
+      </Section>
+    ),
+  };
 
-        <Section title="In ritardo" count={overdue.length} seeAllHref="/tasks">
-          {overdue.length === 0 ? (
-            <EmptyState
-              icon={CircleCheck}
-              title="Niente in ritardo"
-              hint="Ottimo ritmo."
-              className="py-6"
-            />
-          ) : (
-            <div className="-mx-1 flex flex-col">
-              {overdue.map((t) => (
-                <TaskRow key={t.id} task={t} showOwner />
-              ))}
-            </div>
-          )}
-        </Section>
+  // In modalità Personalizza compaiono anche i blocchi nascosti (ghost).
+  const rendered = editing ? blocks : blocks.filter((b) => b.visible);
 
-        <Section
-          title="In scadenza questa settimana"
-          count={thisWeek.length}
-          seeAllHref="/calendar"
-        >
-          {thisWeek.length === 0 ? (
-            <EmptyState
-              icon={CalendarClock}
-              title="Nessuna scadenza in settimana"
-              hint="Pianifica dalla board."
-              className="py-6"
-            />
-          ) : (
-            <div className="-mx-1 flex flex-col">
-              {thisWeek.map((t) => (
-                <TaskRow key={t.id} task={t} showOwner />
-              ))}
-            </div>
-          )}
-        </Section>
+  return (
+    <div className="flex-1 space-y-4 px-4 py-4 sm:px-6">
+      <p aria-live="polite" className="sr-only">
+        {liveMsg}
+      </p>
+
+      {/* Hero personale */}
+      <motion.section
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, ease: [0.2, 0, 0, 1] }}
+        className="glass-hero flex flex-col justify-between gap-4 px-6 py-5 sm:flex-row sm:items-center"
+      >
+        <div className="relative">
+          <p className="text-[13px] text-ink-muted first-letter:uppercase">
+            {DATE_FMT.format(new Date())}
+          </p>
+          <h2 className="mt-1 text-[28px]/9 font-bold tracking-[-0.018em] text-ink sm:text-[34px]/10">
+            {greeting()},{" "}
+            <span className="gradient-text">
+              {currentUser.full_name.split(" ")[0]}
+            </span>{" "}
+            <span aria-hidden>👋</span>
+          </h2>
+          <p className="mt-1.5 max-w-md text-sm text-ink-secondary">
+            {overdue.length > 0 ? (
+              <>
+                <span className="font-mono font-medium text-danger-text">
+                  {overdue.length}
+                </span>{" "}
+                task in ritardo e{" "}
+                <span className="font-mono font-medium text-status-review-text">
+                  {analytics.inReview}
+                </span>{" "}
+                in revisione chiedono attenzione oggi.
+              </>
+            ) : (
+              <>
+                Nessun ritardo:{" "}
+                <span className="font-mono font-medium text-status-review-text">
+                  {analytics.inReview}
+                </span>{" "}
+                task in revisione e{" "}
+                <span className="font-mono font-medium text-ink">
+                  {mine.length}
+                </span>{" "}
+                tuoi aperti.
+              </>
+            )}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            aria-pressed={editing}
+            onClick={() => setEditing((v) => !v)}
+          >
+            {editing ? (
+              <Check data-icon="inline-start" />
+            ) : (
+              <SlidersHorizontal data-icon="inline-start" />
+            )}
+            {editing ? "Fine" : "Personalizza"}
+          </Button>
+        </div>
+        <div className="relative">
+          <ProgressRing
+            percent={percent}
+            delta={analytics.done7Delta}
+            done={mineDone}
+            total={mineDone + mineAll.length}
+          />
+        </div>
+      </motion.section>
+
+      {/* Blocchi componibili su griglia a 12 colonne (una colonna sotto lg) */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        {rendered.map((b) => (
+          <DashboardBlockShell
+            key={b.id}
+            block={b}
+            index={blocks.findIndex((x) => x.id === b.id)}
+            count={blocks.length}
+            editing={editing}
+            dragging={draggingId === b.id}
+            isOver={overId === b.id}
+            registerItem={registerItem}
+            onDragBegin={beginDrag}
+            onDragUpdate={updateDrag}
+            onDragFinish={finishDrag}
+            onMove={handleMove}
+            onSize={handleSize}
+            onToggleVisible={handleToggleVisible}
+          >
+            {blockContent[b.id]}
+          </DashboardBlockShell>
+        ))}
       </div>
+
+      <AnimatePresence>
+        {editing ? (
+          <DashboardEditBar
+            customized={isCustomized}
+            onReset={handleReset}
+            onDone={() => setEditing(false)}
+          />
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

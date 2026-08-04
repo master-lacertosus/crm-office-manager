@@ -1,15 +1,15 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
 import { dueUrgency, todayIso } from "@/lib/format";
+import { updateSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { PriorityBadge } from "@/components/priority-badge";
+import { SearchLink } from "@/components/search-link";
 import { Button } from "@/components/ui/button";
 
 const MONTH_FMT = new Intl.DateTimeFormat("it-IT", { month: "long" });
@@ -59,9 +59,6 @@ export function CalendarView() {
   const metaByKey = new Map(statuses.map((m) => [m.key, m]));
   const statusColor = (key: string) =>
     metaByKey.get(key)?.color ?? "#64748B";
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const now = new Date();
   const [cursor, setCursor] = React.useState({
@@ -164,17 +161,8 @@ export function CalendarView() {
     window.addEventListener("keydown", onKey);
   };
 
-  const chipHref = (task: Task) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("task", task.id);
-    return `${pathname}?${params.toString()}`;
-  };
-
   const quickAdd = (iso: string) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("task", "new");
-    params.set("due", iso);
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    updateSearch({ task: "new", due: iso });
   };
 
   const Chip = ({ task }: { task: Task }) => {
@@ -183,9 +171,8 @@ export function CalendarView() {
       task.due_date !== null &&
       dueUrgency(task.due_date).level === "overdue";
     return (
-      <Link
-        href={chipHref(task)}
-        scroll={false}
+      <SearchLink
+        params={{ task: task.id }}
         draggable={false}
         onPointerDown={(e) => onChipPointerDown(e, task)}
         onClickCapture={(e) => {
@@ -218,7 +205,7 @@ export function CalendarView() {
         >
           {task.title}
         </span>
-      </Link>
+      </SearchLink>
     );
   };
 

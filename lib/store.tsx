@@ -65,13 +65,11 @@ export const MAX_CUSTOM_STATUSES = 3;
 
 /**
  * Store placeholder in memoria: fa da contratto per lo strato dati vero.
- * Le mutazioni simulano ~250ms di latenza per esercitare gli stati di
- * loading richiesti da CLAUDE.md. Al collegamento con Supabase queste
- * funzioni diventeranno query/mutazioni reali a parità di firma.
+ * Le mutazioni sono istantanee ma mantengono firme async: gli stati di
+ * loading richiesti da CLAUDE.md restano implementati nei form e, al
+ * collegamento con Supabase, queste funzioni diventeranno query/mutazioni
+ * reali a parità di firma — senza latenza artificiale sui click.
  */
-
-const LATENCY_MS = 250;
-const wait = () => new Promise((r) => setTimeout(r, LATENCY_MS));
 
 type NewTask = Pick<Task, "title" | "owner_id"> &
   Partial<
@@ -329,7 +327,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
   React.useEffect(() => {
     if (!stateLoadedRef.current) return;
-    const id = setTimeout(() => {
+    const persist = () => {
       try {
         localStorage.setItem(
           STATE_KEY,
@@ -351,8 +349,16 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       } catch {
         /* quota piena o storage assente: pazienza */
       }
-    }, 400);
-    return () => clearTimeout(id);
+    };
+    // Persiste al primo momento di quiete del browser (tetto 400ms):
+    // ogni mutazione annulla e riprogramma, così le raffiche producono
+    // una sola serializzazione e mai dentro un frame di interazione.
+    if (typeof requestIdleCallback === "undefined") {
+      const id = setTimeout(persist, 400);
+      return () => clearTimeout(id);
+    }
+    const id = requestIdleCallback(persist, { timeout: 400 });
+    return () => cancelIdleCallback(id);
   }, [
     tasks,
     events,
@@ -538,26 +544,31 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     });
   }, [tasks]);
 
-  const statuses: StatusMeta[] = [
-    ...(["backlog", "todo", "in_progress"] as const).map((key) => ({
-      key,
-      ...CORE_STATUS_META[key],
-    })),
-    ...customStatuses.map((c) => ({ ...c, kind: "custom" as const })),
-    ...(["in_review", "alert", "done"] as const).map((key) => ({
-      key,
-      ...CORE_STATUS_META[key],
-    })),
-  ];
+  /* Un solo valore di context, ricreato solo quando cambia davvero lo
+     stato (mai per un render del provider, es. un cambio di preferenze
+     più in alto): derivati calcolati all'interno, dipendenze = i soli
+     atomi di stato, verificate dal lint dei hook. */
+  const store = React.useMemo<AppStore>(() => {
+    const statuses: StatusMeta[] = [
+      ...(["backlog", "todo", "in_progress"] as const).map((key) => ({
+        key,
+        ...CORE_STATUS_META[key],
+      })),
+      ...customStatuses.map((c) => ({ ...c, kind: "custom" as const })),
+      ...(["in_review", "alert", "done"] as const).map((key) => ({
+        key,
+        ...CORE_STATUS_META[key],
+      })),
+    ];
+    const currentUser =
+      profiles.find((p) => p.id === currentUserId) ?? profiles[0];
+    const myNotifications = notifications
+      .filter((n) => n.to_user_id === currentUser.id)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    let unreadCount = 0;
+    for (const n of myNotifications) if (!n.read_at) unreadCount += 1;
 
-  const currentUser =
-    profiles.find((p) => p.id === currentUserId) ?? profiles[0];
-
-  const myNotifications = notifications
-    .filter((n) => n.to_user_id === currentUser.id)
-    .sort((a, b) => b.created_at.localeCompare(a.created_at));
-
-  const store: AppStore = {
+    return {
     currentUser,
 
     switchUser(profileId) {
@@ -569,7 +580,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     comments,
 
     async createTask(input) {
-      await wait();
       const task: Task = {
         id: crypto.randomUUID(),
         title: input.title.trim(),
@@ -595,7 +605,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     async updateTask(id, patch) {
-      await wait();
       const before = tasks.find((t) => t.id === id);
       if (!before) return null;
       const next: Task = { ...before, ...patch };
@@ -765,7 +774,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     taskLinks,
 
     async addTaskLink(taskId, url, label) {
-      await wait();
       setTaskLinks((prev) => [
         ...prev,
         {
@@ -834,7 +842,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     projectComments,
 
     async addProjectComment(projectId, body) {
-      await wait();
       const trimmed = body.trim();
       setProjectComments((prev) => [
         ...prev,
@@ -911,7 +918,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     async reportProblem(taskId, reason) {
-      await wait();
       const trimmed = reason.trim();
       const beforeStatus = tasks.find((t) => t.id === taskId)?.status;
       let title = "";
@@ -1012,7 +1018,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     async createTaskFromTemplate(templateId, overrides) {
       const tpl = templates.find((t) => t.id === templateId);
       if (!tpl) return null;
-      await wait();
       const anchor =
         overrides?.due_date !== undefined
           ? overrides.due_date
@@ -1120,7 +1125,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     async addComment(taskId, body) {
-      await wait();
       const trimmed = body.trim();
       setComments((prev) => [
         ...prev,
@@ -1155,14 +1159,12 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     async updateProfileName(id, fullName) {
-      await wait();
       setProfiles((prev) =>
         prev.map((p) => (p.id === id ? { ...p, full_name: fullName.trim() } : p)),
       );
     },
 
     async updateProfile(id, patch) {
-      await wait();
       setProfiles((prev) =>
         prev.map((p) => {
           if (p.id !== id) return p;
@@ -1180,10 +1182,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     notifications: myNotifications,
-    unreadCount: myNotifications.filter((n) => !n.read_at).length,
+    unreadCount,
 
     async sendNotification(toUserId, message, taskId = null, kind = "sistema") {
-      await wait();
       setNotifications((prev) => [
         ...prev,
         {
@@ -1232,7 +1233,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     requests,
 
     async createRequest(input) {
-      await wait();
       const request: TaskRequest = {
         id: crypto.randomUUID(),
         title: input.title.trim(),
@@ -1272,7 +1272,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     async approveRequest(id, opts) {
-      await wait();
       const req = requests.find((r) => r.id === id);
       if (!req || req.status !== "pending") return null;
       const nowIso = new Date().toISOString();
@@ -1370,7 +1369,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     async rejectRequest(id, reason) {
-      await wait();
       const req = requests.find((r) => r.id === id);
       if (!req || req.status !== "pending") return;
       const trimmed = reason.trim();
@@ -1404,7 +1402,24 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         ]);
       }
     },
-  };
+    };
+  }, [
+    comments,
+    currentUserId,
+    customStatuses,
+    events,
+    focusIds,
+    notifications,
+    profiles,
+    projectComments,
+    projects,
+    requests,
+    savedViews,
+    snoozes,
+    taskLinks,
+    tasks,
+    templates,
+  ]);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }

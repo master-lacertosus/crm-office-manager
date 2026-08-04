@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { BookmarkPlus, X } from "lucide-react";
 
+import { pushSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toaster";
@@ -24,8 +25,6 @@ function viewParams(searchParams: URLSearchParams): string {
  */
 export function SavedViews() {
   const { savedViews, addSavedView, removeSavedView } = useAppStore();
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const toast = useToast();
   const [naming, setNaming] = React.useState(false);
@@ -55,9 +54,7 @@ export function SavedViews() {
         return (
           <span key={view.id} className="group/view relative">
             <button
-              onClick={() =>
-                router.push(`${pathname}?${view.params}`, { scroll: false })
-              }
+              onClick={() => pushSearch(`?${view.params}`)}
               className={cn(
                 "rounded-full border py-1 pr-6 pl-3 text-[12px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 active
