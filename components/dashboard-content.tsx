@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import {
   AlarmClockMinus,
@@ -13,13 +12,9 @@ import {
   Eye,
   FolderOpen,
   Inbox,
-  Presentation,
   Star,
   type LucideIcon,
 } from "lucide-react";
-
-import { StandupMode } from "@/components/standup-mode";
-import { Button } from "@/components/ui/button";
 
 import { buildAnalytics } from "@/lib/analytics";
 import { addDaysIso, timeAgo, todayIso } from "@/lib/format";
@@ -215,10 +210,6 @@ function Section({
 export function DashboardContent() {
   const { tasks, profiles, projects, currentUser, notifications, focusIds, statuses, snoozes } =
     useAppStore();
-  const searchParams = useSearchParams();
-  const [standup, setStandup] = React.useState(
-    searchParams.get("standup") === "1",
-  );
   const today = todayIso();
   const weekEnd = addDaysIso(7);
   const analytics = buildAnalytics(tasks, profiles, projects);
@@ -305,15 +296,6 @@ export function DashboardContent() {
               </>
             )}
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => setStandup(true)}
-          >
-            <Presentation data-icon="inline-start" />
-            Modalità standup
-          </Button>
         </div>
         <div className="relative">
           <ProgressRing
@@ -325,8 +307,8 @@ export function DashboardContent() {
         </div>
       </motion.section>
 
-      {/* KPI color-coded */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* KPI color-coded — auto-rows-fr: ogni riga di tile alla stessa altezza */}
+      <div className="grid auto-rows-fr grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
           label="Task aperti"
           value={analytics.open}
@@ -372,6 +354,7 @@ export function DashboardContent() {
           label="Completati · 7g"
           value={analytics.done7}
           delta={analytics.done7Delta}
+          href="/reports"
           aurora="rgb(22 163 101 / 0.11)"
           icon={
             <KpiIcon
@@ -382,7 +365,6 @@ export function DashboardContent() {
         >
           <Sparkline
             values={analytics.trend.map((p) => p.value)}
-            color="#0E7A4A"
             ariaLabel="Andamento completamenti, ultime due settimane"
           />
         </StatTile>
@@ -643,8 +625,6 @@ export function DashboardContent() {
           )}
         </Section>
       </div>
-
-      <StandupMode open={standup} onClose={() => setStandup(false)} />
     </div>
   );
 }

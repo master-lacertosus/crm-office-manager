@@ -260,7 +260,10 @@ export function ReportsContent() {
       </p>
 
       {/* KPI del periodo — reagiscono in tempo reale alla board */}
-      <motion.div {...rise(0)} className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <motion.div
+        {...rise(0)}
+        className="grid auto-rows-fr grid-cols-2 gap-4 lg:grid-cols-4"
+      >
         <StatTile
           label={`Completati · ${a.rangeDays}g`}
           value={a.doneInRange}
