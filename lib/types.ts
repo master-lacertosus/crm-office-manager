@@ -205,6 +205,33 @@ export interface AppNotification {
   read_at: string | null;
 }
 
+/** Stato di una richiesta: in attesa → approvata (diventa task) o rifiutata. */
+export type RequestStatus = "pending" | "approved" | "rejected";
+
+/**
+ * Richiesta di task: chiunque può proporla, i responsabili la approvano
+ * (scegliendo assegnatario/scadenza/progetto: nasce il task collegato)
+ * o la rifiutano con un motivo. Il richiedente ne segue lo stato.
+ */
+export interface TaskRequest {
+  id: string;
+  title: string;
+  description: string | null;
+  requester_id: string;
+  created_at: string;
+  status: RequestStatus;
+  /** Decisione (solo responsabili). */
+  decided_by: string | null;
+  decided_at: string | null;
+  rejection_reason: string | null;
+  /** Esito dell'approvazione. */
+  owner_id: string | null;
+  due_date: string | null;
+  project_id: string | null;
+  /** Task creato all'approvazione. */
+  task_id: string | null;
+}
+
 /** Ordine delle fasi core; le custom si inseriscono prima di in_review. */
 export const STATUS_ORDER: TaskStatus[] = [
   "backlog",

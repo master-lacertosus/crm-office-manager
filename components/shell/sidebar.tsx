@@ -10,6 +10,7 @@ import {
   ChevronDown,
   Compass,
   LogOut,
+  MailPlus,
   Settings,
   UserRound,
   X,
@@ -42,6 +43,7 @@ const NAV_ITEMS: {
   { href: "/calendar", label: "Calendario", icon: IconCalendar },
   { href: "/projects", label: "Progetti", icon: IconProjects },
   { href: "/problems", label: "Problemi", icon: IconProblems },
+  { href: "/requests", label: "Richieste", icon: MailPlus },
   { href: "/reports", label: "Report", icon: IconReports },
   { href: "/team", label: "Team", icon: IconTeam },
   { href: "/settings/profile", label: "Impostazioni", icon: IconSettings },
@@ -63,8 +65,15 @@ function NavLink({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const { requests, currentUser } = useAppStore();
   const active = isActive(pathname, item.href);
   const Icon = item.icon;
+
+  // Richieste in attesa di decisione: contatore per i responsabili.
+  const badge =
+    item.href === "/requests" && currentUser.role === "admin"
+      ? requests.filter((r) => r.status === "pending").length
+      : 0;
 
   return (
     <Link
@@ -90,6 +99,27 @@ function NavLink({
       >
         {item.label}
       </span>
+      {badge > 0 ? (
+        <>
+          {/* pill col conteggio dove l'etichetta è visibile */}
+          <span
+            className={cn(
+              "ml-auto inline-flex min-w-5 items-center justify-center rounded-full px-1.5 font-mono text-[11px] font-semibold",
+              active ? "bg-white/25 text-white" : "bg-brand-500 text-white",
+              labelVisibility === "lg" && "md:hidden lg:inline-flex",
+            )}
+          >
+            {badge}
+          </span>
+          {/* puntino sulla rail compatta (solo icone) */}
+          {labelVisibility === "lg" ? (
+            <span
+              aria-hidden
+              className="absolute top-1.5 right-1.5 hidden size-2 rounded-full bg-brand-500 ring-2 ring-white md:block lg:hidden"
+            />
+          ) : null}
+        </>
+      ) : null}
     </Link>
   );
 }
