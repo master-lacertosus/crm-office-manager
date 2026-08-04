@@ -53,6 +53,39 @@ Esempi:
    git branch -d francesco-design-dashboard
    ```
 
+## Più sessioni in parallelo (worktree)
+
+Due sessioni (editor, Claude, terminali) **nella stessa cartella si pestano
+i piedi**: modifiche mescolate, checkout bloccati, commit sporchi. La regola:
+**una cartella per sessione**. La copia principale è la "sessione 1"; ogni
+altra sessione lavora in una copia collegata del repo (git worktree) sotto
+`../crm-worktrees/`, ognuna col suo branch.
+
+```bash
+# apri una nuova sessione di lavoro (crea copia + branch da origin/master)
+node scripts/worktree.mjs nuovo francesco-design-navbar
+
+# poi, nella nuova finestra/sessione:
+cd ../crm-worktrees/francesco-design-navbar
+npm run dev        # parte su una porta libera in automatico
+
+# vedi le copie attive
+node scripts/worktree.mjs elenco
+
+# dopo il merge della PR, chiudi la copia
+node scripts/worktree.mjs chiudi francesco-design-navbar
+```
+
+Da sapere:
+
+- **`master` vive solo nella copia principale**: nelle altre si lavora sempre
+  su un branch (il comando `nuovo` lo crea già giusto, da `origin/master`
+  aggiornato).
+- Ogni copia ha i **suoi `node_modules`** (il comando fa l'install da solo) e
+  il suo dev server su una **porta diversa** → anche i dati demo in
+  localStorage sono separati per porta.
+- Il ciclo resta identico: commit → push → PR → merge → `chiudi`.
+
 ## Regole per convivere in due
 
 - **Mai committare direttamente su `master`.** Solo tramite Pull Request, così `master` resta sempre in uno stato buono.
