@@ -5,8 +5,10 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { CheckCheck, X } from "lucide-react";
 
 import { buildAnalytics } from "@/lib/analytics";
-import { addDaysIso, dueUrgency } from "@/lib/format";
+import { addDaysIso, dueUrgency, formatDue, todayIso } from "@/lib/format";
+import { personLeaveOnDay } from "@/lib/leave";
 import { useAppStore } from "@/lib/store";
+import { LEAVE_META } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
@@ -54,9 +56,10 @@ export function StandupMode({
   open: boolean;
   onClose: () => void;
 }) {
-  const { profiles, tasks, projects } = useAppStore();
+  const { profiles, tasks, projects, leaves } = useAppStore();
   const reduced = useReducedMotion();
   const weekAgo = addDaysIso(-6);
+  const today = todayIso();
 
   React.useEffect(() => {
     if (!open) return;
@@ -185,6 +188,7 @@ export function StandupMode({
                   <header className="flex items-center gap-3">
                     <AvatarInitials
                       name={profile.full_name}
+                      src={profile.avatar_url}
                       size="lg"
                       className="bg-brand-100 text-brand-700"
                     />
@@ -198,15 +202,36 @@ export function StandupMode({
                           : `${openTasks.length} task apert${openTasks.length === 1 ? "o" : "i"}`}
                       </p>
                     </div>
-                    {overdue > 0 ? (
-                      <span className="rounded-full bg-danger-soft px-2 py-1 text-[11px] font-bold text-danger-text">
-                        {overdue} in ritardo
-                      </span>
-                    ) : review > 0 ? (
-                      <span className="rounded-full bg-status-review-soft px-2 py-1 text-[11px] font-bold text-status-review-text">
-                        {review} in revisione
-                      </span>
-                    ) : null}
+                    {(() => {
+                      // L'assenza di oggi è la prima cosa da dire al daily.
+                      const away = personLeaveOnDay(leaves, profile.id, today);
+                      if (away) {
+                        const meta = LEAVE_META[away.type];
+                        return (
+                          <span
+                            className="rounded-full px-2 py-1 text-[11px] font-bold whitespace-nowrap"
+                            style={{ background: meta.soft, color: meta.text }}
+                          >
+                            {away.type === "ferie"
+                              ? away.end_date === today
+                                ? "In ferie · ultimo giorno"
+                                : `In ferie fino al ${formatDue(away.end_date)}`
+                              : away.time_range
+                                ? `Permesso ${away.time_range}`
+                                : "Permesso oggi"}
+                          </span>
+                        );
+                      }
+                      return overdue > 0 ? (
+                        <span className="rounded-full bg-danger-soft px-2 py-1 text-[11px] font-bold text-danger-text">
+                          {overdue} in ritardo
+                        </span>
+                      ) : review > 0 ? (
+                        <span className="rounded-full bg-status-review-soft px-2 py-1 text-[11px] font-bold text-status-review-text">
+                          {review} in revisione
+                        </span>
+                      ) : null;
+                    })()}
                   </header>
 
                   <div className="my-4 h-px bg-border-soft" />

@@ -124,7 +124,11 @@ export function MentionTextarea({
                   <AtSign className="size-3 text-brand-700" />
                 </span>
               ) : (
-                <AvatarInitials name={s.label} size="sm" />
+                <AvatarInitials
+                  name={s.label}
+                  src={profiles.find((p) => p.id === s.id)?.avatar_url}
+                  size="sm"
+                />
               )}
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-medium text-ink">

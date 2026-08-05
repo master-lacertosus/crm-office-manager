@@ -48,7 +48,11 @@ export function TaskRow({
       <DueChip iso={task.due_date} status={task.status} />
       {showOwner && owner ? (
         <span className="hidden shrink-0 @[17rem]:inline-flex">
-          <AvatarInitials name={owner.full_name} size="sm" />
+          <AvatarInitials
+            name={owner.full_name}
+            src={owner.avatar_url}
+            size="sm"
+          />
         </span>
       ) : null}
       {focusable ? (

@@ -177,7 +177,7 @@ fisicamente (si disattiva, così lo storico conserva gli autori).
 |---|---|---|
 | `id` | uuid PK | = `auth.users.id` |
 | `full_name` | text not null | |
-| `avatar_url` | text null | popolata dall'OAuth se usato; nessun upload nell'MVP |
+| `avatar_url` | text null | dall'OAuth o dall'upload in Impostazioni (fase placeholder: data URL ridotta in locale; con Supabase: Storage) |
 | `role` | text not null default `'member'` | CHECK in (`admin`, `member`) |
 | `is_active` | boolean not null default true | disattivazione al posto della cancellazione |
 | `created_at` / `updated_at` | timestamptz | `updated_at` via trigger |
@@ -283,9 +283,14 @@ bisogno.
    filtrata.
 7. Dashboard: miei task aperti, in ritardo, in scadenza questa settimana.
 8. Tutti i form con stati loading / success / empty / error; desktop-first
-   responsive; avatar a iniziali (nessun upload).
+   responsive; avatar con foto opzionale (iniziali come fallback).
 9. Azione "Duplica task" — banale da costruire, e per ora sostituisce sia i
    task ricorrenti sia i template.
+10. Ferie & permessi (ago 2026): richiesta con approvazione admin
+    motivata (notifiche a richiedente e responsabili), calendario
+    dell'ufficio con chiusure aziendali, conteggio in giorni lavorativi
+    (weekend e chiusure esclusi). Presenze visibili anche in dashboard
+    (Polso del team) e standup.
 
 ### Fuori dall'MVP — ogni voce è un rischio di complessità segnalato
 
@@ -308,7 +313,7 @@ bisogno.
 | Wiki/documenti, chat | Altri prodotti. |
 | Integrazioni (Shopify, Meta, Slack, …) | Ognuna è auth + sync + modalità di guasto. Nessuna prima che il nucleo si dimostri. |
 | Multi-workspace / multi-tenant | Vedi §6 D2 — sconsigliato **in modo permanente** per questo strumento interno. |
-| Upload avatar, dark mode, framework i18n | Rifiniture con superficie di test reale. Avatar a iniziali; una lingua, hardcoded (§6 D4). |
+| Dark mode, framework i18n | Rifiniture con superficie di test reale. Una lingua, hardcoded (§6 D4). L'upload avatar è rientrato (ago 2026): ritaglio client e data URL locale, Storage con Supabase. |
 
 ## 6. Rischi e decisioni architetturali aperte
 

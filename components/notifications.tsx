@@ -231,6 +231,7 @@ export function NotificationsBell() {
                           >
                             <AvatarInitials
                               name={sender?.full_name ?? "?"}
+                              src={sender?.avatar_url}
                               size="sm"
                               className="mt-0.5"
                             />

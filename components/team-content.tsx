@@ -106,7 +106,11 @@ export function TeamContent() {
                   !profile.is_active && "opacity-60",
                 )}
               >
-                <AvatarInitials name={profile.full_name} size="lg" />
+                <AvatarInitials
+                  name={profile.full_name}
+                  src={profile.avatar_url}
+                  size="lg"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-x-2 text-sm font-medium text-ink">
                     {profile.full_name}

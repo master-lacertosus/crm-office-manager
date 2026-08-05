@@ -32,7 +32,7 @@ cerca qui**. Se una primitiva esiste, si usa; se manca, si estende qui.
 | MetricCard | `charts/stat-tile.tsx` | label, value(+decimals), sublabel, delta(+label), icon, aurora, href, children (sparkline) |
 | StatusBadge | `status-pip.tsx` (`StatusPip`/`StatusLabel`) | forma+colore+etichetta, mai colore-solo |
 | PriorityBadge | `priority-badge.tsx` | modello reale: solo `high` è marcata (`iconOnly` per contesti densi) |
-| Avatar | `avatar-initials.tsx` | iniziali, size, nome accessibile; stato online nel footer sidebar |
+| Avatar | `avatar-initials.tsx` | foto opzionale (`src`, fallback iniziali), size, nome accessibile; stato online nel footer sidebar |
 | AvatarGroup | non esiste | da creare SOLO quando un'area lo richiederà |
 | ProgressBar | barre in workload-view / checklist (progressbar ARIA) | segmenti solo dove i dati li sostengono |
 | ProgressRing | in `dashboard-content.tsx` | percent, done/total, delta, reduced-motion |
@@ -70,6 +70,19 @@ sui preset, chip S–XL, occhio per nascondere, frecce su/giù sotto `lg`
 (che sono anche il percorso tastiera richiesto dal §10 del design system),
 annunci `aria-live`, contenuto `inert` durante l'editing, «Ripristina».
 Il blocco KPI è `fullWidth`: spostabile ma non ridimensionabile.
+
+## Ferie & Permessi (`/leave`)
+
+`components/leave-content.tsx` + logica pura in `lib/leave.ts` (conteggio
+giorni LAVORATIVI: weekend e chiusure esclusi — unico numero mostrato
+ovunque). Colori da `LEAVE_META` in `lib/types.ts`: ferie verde, permesso
+blu; «in attesa» = pill tratteggiata (forma, non solo colore); chiusure =
+fondo a righe con titolo nel primo giorno. Il form si apre con
+`?request=1` (topbar e ⌘K, shallow via `updateSearch`). Coda «Da
+approvare» solo admin: motivazione obbligatoria al rifiuto, facoltativa
+all'approvazione; avvisi a richiedente + altri responsabili. Badge conta
+pendenti sulla voce «Ferie» in sidebar (admin). Presenze riflesse nel
+Polso del team e nelle card standup.
 
 ## Esempi dalla dashboard
 

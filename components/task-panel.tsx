@@ -1286,6 +1286,7 @@ function CommentSection({ taskId }: { taskId: string }) {
                   <div className="group/comment flex gap-2.5">
                     <AvatarInitials
                       name={author?.full_name ?? "?"}
+                      src={author?.avatar_url}
                       size="sm"
                       className="mt-0.5"
                     />

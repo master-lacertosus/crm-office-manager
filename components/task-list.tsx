@@ -50,7 +50,11 @@ function Row({ task }: { task: Task }) {
       <span className="hidden w-32 items-center gap-1.5 truncate lg:flex">
         {owner ? (
           <>
-            <AvatarInitials name={owner.full_name} size="sm" />
+            <AvatarInitials
+              name={owner.full_name}
+              src={owner.avatar_url}
+              size="sm"
+            />
             <span className="truncate text-xs text-ink-secondary">
               {owner.full_name.split(" ")[0]}
             </span>

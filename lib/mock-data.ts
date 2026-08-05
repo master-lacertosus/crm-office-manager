@@ -1,6 +1,8 @@
 import { addDaysIso } from "@/lib/format";
 import type {
   AppNotification,
+  CompanyClosure,
+  LeaveRequest,
   Profile,
   Project,
   ProjectComment,
@@ -700,6 +702,118 @@ export const MOCK_REQUESTS: TaskRequest[] = [
     due_date: null,
     project_id: null,
     task_id: null,
+  },
+];
+
+/** Ferie e permessi — un mix di stati per esercitare calendario e coda. */
+export const MOCK_LEAVES: LeaveRequest[] = [
+  {
+    // In corso: Klea è in ferie da domani a fine settimana prossima
+    id: "00000000-0000-4000-8000-000000000601",
+    requester_id: U.klea,
+    type: "ferie",
+    start_date: addDaysIso(1),
+    end_date: addDaysIso(7),
+    time_range: null,
+    note: "Settimana al mare con la famiglia.",
+    status: "approved",
+    created_at: t(60 * 24 * 9),
+    decided_by: U.sara,
+    decided_at: t(60 * 24 * 8),
+    decision_note: "Buon riposo! Copre Riccardo sui social.",
+  },
+  {
+    // Oggi: permesso pomeridiano di Riccardo (visibile in «oggi fuori»)
+    id: "00000000-0000-4000-8000-000000000602",
+    requester_id: U.riccardo,
+    type: "permesso",
+    start_date: addDaysIso(0),
+    end_date: addDaysIso(0),
+    time_range: "14:00–18:00",
+    note: "Visita medica.",
+    status: "approved",
+    created_at: t(60 * 24 * 2),
+    decided_by: U.francesco,
+    decided_at: t(60 * 24 * 1),
+    decision_note: null,
+  },
+  {
+    // In attesa e IMMINENTE: permesso di Lorenzo per domani (urgenza in coda)
+    id: "00000000-0000-4000-8000-000000000603",
+    requester_id: U.lorenzo,
+    type: "permesso",
+    start_date: addDaysIso(1),
+    end_date: addDaysIso(1),
+    time_range: "9:00–13:00",
+    note: "Commissione in comune, recupero nel pomeriggio.",
+    status: "pending",
+    created_at: t(60 * 5),
+    decided_by: null,
+    decided_at: null,
+    decision_note: null,
+  },
+  {
+    // In attesa: ferie di Enrico più avanti nel mese
+    id: "00000000-0000-4000-8000-000000000604",
+    requester_id: U.enrico,
+    type: "ferie",
+    start_date: addDaysIso(16),
+    end_date: addDaysIso(20),
+    time_range: null,
+    note: null,
+    status: "pending",
+    created_at: t(60 * 26),
+    decided_by: null,
+    decided_at: null,
+    decision_note: null,
+  },
+  {
+    // Rifiutata con motivazione (storico visibile a Matteo e agli admin)
+    id: "00000000-0000-4000-8000-000000000605",
+    requester_id: U.matteo,
+    type: "ferie",
+    start_date: addDaysIso(24),
+    end_date: addDaysIso(28),
+    time_range: null,
+    note: "Vorrei allungare il ponte.",
+    status: "rejected",
+    created_at: t(60 * 24 * 6),
+    decided_by: U.sara,
+    decided_at: t(60 * 24 * 5),
+    decision_note: "Siamo già in due fuori quella settimana: proponi date dopo il rientro di Enrico.",
+  },
+  {
+    // Storico dell'utente demo: permesso già goduto
+    id: "00000000-0000-4000-8000-000000000606",
+    requester_id: U.francesco,
+    type: "permesso",
+    start_date: addDaysIso(-6),
+    end_date: addDaysIso(-6),
+    time_range: "15:00–18:00",
+    note: null,
+    status: "approved",
+    created_at: t(60 * 24 * 8),
+    decided_by: U.sara,
+    decided_at: t(60 * 24 * 7),
+    decision_note: null,
+  },
+];
+
+/** Chiusure aziendali decise dai responsabili. */
+export const MOCK_CLOSURES: CompanyClosure[] = [
+  {
+    id: "00000000-0000-4000-8000-000000000701",
+    title: "Ponte di Ferragosto",
+    start_date: addDaysIso(10),
+    end_date: addDaysIso(13),
+    created_by: U.sara,
+  },
+  {
+    id: "00000000-0000-4000-8000-000000000702",
+    title: "Inventario magazzino",
+    start_date: addDaysIso(30),
+    end_date: addDaysIso(30),
+    created_by: U.francesco,
   },
 ];
 
