@@ -231,6 +231,7 @@ supabase/           # migrazione SQL iniziale (schema + RLS + trigger)
 | [`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md) | Modello di sicurezza: ruoli, RLS, service role |
 | [`docs/design-system.md`](docs/design-system.md) | Token, tipografia, colore, motion |
 | [`docs/ui-primitives.md`](docs/ui-primitives.md) | Catalogo dei componenti riusabili |
+| [`CHANGELOG.md`](CHANGELOG.md) | Storico di tutti gli update (uno per Release GitHub) |
 
 ## Come lavoriamo
 
@@ -242,7 +243,9 @@ node scripts/worktree.mjs elenco
 node scripts/worktree.mjs chiudi francesco-argomento-feature  # dopo il merge della PR
 ```
 
-Regole complete in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Ogni upgrade o nuova funzionalità arriva su GitHub anche come **Update**: voce
+nel [`CHANGELOG.md`](CHANGELOG.md) nella stessa PR e Release «Update» dopo il
+merge. Regole complete in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ---
 

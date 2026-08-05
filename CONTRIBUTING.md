@@ -53,6 +53,30 @@ Esempi:
    git branch -d francesco-design-dashboard
    ```
 
+## Ogni novità diventa un «Update» su GitHub
+
+Standard del repo: upgrade, aggiornamenti e nuove funzionalità non finiscono
+solo nel codice — arrivano su GitHub anche come **Update leggibile**.
+
+1. **Nella PR**, prima del merge:
+   - aggiungi la voce a [`CHANGELOG.md`](CHANGELOG.md) sotto la data del
+     giorno (o in «Non rilasciato»), con il riferimento `(#PR)`;
+   - se cambia ciò che l'utente vede: allinea la sezione Funzionalità del
+     [`README.md`](README.md) e, quando serve, gli screenshot in
+     `docs/screenshots/`.
+2. **Dopo il merge**, pubblica la Release «Update» con le stesse note del
+   changelog:
+
+   ```bash
+   gh release create update-AAAAMMGG \
+     --title "Update AAAA-MM-GG — titolo breve" \
+     --notes "…voci del changelog del giorno…"
+   # più update nello stesso giorno: update-AAAAMMGG-2, -3…
+   ```
+
+La regola d'oro: **se non è nel changelog e nella release, l'update non è
+finito.** Il changelog è lo storico completo; la release è la vetrina.
+
 ## Più sessioni in parallelo (worktree)
 
 Due sessioni (editor, Claude, terminali) **nella stessa cartella si pestano
