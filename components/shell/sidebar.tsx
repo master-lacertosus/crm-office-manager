@@ -23,6 +23,7 @@ import { AvatarInitials } from "@/components/avatar-initials";
 import {
   IconCalendar,
   IconDashboard,
+  IconLeave,
   IconProblems,
   IconProjects,
   IconReports,
@@ -44,6 +45,7 @@ const NAV_ITEMS: {
   { href: "/projects", label: "Progetti", icon: IconProjects },
   { href: "/problems", label: "Problemi", icon: IconProblems },
   { href: "/requests", label: "Richieste", icon: MailPlus },
+  { href: "/leave", label: "Ferie", icon: IconLeave },
   { href: "/reports", label: "Report", icon: IconReports },
   { href: "/team", label: "Team", icon: IconTeam },
   { href: "/settings/profile", label: "Impostazioni", icon: IconSettings },
@@ -65,15 +67,19 @@ function NavLink({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const { requests, currentUser } = useAppStore();
+  const { requests, leaves, currentUser } = useAppStore();
   const active = isActive(pathname, item.href);
   const Icon = item.icon;
 
-  // Richieste in attesa di decisione: contatore per i responsabili.
+  // In attesa di decisione: contatore per i responsabili.
   const badge =
-    item.href === "/requests" && currentUser.role === "admin"
-      ? requests.filter((r) => r.status === "pending").length
-      : 0;
+    currentUser.role !== "admin"
+      ? 0
+      : item.href === "/requests"
+        ? requests.filter((r) => r.status === "pending").length
+        : item.href === "/leave"
+          ? leaves.filter((l) => l.status === "pending").length
+          : 0;
 
   return (
     <Link
@@ -193,7 +199,11 @@ function UserFooter({ compact = false }: { compact?: boolean }) {
                   }}
                   className={item}
                 >
-                  <AvatarInitials name={p.full_name} size="sm" />
+                  <AvatarInitials
+                    name={p.full_name}
+                    src={p.avatar_url}
+                    size="sm"
+                  />
                   <span className="min-w-0 flex-1 truncate">
                     {p.full_name}
                     <span className="ml-1 text-[11px] font-normal text-ink-muted">
@@ -227,6 +237,7 @@ function UserFooter({ compact = false }: { compact?: boolean }) {
         <span className="relative shrink-0">
           <AvatarInitials
             name={currentUser.full_name}
+            src={currentUser.avatar_url}
             className="bg-brand-100 text-brand-700"
           />
           <span

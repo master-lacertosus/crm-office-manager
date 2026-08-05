@@ -213,7 +213,11 @@ function PendingCard({ req }: { req: TaskRequest }) {
       )}
     >
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-        <AvatarInitials name={requester?.full_name ?? "?"} size="sm" />
+        <AvatarInitials
+          name={requester?.full_name ?? "?"}
+          src={requester?.avatar_url}
+          size="sm"
+        />
         <span className="text-[13px] font-medium text-ink">
           {requester?.full_name ?? "—"}
         </span>
@@ -365,7 +369,11 @@ function RequestRow({ req, showRequester }: { req: TaskRequest; showRequester?: 
   return (
     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-accent/60">
       {showRequester ? (
-        <AvatarInitials name={requester?.full_name ?? "?"} size="sm" />
+        <AvatarInitials
+          name={requester?.full_name ?? "?"}
+          src={requester?.avatar_url}
+          size="sm"
+        />
       ) : null}
       <span className="min-w-0 flex-1 basis-48">
         <span className="flex min-w-0 items-center gap-1.5">

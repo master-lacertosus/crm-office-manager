@@ -88,7 +88,11 @@ export function ArchiveView() {
                     : "—"}
                 </span>
                 {owner ? (
-                  <AvatarInitials name={owner.full_name} size="sm" />
+                  <AvatarInitials
+                    name={owner.full_name}
+                    src={owner.avatar_url}
+                    size="sm"
+                  />
                 ) : null}
                 <Button
                   variant="ghost"

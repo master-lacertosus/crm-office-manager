@@ -56,7 +56,11 @@ export function WorkloadView() {
         >
           <header className="space-y-2 px-1.5 pt-1 pb-2.5">
             <div className="flex items-center gap-2">
-              <AvatarInitials name={profile.full_name} size="sm" />
+              <AvatarInitials
+                name={profile.full_name}
+                src={profile.avatar_url}
+                size="sm"
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] font-semibold text-ink">
                   {profile.full_name}

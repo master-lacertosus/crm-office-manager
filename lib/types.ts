@@ -57,6 +57,9 @@ export interface Profile {
   role: Role;
   /** Qualifica mostrata accanto al nome (es. «Responsabile · Webmaster»). */
   title?: string;
+  /** Foto del profilo — fase placeholder: data URL ridimensionata salvata
+   *  in locale; con Supabase: URL di Storage (colonna già a schema). */
+  avatar_url?: string | null;
   is_active: boolean;
 }
 
@@ -203,6 +206,66 @@ export interface AppNotification {
   kind?: NotificationKind;
   created_at: string;
   read_at: string | null;
+}
+
+/** Tipo di assenza richiedibile: ferie (giorni) o permesso (ore/giornata). */
+export type LeaveType = "ferie" | "permesso";
+
+export type LeaveStatus = "pending" | "approved" | "rejected";
+
+/** Etichette e colori delle assenze (tinte dai token semantici: ferie
+ *  verde, permesso blu — il warning resta allo stato «in attesa»). */
+export const LEAVE_META: Record<
+  LeaveType,
+  { label: string; labelOne: string; color: string; soft: string; text: string }
+> = {
+  ferie: {
+    label: "Ferie",
+    labelOne: "Ferie",
+    color: "#16A365",
+    soft: "#E7F6EF",
+    text: "#0E7A4A",
+  },
+  permesso: {
+    label: "Permessi",
+    labelOne: "Permesso",
+    color: "#3B82F6",
+    soft: "#EBF2FE",
+    text: "#1D4ED8",
+  },
+};
+
+/**
+ * Richiesta di ferie/permesso: chiunque la invia, i responsabili decidono
+ * con motivazione; richiedente e responsabili ricevono l'esito. Le
+ * approvate compongono il calendario dell'ufficio.
+ */
+export interface LeaveRequest {
+  id: string;
+  requester_id: string;
+  type: LeaveType;
+  /** Intervallo ISO incluso (start = end per il giorno singolo). */
+  start_date: string;
+  end_date: string;
+  /** Solo permesso: fascia oraria libera (es. «9:00–13:00»). */
+  time_range?: string | null;
+  /** Motivo/contesto del richiedente (facoltativo). */
+  note: string | null;
+  status: LeaveStatus;
+  created_at: string;
+  /** Decisione (solo responsabili), con motivazione visibile a entrambi. */
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+}
+
+/** Chiusura aziendale (festività, ponti, inventario): vale per tutti. */
+export interface CompanyClosure {
+  id: string;
+  title: string;
+  start_date: string;
+  end_date: string;
+  created_by: string;
 }
 
 /** Stato di una richiesta: in attesa → approvata (diventa task) o rifiutata. */

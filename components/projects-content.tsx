@@ -118,6 +118,7 @@ export function ProjectsContent() {
                       <AvatarInitials
                         key={p!.id}
                         name={p!.full_name}
+                        src={p!.avatar_url}
                         size="sm"
                         className="ring-2 ring-white"
                       />

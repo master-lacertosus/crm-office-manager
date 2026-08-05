@@ -69,7 +69,13 @@ export function CardVisual({
             />
           ) : null}
         </span>
-        {owner ? <AvatarInitials name={owner.full_name} size="sm" /> : null}
+        {owner ? (
+          <AvatarInitials
+            name={owner.full_name}
+            src={owner.avatar_url}
+            size="sm"
+          />
+        ) : null}
       </div>
     </div>
   );
