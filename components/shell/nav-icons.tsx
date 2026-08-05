@@ -115,6 +115,18 @@ export function IconTeam({ className }: NavIconProps) {
   );
 }
 
+export function IconLeave({ className }: NavIconProps) {
+  return (
+    <Svg className={className}>
+      {/* ombrellone: cupola duotone con spicchio e palo a uncino */}
+      <path d="M4 11a8 8 0 0 1 16 0Z" fill="currentColor" opacity="0.16" stroke="none" />
+      <path d="M4 11a8 8 0 0 1 16 0Z" />
+      <path d="M8.2 11C8.2 6.6 9.9 3 12 3s3.8 3.6 3.8 8" opacity="0.6" />
+      <path d="M12 11v7.5a1.7 1.7 0 0 0 3.4 0" />
+    </Svg>
+  );
+}
+
 export function IconSettings({ className }: NavIconProps) {
   return (
     <Svg className={className}>

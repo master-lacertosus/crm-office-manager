@@ -20,6 +20,7 @@ import {
 
 import { buildAnalytics } from "@/lib/analytics";
 import { addDaysIso, timeAgo, todayIso } from "@/lib/format";
+import { personLeaveOnDay } from "@/lib/leave";
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -222,7 +223,7 @@ function Section({
 }
 
 export function DashboardContent() {
-  const { tasks, profiles, projects, currentUser, notifications, focusIds, statuses, snoozes } =
+  const { tasks, profiles, projects, currentUser, notifications, focusIds, statuses, snoozes, leaves } =
     useAppStore();
   const today = todayIso();
   const weekEnd = addDaysIso(7);
@@ -420,6 +421,7 @@ export function DashboardContent() {
                 <>
                   <AvatarInitials
                     name={sender?.full_name ?? "?"}
+                    src={sender?.avatar_url}
                     size="sm"
                     className="mt-0.5"
                   />
@@ -534,9 +536,14 @@ export function DashboardContent() {
                 (t) =>
                   t.status !== "done" && t.due_date && t.due_date < today,
               ).length;
-              // Etichetta di carico spiegata (solo presentazione)
-              const load =
-                personLate > 0
+              // Etichetta di carico spiegata (solo presentazione).
+              // L'assenza di oggi vince su tutto: chi è fuori è fuori.
+              const away = personLeaveOnDay(leaves, person.id, today);
+              const load = away
+                ? away.type === "ferie"
+                  ? { label: "In ferie", cls: "text-success-text" }
+                  : { label: "Permesso", cls: "text-info-text" }
+                : personLate > 0
                   ? { label: "In ritardo", cls: "text-danger-text" }
                   : personOpen === 0
                     ? { label: "Disponibile", cls: "text-success-text" }
@@ -551,7 +558,11 @@ export function DashboardContent() {
                     href={`/tasks?owner=${person.id}`}
                     className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 outline-none transition-colors hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <AvatarInitials name={person.full_name} size="sm" />
+                    <AvatarInitials
+                      name={person.full_name}
+                      src={person.avatar_url}
+                      size="sm"
+                    />
                     <span className="w-16 truncate text-[13px] font-medium text-ink">
                       {person.full_name.split(" ")[0]}
                     </span>
@@ -685,20 +696,6 @@ export function DashboardContent() {
               </>
             )}
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            aria-pressed={editing}
-            onClick={() => setEditing((v) => !v)}
-          >
-            {editing ? (
-              <Check data-icon="inline-start" />
-            ) : (
-              <SlidersHorizontal data-icon="inline-start" />
-            )}
-            {editing ? "Fine" : "Personalizza"}
-          </Button>
         </div>
         <div className="relative">
           <ProgressRing
@@ -709,6 +706,26 @@ export function DashboardContent() {
           />
         </div>
       </motion.section>
+
+      {/* L'interruttore di personalizzazione sta sul bordo della griglia
+          che governa: il raggio d'azione è autoevidente e i blocchi ghost
+          compaiono subito sotto. */}
+      <div className="-mb-1 flex justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-pressed={editing}
+          onClick={() => setEditing((v) => !v)}
+          className={cn(!editing && "text-ink-muted hover:text-ink")}
+        >
+          {editing ? (
+            <Check data-icon="inline-start" />
+          ) : (
+            <SlidersHorizontal data-icon="inline-start" />
+          )}
+          {editing ? "Fine" : "Personalizza"}
+        </Button>
+      </div>
 
       {/* Blocchi componibili su griglia a 12 colonne (una colonna sotto lg) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">

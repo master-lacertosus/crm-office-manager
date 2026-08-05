@@ -15,6 +15,7 @@ import {
   Search,
   Settings,
   Shield,
+  TreePalm,
   TriangleAlert,
   User,
   Users,
@@ -85,6 +86,13 @@ export function CommandPalette() {
           ]
         : []),
       {
+        id: "leave-req",
+        group: "Azioni",
+        label: "Richiedi ferie o permesso",
+        icon: TreePalm,
+        run: () => go("/leave?request=1"),
+      },
+      {
         id: "capo",
         group: "Azioni",
         label: "Evoca il Capo",
@@ -101,6 +109,7 @@ export function CommandPalette() {
       { id: "p", group: "Vai a", label: "Progetti", icon: Folder, run: () => go("/projects") },
       { id: "pr", group: "Vai a", label: "Problemi", icon: TriangleAlert, run: () => go("/problems") },
       { id: "rq", group: "Vai a", label: "Richieste", icon: MailPlus, run: () => go("/requests") },
+      { id: "lv", group: "Vai a", label: "Ferie & Permessi", icon: TreePalm, run: () => go("/leave") },
       { id: "r", group: "Vai a", label: "Report", icon: ChartNoAxesColumn, run: () => go("/reports") },
       { id: "te", group: "Vai a", label: "Team", icon: Users, run: () => go("/team") },
       { id: "s", group: "Vai a", label: "Impostazioni", icon: Settings, run: () => go("/settings/profile") },

@@ -32,7 +32,7 @@ nessuna cancellazione fisica dei profili (si disattiva).
 |---|---|---|
 | `id` | uuid PK | FK → `auth.users(id)` ON DELETE CASCADE |
 | `full_name` | text NOT NULL | 1–80 caratteri (trim) |
-| `avatar_url` | text NULL | riempita dall'OAuth se usato |
+| `avatar_url` | text NULL | dall'OAuth o dall'upload in Impostazioni (poi: Storage) |
 | `role` | text NOT NULL DEFAULT `'member'` | CHECK in (`admin`, `member`) |
 | `is_active` | boolean NOT NULL DEFAULT true | disattivazione ≠ cancellazione |
 | `created_at` / `updated_at` | timestamptz NOT NULL DEFAULT now() | `updated_at` via trigger |
@@ -78,6 +78,29 @@ sulla parte locale dell'email. Nessuna INSERT/DELETE via API (niente policy).
 | `author_id` | uuid NOT NULL | FK → `profiles(id)` |
 | `body` | text NOT NULL | 1–4000 caratteri (trim); piatti, niente thread |
 | `created_at` / `updated_at` | timestamptz NOT NULL DEFAULT now() | |
+
+### `leave_requests` — ferie e permessi (fase placeholder: `lib/types.ts`)
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `id` | uuid PK DEFAULT `gen_random_uuid()` | |
+| `requester_id` | uuid NOT NULL | FK → `profiles(id)` |
+| `type` | text NOT NULL | CHECK in (`ferie`, `permesso`) |
+| `start_date` / `end_date` | date NOT NULL | intervallo incluso; CHECK `end_date >= start_date` |
+| `time_range` | text NULL | solo permesso, fascia libera («9:00–13:00») |
+| `note` | text NULL | motivo del richiedente |
+| `status` | text NOT NULL DEFAULT `'pending'` | CHECK in (`pending`, `approved`, `rejected`) |
+| `decided_by` / `decided_at` / `decision_note` | uuid / timestamptz / text NULL | decisione admin con motivazione |
+| `created_at` | timestamptz NOT NULL DEFAULT now() | |
+
+### `company_closures` — chiusure aziendali (fase placeholder: `lib/types.ts`)
+
+| Colonna | Tipo | Vincoli |
+|---|---|---|
+| `id` | uuid PK DEFAULT `gen_random_uuid()` | |
+| `title` | text NOT NULL | |
+| `start_date` / `end_date` | date NOT NULL | CHECK `end_date >= start_date` |
+| `created_by` | uuid NOT NULL | FK → `profiles(id)`; solo admin (RLS) |
 
 ## Indici
 

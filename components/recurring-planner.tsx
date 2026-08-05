@@ -129,6 +129,8 @@ export function RecurringPlanner() {
 
   const ownerName = (id: string) =>
     profiles.find((p) => p.id === id)?.full_name ?? "—";
+  const ownerAvatar = (id: string) =>
+    profiles.find((p) => p.id === id)?.avatar_url;
 
   /* Il dialog vive in un portal sul body: la topbar ha backdrop-blur, che
      farebbe da containing block per i discendenti position:fixed. */
@@ -229,6 +231,7 @@ export function RecurringPlanner() {
                         <DueChip iso={active.due_date} status={active.status} />
                         <AvatarInitials
                           name={ownerName(active.owner_id)}
+                          src={ownerAvatar(active.owner_id)}
                           size="sm"
                         />
                         <Button

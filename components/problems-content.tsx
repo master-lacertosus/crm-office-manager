@@ -78,7 +78,11 @@ export function ProblemsContent() {
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border-soft pt-3">
                 {owner ? (
                   <span className="flex items-center gap-1.5">
-                    <AvatarInitials name={owner.full_name} size="sm" />
+                    <AvatarInitials
+                      name={owner.full_name}
+                      src={owner.avatar_url}
+                      size="sm"
+                    />
                     <span className="text-[12px] text-ink-secondary">
                       Sblocca: <b>{owner.full_name.split(" ")[0]}</b>
                     </span>

@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import {
+  diffIsoDays,
   nextMonthlyIso,
   shiftIsoDays,
   shiftIsoMonths,
@@ -12,8 +13,10 @@ import { extractMentionIds } from "@/lib/mentions";
 import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
 import {
   CURRENT_USER_ID,
+  MOCK_CLOSURES,
   MOCK_COMMENTS,
   MOCK_EVENTS,
+  MOCK_LEAVES,
   MOCK_NOTIFICATIONS,
   MOCK_PROFILES,
   MOCK_PROJECTS,
@@ -23,9 +26,13 @@ import {
   MOCK_TASK_LINKS,
   MOCK_TEMPLATES,
 } from "@/lib/mock-data";
+import { formatRange, workingDaysCount } from "@/lib/leave";
 import type {
   AppNotification,
+  CompanyClosure,
   CustomStatus,
+  LeaveRequest,
+  LeaveType,
   NotificationKind,
   Profile,
   Project,
@@ -169,6 +176,24 @@ const seedEscalatedRequests = (requests: TaskRequest[], now: number): string[] =
     )
     .map((r) => r.id);
 
+/** Una richiesta ferie merita il promemoria? In attesa da più di 3 giorni,
+ *  oppure partenza ormai vicina (≤3 g): decidere tardi è un no di fatto. */
+const leaveEscalationDue = (
+  l: LeaveRequest,
+  now: number,
+  today: string,
+): boolean =>
+  l.status === "pending" &&
+  (now - new Date(l.created_at).getTime() > REQUEST_ESCALATION_MS ||
+    (l.start_date >= today && diffIsoDays(today, l.start_date) <= 3));
+
+const seedEscalatedLeaves = (
+  leaves: LeaveRequest[],
+  now: number,
+  today: string,
+): string[] =>
+  leaves.filter((l) => leaveEscalationDue(l, now, today)).map((l) => l.id);
+
 /** Eventi di cronologia derivati da una modifica (campi tracciati). */
 function diffTaskEvents(before: Task, after: Task, actorId: string): TaskEvent[] {
   const out: TaskEvent[] = [];
@@ -275,6 +300,8 @@ interface AppStore {
     id: string,
     patch: { full_name?: string; title?: string | null },
   ) => Promise<void>;
+  /** Imposta o rimuove (null) la foto del profilo (data URL ridotta). */
+  setAvatar: (profileId: string, dataUrl: string | null) => void;
   notifications: AppNotification[];
   unreadCount: number;
   sendNotification: (
@@ -306,6 +333,32 @@ interface AppStore {
   ) => Promise<Task | null>;
   /** Rifiuta (solo admin) con motivo; il richiedente riceve l'avviso. */
   rejectRequest: (id: string, reason: string) => Promise<void>;
+  /** Ferie e permessi: richieste con approvazione dei responsabili. */
+  leaves: LeaveRequest[];
+  createLeave: (input: {
+    type: LeaveType;
+    start_date: string;
+    end_date: string;
+    time_range?: string | null;
+    note?: string;
+  }) => Promise<LeaveRequest>;
+  /** Ritira una propria richiesta in attesa; restituisce l'annulla. */
+  withdrawLeave: (id: string) => (() => void) | null;
+  /** Decisione (solo admin) con motivazione: avvisa richiedente e gli
+   *  altri responsabili. Il motivo è obbligatorio per il rifiuto. */
+  decideLeave: (
+    id: string,
+    decision: "approved" | "rejected",
+    note: string,
+  ) => Promise<void>;
+  /** Chiusure aziendali (solo admin): compaiono sul calendario di tutti. */
+  closures: CompanyClosure[];
+  addClosure: (input: {
+    title: string;
+    start_date: string;
+    end_date: string;
+  }) => void;
+  removeClosure: (id: string) => (() => void) | null;
 }
 
 const StoreContext = React.createContext<AppStore | null>(null);
@@ -333,13 +386,18 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = React.useState<TaskEvent[]>(MOCK_EVENTS);
   const [requests, setRequests] =
     React.useState<TaskRequest[]>(MOCK_REQUESTS);
+  const [leaves, setLeaves] = React.useState<LeaveRequest[]>(MOCK_LEAVES);
+  const [closures, setClosures] =
+    React.useState<CompanyClosure[]>(MOCK_CLOSURES);
   /* Marcatori «già segnalato» delle escalation: il ref fa da guardia
      sincrona dentro la sessione, lo stato è lo specchio PERSISTITO — senza,
      ogni ricarica ri-generava le stesse notifiche all'infinito. */
   const [escalatedProblems, setEscalatedProblems] = React.useState<string[]>([]);
   const [escalatedRequests, setEscalatedRequests] = React.useState<string[]>([]);
+  const [escalatedLeaves, setEscalatedLeaves] = React.useState<string[]>([]);
   const escalatedRef = React.useRef(new Set<string>());
   const requestsEscalatedRef = React.useRef(new Set<string>());
+  const leavesEscalatedRef = React.useRef(new Set<string>());
 
   /* ------------------------------------------------------------------ */
   /* Persistenza locale dell'intero workspace (fase placeholder).        */
@@ -372,6 +430,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             if (data.focusIds) setFocusIds(data.focusIds);
             if (data.customStatuses) setCustomStatuses(data.customStatuses);
             if (data.requests) setRequests(data.requests);
+            if (data.leaves) setLeaves(data.leaves);
+            if (data.closures) setClosures(data.closures);
             // Marcatori di escalation: caricati, o dedotti alla prima
             // apertura post-fix (campo assente nello stato salvato).
             const now = Date.now();
@@ -381,10 +441,15 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             const staleReqs: string[] = Array.isArray(data.escalatedRequests)
               ? data.escalatedRequests
               : seedEscalatedRequests(data.requests ?? [], now);
+            const staleLeaves: string[] = Array.isArray(data.escalatedLeaves)
+              ? data.escalatedLeaves
+              : seedEscalatedLeaves(data.leaves ?? [], now, todayIso());
             escalatedRef.current = new Set(problems);
             requestsEscalatedRef.current = new Set(staleReqs);
+            leavesEscalatedRef.current = new Set(staleLeaves);
             setEscalatedProblems(problems);
             setEscalatedRequests(staleReqs);
+            setEscalatedLeaves(staleLeaves);
           }
         }
       } catch {
@@ -412,8 +477,11 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             focusIds,
             customStatuses,
             requests,
+            leaves,
+            closures,
             escalatedProblems,
             escalatedRequests,
+            escalatedLeaves,
           }),
         );
       } catch {
@@ -440,8 +508,11 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     focusIds,
     customStatuses,
     requests,
+    leaves,
+    closures,
     escalatedProblems,
     escalatedRequests,
+    escalatedLeaves,
   ]);
 
   /* Auto-archivio: i Fatto completati da più di 14 giorni escono dalla
@@ -515,6 +586,31 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, [templates]);
 
+  /* Foto profilo (id → data URL). Chiave separata da office-state: quel
+     payload si riserializza a ogni mutazione dei task e non deve portarsi
+     dietro le immagini; queste si riscrivono solo quando cambiano. */
+  const [avatars, setAvatars] = React.useState<Record<string, string>>({});
+  const avatarsLoadedRef = React.useRef(false);
+  React.useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const raw = localStorage.getItem("profile-avatars");
+        if (raw) setAvatars(JSON.parse(raw));
+      } catch {
+        /* ignora */
+      }
+      avatarsLoadedRef.current = true;
+    });
+  }, []);
+  React.useEffect(() => {
+    if (!avatarsLoadedRef.current) return;
+    try {
+      localStorage.setItem("profile-avatars", JSON.stringify(avatars));
+    } catch {
+      /* quota piena: la foto resta per la sessione, senza persistere */
+    }
+  }, [avatars]);
+
   /* Risveglio degli snooze scaduti: il task torna con un avviso */
   React.useEffect(() => {
     const today = todayIso();
@@ -586,6 +682,54 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     });
   }, [requests]);
 
+  /* Ferie in attesa: promemoria one-shot ai responsabili quando la
+     richiesta langue (>3 g) o quando la partenza è ormai vicina (≤3 g) —
+     una decisione tardiva è un no di fatto. */
+  React.useEffect(() => {
+    const now = Date.now();
+    const today = todayIso();
+    const due = leaves.filter((l) => leaveEscalationDue(l, now, today));
+    if (due.length === 0) return;
+    queueMicrotask(() => {
+      // Il «già segnalato» si valuta QUI: la microtask gira dopo quella di
+      // idratazione, quindi i marcatori persistiti sono già caricati.
+      const stale = due.filter((l) => !leavesEscalatedRef.current.has(l.id));
+      if (stale.length === 0) return;
+      for (const l of stale) leavesEscalatedRef.current.add(l.id);
+      setEscalatedLeaves((prev) => [...prev, ...stale.map((l) => l.id)]);
+      const admins = MOCK_PROFILES.filter(
+        (p) => p.is_active && p.role === "admin",
+      );
+      setNotifications((prev) => [
+        ...prev,
+        ...stale.flatMap((leave) => {
+          const who =
+            MOCK_PROFILES.find((p) => p.id === leave.requester_id)?.full_name.split(
+              " ",
+            )[0] ?? "collega";
+          const label = leave.type === "ferie" ? "Ferie" : "Permesso";
+          const days = diffIsoDays(today, leave.start_date);
+          const when =
+            days > 0
+              ? `parte tra ${days} g`
+              : days === 0
+                ? "parte oggi"
+                : "data già passata";
+          return admins.map((admin) => ({
+            id: crypto.randomUUID(),
+            to_user_id: admin.id,
+            from_user_id: leave.requester_id,
+            message: `⏳ ${label} di ${who} da decidere (${formatRange(leave.start_date, leave.end_date)} — ${when}).`,
+            task_id: null,
+            kind: "sistema" as const,
+            created_at: new Date().toISOString(),
+            read_at: null,
+          }));
+        }),
+      ]);
+    });
+  }, [leaves]);
+
   /* Escalation: problemi fermi da più di 48h → avviso one-shot agli admin
      per EPISODIO di blocco (task + problem_since): sbloccato e ri-segnalato
      riparte, ricaricare la pagina no. */
@@ -648,8 +792,14 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         ...CORE_STATUS_META[key],
       })),
     ];
+    // Le foto vivono in una mappa a parte: qui si fondono nei profili,
+    // così ogni consumatore legge un solo campo (p.avatar_url).
+    const profilesResolved = profiles.map((p) =>
+      avatars[p.id] ? { ...p, avatar_url: avatars[p.id] } : p,
+    );
     const currentUser =
-      profiles.find((p) => p.id === currentUserId) ?? profiles[0];
+      profilesResolved.find((p) => p.id === currentUserId) ??
+      profilesResolved[0];
     const myNotifications = notifications
       .filter((n) => n.to_user_id === currentUser.id)
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -662,7 +812,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     switchUser(profileId) {
       setCurrentUserId(profileId);
     },
-    profiles,
+    profiles: profilesResolved,
     projects,
     tasks,
     comments,
@@ -1269,6 +1419,15 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       );
     },
 
+    setAvatar(profileId, dataUrl) {
+      setAvatars((prev) => {
+        const next = { ...prev };
+        if (dataUrl) next[profileId] = dataUrl;
+        else delete next[profileId];
+        return next;
+      });
+    },
+
     notifications: myNotifications,
     unreadCount,
 
@@ -1490,13 +1649,199 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         ]);
       }
     },
+
+    leaves,
+
+    async createLeave(input) {
+      const leave: LeaveRequest = {
+        id: crypto.randomUUID(),
+        requester_id: currentUser.id,
+        type: input.type,
+        start_date: input.start_date,
+        end_date: input.end_date,
+        time_range: input.time_range ?? null,
+        note: input.note?.trim() || null,
+        status: "pending",
+        created_at: new Date().toISOString(),
+        decided_by: null,
+        decided_at: null,
+        decision_note: null,
+      };
+      setLeaves((prev) => [...prev, leave]);
+      const range = formatRange(leave.start_date, leave.end_date);
+      const days = workingDaysCount(leave.start_date, leave.end_date, closures);
+      const detail =
+        leave.type === "permesso" && leave.time_range
+          ? `${range} · ${leave.time_range}`
+          : `${range} (${days} gg lavorativ${days === 1 ? "o" : "i"})`;
+      const admins = profiles.filter(
+        (p) => p.is_active && p.role === "admin" && p.id !== currentUser.id,
+      );
+      setNotifications((prev) => [
+        ...prev,
+        ...admins.map((admin) => ({
+          id: crypto.randomUUID(),
+          to_user_id: admin.id,
+          from_user_id: currentUser.id,
+          message: `🏖️ ${currentUser.full_name.split(" ")[0]} chiede ${leave.type === "ferie" ? "ferie" : "un permesso"}: ${detail}${leave.note ? ` — «${leave.note}»` : ""}`,
+          task_id: null,
+          kind: "sistema" as const,
+          created_at: new Date().toISOString(),
+          read_at: null,
+        })),
+      ]);
+      return leave;
+    },
+
+    withdrawLeave(id) {
+      const leave = leaves.find((l) => l.id === id);
+      if (
+        !leave ||
+        leave.status !== "pending" ||
+        leave.requester_id !== currentUser.id
+      ) {
+        return null;
+      }
+      const index = leaves.findIndex((l) => l.id === id);
+      setLeaves((prev) => prev.filter((l) => l.id !== id));
+      return () => {
+        setLeaves((prev) => {
+          const next = [...prev];
+          next.splice(Math.min(index, next.length), 0, leave);
+          return next;
+        });
+      };
+    },
+
+    async decideLeave(id, decision, note) {
+      const leave = leaves.find((l) => l.id === id);
+      if (!leave || leave.status !== "pending") return;
+      const trimmed = note.trim();
+      const nowIso = new Date().toISOString();
+      setLeaves((prev) =>
+        prev.map((l) =>
+          l.id === id
+            ? {
+                ...l,
+                status: decision,
+                decided_by: currentUser.id,
+                decided_at: nowIso,
+                decision_note: trimmed || null,
+              }
+            : l,
+        ),
+      );
+      const isFerie = leave.type === "ferie";
+      const label = isFerie ? "Ferie" : "Permesso";
+      const range = formatRange(leave.start_date, leave.end_date);
+      const detail =
+        leave.type === "permesso" && leave.time_range
+          ? `${range} · ${leave.time_range}`
+          : range;
+      // Esito al richiedente, sempre con l'eventuale motivazione.
+      const requesterMsg =
+        decision === "approved"
+          ? `✅ ${label} approvat${isFerie ? "e" : "o"}: ${detail}${trimmed ? ` — ${trimmed}` : ""}`
+          : `❌ ${label} non approvat${isFerie ? "e" : "o"}: ${detail} — ${trimmed}`;
+      // Gli altri responsabili restano allineati sulla decisione.
+      const deciderName = currentUser.full_name.split(" ")[0];
+      const requesterName =
+        profiles.find((p) => p.id === leave.requester_id)?.full_name.split(
+          " ",
+        )[0] ?? "collega";
+      const otherAdmins = profiles.filter(
+        (p) =>
+          p.is_active &&
+          p.role === "admin" &&
+          p.id !== currentUser.id &&
+          p.id !== leave.requester_id,
+      );
+      setNotifications((prev) => [
+        ...prev,
+        ...(leave.requester_id !== currentUser.id
+          ? [
+              {
+                id: crypto.randomUUID(),
+                to_user_id: leave.requester_id,
+                from_user_id: currentUser.id,
+                message: requesterMsg,
+                task_id: null,
+                kind: "sistema" as const,
+                created_at: nowIso,
+                read_at: null,
+              },
+            ]
+          : []),
+        ...otherAdmins.map((admin) => ({
+          id: crypto.randomUUID(),
+          to_user_id: admin.id,
+          from_user_id: currentUser.id,
+          message: `${decision === "approved" ? "✅" : "❌"} ${deciderName} ha ${decision === "approved" ? "approvato" : "rifiutato"} ${isFerie ? "le ferie" : "il permesso"} di ${requesterName} (${detail})${trimmed ? ` — ${trimmed}` : ""}`,
+          task_id: null,
+          kind: "sistema" as const,
+          created_at: nowIso,
+          read_at: null,
+        })),
+      ]);
+    },
+
+    closures,
+
+    addClosure(input) {
+      const closure: CompanyClosure = {
+        id: crypto.randomUUID(),
+        title: input.title.trim(),
+        start_date: input.start_date,
+        end_date: input.end_date,
+        created_by: currentUser.id,
+      };
+      setClosures((prev) =>
+        [...prev, closure].sort((a, b) =>
+          a.start_date.localeCompare(b.start_date),
+        ),
+      );
+      // Una chiusura riguarda tutti: avviso a tutto l'ufficio.
+      const others = profiles.filter(
+        (p) => p.is_active && p.id !== currentUser.id,
+      );
+      setNotifications((prev) => [
+        ...prev,
+        ...others.map((p) => ({
+          id: crypto.randomUUID(),
+          to_user_id: p.id,
+          from_user_id: currentUser.id,
+          message: `🏢 Chiusura aziendale: «${closure.title}» ${formatRange(closure.start_date, closure.end_date)}`,
+          task_id: null,
+          kind: "sistema" as const,
+          created_at: new Date().toISOString(),
+          read_at: null,
+        })),
+      ]);
+    },
+
+    removeClosure(id) {
+      const removed = closures.find((c) => c.id === id);
+      if (!removed) return null;
+      const index = closures.findIndex((c) => c.id === id);
+      setClosures((prev) => prev.filter((c) => c.id !== id));
+      return () => {
+        setClosures((prev) => {
+          const next = [...prev];
+          next.splice(Math.min(index, next.length), 0, removed);
+          return next;
+        });
+      };
+    },
     };
   }, [
+    avatars,
+    closures,
     comments,
     currentUserId,
     customStatuses,
     events,
     focusIds,
+    leaves,
     notifications,
     profiles,
     projectComments,
