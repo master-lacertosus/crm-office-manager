@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "motion/react";
 import { MessageSquare, Send, X } from "lucide-react";
 
 import { extractMentionIds, splitMentions } from "@/lib/mentions";
+import { sheet } from "@/lib/motion";
 import { useAppStore } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -233,16 +235,16 @@ export function ChatPanel() {
   if (!pronto) return null;
 
   const pannello = (
-    /* `--capo-altezza` la dichiara il Cavaliere di Parma quando compare, così
-       la chat gli si alza sopra invece di coprirlo; quando non c'è, la
-       variabile non esiste e il ripiego a 0px riporta tutto in basso. */
-    <div
-      style={{
-        bottom: "calc(1rem + var(--capo-altezza, 0px))",
-        maxHeight:
-          "min(600px, calc(100dvh - 2rem - var(--capo-altezza, 0px)))",
-      }}
-      className="fixed right-4 z-90 flex w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-[0_24px_64px_rgb(15_23_42/0.22)]"
+    /* Ancorato al bordo inferiore e centrato: sale dal bordo da cui è nato,
+       invece di comparire in un angolo. Lascia liberi entrambi gli angoli —
+       ed è il motivo per cui il coordinamento con il Cavaliere di Parma non
+       serve più. */
+    <motion.div
+      variants={sheet}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className="fixed bottom-0 left-1/2 z-90 flex max-h-[min(620px,calc(100dvh-3rem))] w-[min(460px,calc(100vw-1.5rem))] -translate-x-1/2 flex-col overflow-hidden rounded-t-2xl border border-b-0 border-border bg-white shadow-[0_-8px_48px_rgb(15_23_42/0.18)]"
     >
       <div className="flex items-center gap-2 border-b border-border-soft px-3 py-2.5">
         <MessageSquare className="size-4 text-ink-muted" strokeWidth={1.75} />
@@ -374,26 +376,49 @@ export function ChatPanel() {
           <Send className="size-4" />
         </Button>
       </form>
-    </div>
+    </motion.div>
   );
 
-  const bolla = (
-    <button
+  /* Semicerchio a filo del bordo inferiore: 80×40 con `rounded-t-full` è
+     esattamente mezzo disco. Al passaggio del mouse sale di due pixel invece
+     di ingrandirsi — il sistema di movimento vieta di animare le dimensioni,
+     e uno spostamento verticale suggerisce comunque «tirami su». */
+  const linguetta = (
+    <motion.button
+      variants={sheet}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
       onClick={apri}
-      aria-label="Apri la comunicazione rapida"
-      style={{ bottom: "calc(1rem + var(--capo-altezza, 0px))" }}
-      className="btn-glow fixed right-4 z-90 flex size-12 items-center justify-center rounded-full text-white shadow-[0_12px_32px_rgb(15_23_42/0.24)] transition-[bottom,transform] duration-300 hover:scale-105"
+      aria-label={
+        totaleNonLetti > 0
+          ? `Apri la comunicazione rapida, ${totaleNonLetti} non letti`
+          : "Apri la comunicazione rapida"
+      }
+      className="btn-glow fixed bottom-0 left-1/2 z-90 flex h-10 w-20 -translate-x-1/2 items-end justify-center rounded-t-full pb-2.5 text-white shadow-[0_-6px_24px_rgb(15_23_42/0.22)] transition-transform duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       <MessageSquare className="size-5" strokeWidth={1.75} />
       {totaleNonLetti > 0 ? (
-        <span className="absolute -top-0.5 -right-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-danger px-1 font-mono text-[10px] font-semibold text-white ring-2 ring-white">
+        <span className="absolute top-1 right-2.5 inline-flex min-w-4 items-center justify-center rounded-full bg-danger px-1 font-mono text-[10px] leading-4 font-semibold text-white ring-2 ring-white">
           {totaleNonLetti}
         </span>
       ) : null}
-    </button>
+    </motion.button>
   );
 
   return typeof document !== "undefined"
-    ? createPortal(open ? pannello : bolla, document.body)
+    ? createPortal(
+        /* `mode="wait"` evita che linguetta e pannello si incrocino a metà
+           strada: uno esce del tutto, poi entra l'altro. Occupano lo stesso
+           punto del bordo, e sovrapporli darebbe un guizzo. */
+        <AnimatePresence mode="wait">
+          {open ? (
+            <React.Fragment key="pannello">{pannello}</React.Fragment>
+          ) : (
+            <React.Fragment key="linguetta">{linguetta}</React.Fragment>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )
     : null;
 }

@@ -390,24 +390,10 @@ export function IlCapo() {
     setVisible(false);
   };
 
-  /* Il Capo occupa l'angolo in basso a destra, dove sta anche la bolla della
-     chat: senza coordinamento si sovrappongono. Spostarlo di lato non è
-     un'opzione — il suo fumetto è largo 250px e la riga arriva a 386px, che
-     a 390px sfora appena lo si muove.
-     Si dichiara quindi la propria altezza in una variabile CSS: la chat la
-     legge e si alza quanto basta, tornando in basso quando lui se ne va.
-     Una variabile invece di un contesto React perché è l'unica cosa che i due
-     componenti devono sapere l'uno dell'altro. */
-  React.useEffect(() => {
-    const root = document.documentElement;
-    if (visible) root.style.setProperty("--capo-altezza", "132px");
-    else root.style.removeProperty("--capo-altezza");
-    // Le graffe servono: `removeProperty` restituisce una stringa, e una
-    // funzione di pulizia deve restituire void.
-    return () => {
-      root.style.removeProperty("--capo-altezza");
-    };
-  }, [visible]);
+  /* Il Capo tiene l'angolo in basso a destra tutto per sé: la chat è passata
+     al centro del bordo inferiore, quindi il coordinamento che c'era qui —
+     un'altezza dichiarata in una variabile CSS — non serve più. Spostare la
+     chat ha risolto la sovrapposizione meglio di quanto facesse coordinarla. */
 
   return (
     <AnimatePresence>
