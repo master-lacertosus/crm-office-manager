@@ -19,6 +19,7 @@ import {
 import { drawer, pop, scrim } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
+import { signOut } from "@/lib/supabase/auth";
 import { AvatarInitials } from "@/components/avatar-initials";
 import {
   IconCalendar,
@@ -217,10 +218,15 @@ function UserFooter({ compact = false }: { compact?: boolean }) {
               ))}
 
             <div className="my-1.5 h-px bg-border-soft" />
-            <Link href="/login" onClick={() => setOpen(false)} className={item}>
-              <LogOut className="size-4 text-ink-muted" strokeWidth={1.75} />
-              Esci
-            </Link>
+            {/* Uscita vera: un link a /login non basta più, perché il proxy
+                rimanda alla dashboard chi ha ancora la sessione. Serve
+                cancellare i cookie lato server, cioè una Server Action. */}
+            <form action={signOut}>
+              <button type="submit" role="menuitem" className={item}>
+                <LogOut className="size-4 text-ink-muted" strokeWidth={1.75} />
+                Esci
+              </button>
+            </form>
           </motion.div>
         ) : null}
       </AnimatePresence>

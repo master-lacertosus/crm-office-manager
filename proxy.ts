@@ -11,8 +11,10 @@
  * della richiesta in cui si può, e senza di lui le sessioni cadono in modo
  * apparentemente casuale.
  *
- * Cosa NON fa ancora: proteggere le rotte. L'autenticazione arriva nella
- * tappa successiva; finché l'app gira sui dati mock, qui si rinnova soltanto.
+ * Fa anche da cancello: senza sessione si finisce sul login. Ma è solo la
+ * prima linea — le Server Action non sono rotte e il matcher non le copre,
+ * quindi ognuna deve verificare i permessi per conto proprio
+ * (docs/01-app/03-api-reference/03-file-conventions/proxy.md).
  */
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -62,7 +64,25 @@ export async function proxy(request: NextRequest) {
      arriva a risposta già chiusa, il token nuovo si perde e la richiesta
      successiva rinnova di nuovo, all'infinito. `getClaims()` è la via
      raccomandata rispetto a `getSession()`. */
-  await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getClaims();
+  const autenticato = Boolean(data?.claims);
+
+  const percorso = request.nextUrl.pathname;
+  const pubblica = percorso === "/login" || percorso.startsWith("/auth");
+
+  if (!autenticato && !pubblica) {
+    // Si ricorda dove si stava andando, così dopo l'accesso si atterra lì e
+    // non sempre sulla dashboard.
+    const login = new URL("/login", request.url);
+    if (percorso !== "/") {
+      login.searchParams.set("next", percorso + request.nextUrl.search);
+    }
+    return NextResponse.redirect(login);
+  }
+
+  if (autenticato && percorso === "/login") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
 
   return response;
 }

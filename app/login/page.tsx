@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { Suspense } from "react";
 
 import { LoginForm } from "@/components/login-form";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export const metadata: Metadata = { title: "Accedi" };
 
@@ -23,7 +25,12 @@ export default function LoginPage() {
             Office OS
           </p>
         </div>
-        <LoginForm />
+        {/* Il form legge `next` dalla query per tornare dove si era diretti:
+            useSearchParams esige un confine Suspense, altrimenti l'intera
+            pagina uscirebbe dal rendering statico. */}
+        <Suspense fallback={<div className="h-[340px]" />}>
+          <LoginForm configurato={isSupabaseConfigured} />
+        </Suspense>
       </div>
     </main>
   );
