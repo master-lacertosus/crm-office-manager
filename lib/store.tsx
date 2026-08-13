@@ -14,16 +14,34 @@ import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
+  deleteChecklistItem,
   deleteCustomStatus,
+  deleteTaskLink,
   deleteTaskRow,
+  fetchChecklists,
+  fetchNotifications,
+  fetchProjectComments,
+  fetchTaskComments,
+  fetchTaskEvents,
+  fetchTaskLinks,
   fetchCustomStatuses,
   fetchProfiles,
   fetchProjects,
   fetchTasks,
+  insertChecklistItem,
   insertCustomStatus,
+  insertNotifications,
   insertProject,
+  insertProjectComment,
+  insertTaskComment,
+  insertTaskEvents,
+  insertTaskLink,
   insertTask,
+  markNotificationsRead,
   removeAvatarByUrl,
+  setChecklistItemDone,
+  setDecision,
+  toggleReactionRow,
   updateProfileRow,
   updateTaskRow,
   uploadAvatar,
@@ -425,6 +443,68 @@ const WORKSPACE_STORAGE_KEYS = [
   "workspace-templates",
 ];
 
+/**
+ * Sincronizza una collezione con il database confrontando gli id.
+ *
+ * Le collezioni append-only dell'app — cronologia, commenti, allegati,
+ * avvisi — hanno una quarantina di punti che le modificano, sparsi in tutto
+ * lo store. Attaccare una scrittura a ognuno significherebbe quaranta
+ * occasioni di dimenticarne una, e ogni dimenticanza sarebbe un dato perso
+ * senza errore.
+ *
+ * Qui si osserva il risultato invece del gesto: a ogni cambiamento si
+ * confrontano gli id presenti con quelli già noti al server, si inserisce
+ * ciò che è comparso e si elimina ciò che è sparito. I punti di mutazione
+ * restano com'erano.
+ *
+ * Il limite da conoscere: le MODIFICHE a una riga esistente non si vedono,
+ * perché l'id non cambia. Reazioni, decisioni, spunte e letture si scrivono
+ * quindi esplicitamente dove avvengono.
+ */
+function useSincronizza<T extends { id: string }>(
+  righe: T[],
+  pronto: boolean,
+  inserisci: (nuove: T[]) => Promise<void>,
+  elimina: (ids: string[]) => Promise<void>,
+  segnalaErrore: (messaggio: string) => void,
+) {
+  const noteRef = React.useRef<Set<string> | null>(null);
+
+  React.useEffect(() => {
+    if (!pronto) return;
+
+    // Prima passata: quello che c'è arriva dal server, non va reinserito.
+    if (noteRef.current === null) {
+      noteRef.current = new Set(righe.map((r) => r.id));
+      return;
+    }
+
+    const attuali = new Set(righe.map((r) => r.id));
+    const nuove = righe.filter((r) => !noteRef.current!.has(r.id));
+    const rimosse = [...noteRef.current].filter((id) => !attuali.has(id));
+    if (nuove.length === 0 && rimosse.length === 0) return;
+
+    /* Si aggiorna PRIMA di scrivere: se la scrittura è lenta e nel frattempo
+       arriva un altro cambiamento, senza questo la stessa riga verrebbe
+       inserita due volte. */
+    noteRef.current = attuali;
+
+    void (async () => {
+      try {
+        if (nuove.length > 0) await inserisci(nuove);
+        if (rimosse.length > 0) await elimina(rimosse);
+      } catch (e) {
+        segnalaErrore(
+          e instanceof Error ? e.message : "Salvataggio non riuscito.",
+        );
+      }
+    })();
+    // `inserisci` ed `elimina` sono ricreate a ogni render dai chiamanti:
+    // includerle farebbe girare l'effetto in continuo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [righe, pronto]);
+}
+
 const StoreContext = React.createContext<AppStore | null>(null);
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
@@ -522,19 +602,46 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         const { data: claims } = await supabase.auth.getClaims();
         const userId = claims?.claims?.sub as string | undefined;
 
-        const [profileList, projectList, taskList, customList] =
-          await Promise.all([
-            fetchProfiles(supabase),
-            fetchProjects(supabase),
-            fetchTasks(supabase),
-            fetchCustomStatuses(supabase),
-          ]);
+        const [
+          profileList,
+          projectList,
+          taskList,
+          customList,
+          checklists,
+          linkList,
+          eventList,
+          commentList,
+          projectCommentList,
+          notificationList,
+        ] = await Promise.all([
+          fetchProfiles(supabase),
+          fetchProjects(supabase),
+          fetchTasks(supabase),
+          fetchCustomStatuses(supabase),
+          fetchChecklists(supabase),
+          fetchTaskLinks(supabase),
+          fetchTaskEvents(supabase),
+          fetchTaskComments(supabase),
+          fetchProjectComments(supabase),
+          fetchNotifications(supabase),
+        ]);
 
         if (annullato) return;
         setProfiles(profileList);
         setProjects(projectList);
-        setTasks(taskList);
+        // Le voci di checklist stanno in tabella a parte ma il tipo `Task` le
+        // porta dentro di sé: si ricompongono qui, una volta sola.
+        setTasks(
+          taskList.map((t) =>
+            checklists[t.id] ? { ...t, checklist: checklists[t.id] } : t,
+          ),
+        );
         setCustomStatuses(customList);
+        setTaskLinks(linkList);
+        setEvents(eventList);
+        setComments(commentList);
+        setProjectComments(projectCommentList);
+        setNotifications(notificationList);
         if (userId) setCurrentUserId(userId);
       } catch (e) {
         if (!annullato) {
@@ -553,6 +660,72 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       annullato = true;
     };
   }, []);
+
+  /* --- Sincronizzazione delle collezioni append-only ------------------ */
+  const pronto = isSupabaseConfigured && !loading && Boolean(currentUserId);
+
+  useSincronizza(
+    events,
+    pronto,
+    (nuovi) => insertTaskEvents(createClient(), nuovi),
+    // La cronologia è append-only: non ha policy di cancellazione, e un
+    // registro che si può correggere non è un registro.
+    async () => {},
+    setSyncError,
+  );
+
+  useSincronizza(
+    comments,
+    pronto,
+    async (nuovi) => {
+      const supabase = createClient();
+      for (const c of nuovi) await insertTaskComment(supabase, c);
+    },
+    async () => {},
+    setSyncError,
+  );
+
+  useSincronizza(
+    projectComments,
+    pronto,
+    async (nuovi) => {
+      const supabase = createClient();
+      for (const c of nuovi) await insertProjectComment(supabase, c);
+    },
+    async () => {},
+    setSyncError,
+  );
+
+  useSincronizza(
+    taskLinks,
+    pronto,
+    async (nuovi) => {
+      const supabase = createClient();
+      for (const l of nuovi) await insertTaskLink(supabase, l, currentUserId);
+    },
+    async (ids) => {
+      const supabase = createClient();
+      for (const id of ids) await deleteTaskLink(supabase, id);
+    },
+    setSyncError,
+  );
+
+  useSincronizza(
+    notifications,
+    pronto,
+    async (nuovi) => {
+      /* Si scrivono solo gli avvisi che l'utente corrente sta mandando: la
+         policy pretende `from_user_id = auth.uid()`. Le escalation
+         automatiche li attribuiscono al richiedente, quindi verrebbero
+         rifiutate — e comunque non hanno senso generate dal browser di chi
+         ha per caso una scheda aperta. Restano locali finché richieste e
+         ferie non passano al database, dove quelle notifiche appartengono. */
+      const miei = nuovi.filter((n) => n.from_user_id === currentUserId);
+      if (miei.length > 0) await insertNotifications(createClient(), miei);
+    },
+    async () => {},
+    setSyncError,
+  );
 
   /* ------------------------------------------------------------------ */
   /* Persistenza locale delle entità non ancora collegate.               */
@@ -1242,40 +1415,67 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     events,
 
+    /* Le voci di checklist vivono dentro `Task` per l'app e in tabella per
+       il database: il confronto per id non le raggiunge, perché a cambiare è
+       il contenuto di un task. Si scrivono qui, una per una. */
+
     toggleChecklistItem(taskId, itemId) {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === taskId
-            ? {
-                ...t,
-                checklist: t.checklist?.map((item) =>
-                  item.id === itemId ? { ...item, done: !item.done } : item,
-                ),
-              }
-            : t,
-        ),
+      const voce = tasks
+        .find((t) => t.id === taskId)
+        ?.checklist?.find((i) => i.id === itemId);
+      if (!voce) return;
+      const applica = (done: boolean) =>
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  checklist: t.checklist?.map((item) =>
+                    item.id === itemId ? { ...item, done } : item,
+                  ),
+                }
+              : t,
+          ),
+        );
+      applica(!voce.done);
+      scriviCon(
+        () => setChecklistItemDone(createClient(), itemId, !voce.done),
+        () => applica(voce.done),
       );
     },
 
     addChecklistItem(taskId, text) {
       const trimmed = text.trim();
       if (!trimmed) return;
+      const voce = { id: crypto.randomUUID(), text: trimmed, done: false };
+      const posizione = Date.now();
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
-            ? {
-                ...t,
-                checklist: [
-                  ...(t.checklist ?? []),
-                  { id: crypto.randomUUID(), text: trimmed, done: false },
-                ],
-              }
+            ? { ...t, checklist: [...(t.checklist ?? []), voce] }
             : t,
         ),
+      );
+      scriviCon(
+        () => insertChecklistItem(createClient(), taskId, voce, posizione),
+        () =>
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === taskId
+                ? {
+                    ...t,
+                    checklist: t.checklist?.filter((i) => i.id !== voce.id),
+                  }
+                : t,
+            ),
+          ),
       );
     },
 
     removeChecklistItem(taskId, itemId) {
+      const voce = tasks
+        .find((t) => t.id === taskId)
+        ?.checklist?.find((i) => i.id === itemId);
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
@@ -1285,6 +1485,18 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
               }
             : t,
         ),
+      );
+      if (!voce) return;
+      scriviCon(
+        () => deleteChecklistItem(createClient(), itemId),
+        () =>
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === taskId
+                ? { ...t, checklist: [...(t.checklist ?? []), voce] }
+                : t,
+            ),
+          ),
       );
     },
 
@@ -1481,6 +1693,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         });
       if (scope === "task") setComments((prev) => apply(prev));
       else setProjectComments((prev) => apply(prev));
+
+      /* Il confronto per id non vede questa modifica: la riga è la stessa,
+         cambia solo il contenuto. Va scritta esplicitamente. */
+      const elenco = scope === "task" ? comments : projectComments;
+      const prima = elenco.find((c) => c.id === commentId);
+      const attiva = !(prima?.reactions?.[emoji] ?? []).includes(currentUser.id);
+      scriviCon(
+        () =>
+          toggleReactionRow(
+            createClient(),
+            scope,
+            commentId,
+            currentUser.id,
+            emoji,
+            attiva,
+          ),
+        () => {
+          if (scope === "task") setComments((prev) => apply(prev));
+          else setProjectComments((prev) => apply(prev));
+        },
+      );
     },
 
     toggleDecision(scope, commentId) {
@@ -1492,6 +1725,16 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         );
       if (scope === "task") setComments((prev) => apply(prev));
       else setProjectComments((prev) => apply(prev));
+
+      const elenco = scope === "task" ? comments : projectComments;
+      const nuovo = !elenco.find((c) => c.id === commentId)?.is_decision;
+      scriviCon(
+        () => setDecision(createClient(), scope, commentId, nuovo),
+        () => {
+          if (scope === "task") setComments((prev) => apply(prev));
+          else setProjectComments((prev) => apply(prev));
+        },
+      );
     },
 
     snoozes,
@@ -1800,33 +2043,64 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       ]);
     },
 
+    /* «Letto» è una modifica alla riga, non una riga nuova: il confronto per
+       id non la vede. Si scrive esplicitamente, in blocco — segnare venti
+       avvisi letti non deve costare venti richieste. */
+
     markTaskNotificationsRead(taskId) {
+      const ids = notifications
+        .filter(
+          (n) =>
+            n.to_user_id === currentUser.id && n.task_id === taskId && !n.read_at,
+        )
+        .map((n) => n.id);
+      if (ids.length === 0) return;
       setNotifications((prev) =>
         prev.map((n) =>
-          n.to_user_id === currentUser.id && n.task_id === taskId && !n.read_at
-            ? { ...n, read_at: new Date().toISOString() }
-            : n,
+          ids.includes(n.id) ? { ...n, read_at: new Date().toISOString() } : n,
         ),
+      );
+      scriviCon(
+        () => markNotificationsRead(createClient(), ids),
+        () =>
+          setNotifications((prev) =>
+            prev.map((n) => (ids.includes(n.id) ? { ...n, read_at: null } : n)),
+          ),
       );
     },
 
     markNotificationRead(id) {
+      if (notifications.find((n) => n.id === id)?.read_at) return;
       setNotifications((prev) =>
         prev.map((n) =>
-          n.id === id && !n.read_at
-            ? { ...n, read_at: new Date().toISOString() }
-            : n,
+          n.id === id ? { ...n, read_at: new Date().toISOString() } : n,
         ),
+      );
+      scriviCon(
+        () => markNotificationsRead(createClient(), [id]),
+        () =>
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === id ? { ...n, read_at: null } : n)),
+          ),
       );
     },
 
     markAllNotificationsRead() {
+      const ids = notifications
+        .filter((n) => n.to_user_id === currentUser.id && !n.read_at)
+        .map((n) => n.id);
+      if (ids.length === 0) return;
       setNotifications((prev) =>
         prev.map((n) =>
-          n.to_user_id === currentUser.id && !n.read_at
-            ? { ...n, read_at: new Date().toISOString() }
-            : n,
+          ids.includes(n.id) ? { ...n, read_at: new Date().toISOString() } : n,
         ),
+      );
+      scriviCon(
+        () => markNotificationsRead(createClient(), ids),
+        () =>
+          setNotifications((prev) =>
+            prev.map((n) => (ids.includes(n.id) ? { ...n, read_at: null } : n)),
+          ),
       );
     },
 

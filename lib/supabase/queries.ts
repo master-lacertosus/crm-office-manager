@@ -11,7 +11,18 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { CustomStatus, Profile, Project, Task } from "@/lib/types";
+import type {
+  AppNotification,
+  ChecklistItem,
+  CustomStatus,
+  Profile,
+  Project,
+  ProjectComment,
+  Task,
+  TaskComment,
+  TaskEvent,
+  TaskLink,
+} from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */
 /* Profili                                                                     */
@@ -126,8 +137,325 @@ export async function removeAvatarByUrl(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Checklist                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/** Le voci raggruppate per task: il tipo `Task` le porta dentro di sé, ma il
+ *  database le tiene in tabella perché si spuntano una alla volta e l'ordine
+ *  conta. La ricomposizione avviene qui, una volta sola. */
+export async function fetchChecklists(
+  supabase: SupabaseClient,
+): Promise<Record<string, ChecklistItem[]>> {
+  const { data, error } = await supabase
+    .from("task_checklist_items")
+    .select("id, task_id, body, done, position")
+    .order("position");
+  if (error) throw error;
+
+  const out: Record<string, ChecklistItem[]> = {};
+  for (const r of data as {
+    id: string;
+    task_id: string;
+    body: string;
+    done: boolean;
+  }[]) {
+    (out[r.task_id] ??= []).push({ id: r.id, text: r.body, done: r.done });
+  }
+  return out;
+}
+
+export async function insertChecklistItem(
+  supabase: SupabaseClient,
+  taskId: string,
+  item: ChecklistItem,
+  position: number,
+): Promise<void> {
+  const { error } = await supabase.from("task_checklist_items").insert({
+    id: item.id,
+    task_id: taskId,
+    body: item.text,
+    done: item.done,
+    position,
+  });
+  if (error) throw error;
+}
+
+export async function setChecklistItemDone(
+  supabase: SupabaseClient,
+  id: string,
+  done: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from("task_checklist_items")
+    .update({ done })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteChecklistItem(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("task_checklist_items")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Allegati-link                                                               */
+/* -------------------------------------------------------------------------- */
+
+export async function fetchTaskLinks(
+  supabase: SupabaseClient,
+): Promise<TaskLink[]> {
+  const { data, error } = await supabase
+    .from("task_links")
+    .select("id, task_id, url, label")
+    .order("created_at");
+  if (error) throw error;
+  return data as TaskLink[];
+}
+
+export async function insertTaskLink(
+  supabase: SupabaseClient,
+  link: TaskLink,
+  createdBy: string,
+): Promise<void> {
+  const { error } = await supabase.from("task_links").insert({
+    id: link.id,
+    task_id: link.task_id,
+    url: link.url,
+    label: link.label,
+    created_by: createdBy,
+  });
+  if (error) throw error;
+}
+
+export async function deleteTaskLink(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase.from("task_links").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Cronologia                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/** Le colonne si chiamano `from_value`/`to_value` nel database: `from` è una
+ *  parola riservata di SQL e come nome di colonna avrebbe richiesto le
+ *  virgolette ovunque. */
+export async function fetchTaskEvents(
+  supabase: SupabaseClient,
+): Promise<TaskEvent[]> {
+  const { data, error } = await supabase
+    .from("task_events")
+    .select("id, task_id, actor_id, type, from_value, to_value, created_at")
+    .order("created_at");
+  if (error) throw error;
+
+  return (data as {
+    id: string;
+    task_id: string;
+    actor_id: string;
+    type: TaskEvent["type"];
+    from_value: string | null;
+    to_value: string | null;
+    created_at: string;
+  }[]).map((r) => ({
+    id: r.id,
+    task_id: r.task_id,
+    actor_id: r.actor_id,
+    type: r.type,
+    from: r.from_value,
+    to: r.to_value,
+    created_at: r.created_at,
+  }));
+}
+
+export async function insertTaskEvents(
+  supabase: SupabaseClient,
+  eventi: TaskEvent[],
+): Promise<void> {
+  if (eventi.length === 0) return;
+  const { error } = await supabase.from("task_events").insert(
+    eventi.map((e) => ({
+      id: e.id,
+      task_id: e.task_id,
+      actor_id: e.actor_id,
+      type: e.type,
+      from_value: e.from ?? null,
+      to_value: e.to ?? null,
+    })),
+  );
+  if (error) throw error;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Commenti e reazioni                                                         */
+/* -------------------------------------------------------------------------- */
+
+/** Le reazioni stanno in tabella (una riga per persona ed emoji) ma l'app le
+ *  vuole come mappa emoji → elenco di id. La conversione sta qui. */
+function raggruppaReazioni(
+  righe: { comment_id: string; user_id: string; emoji: string }[],
+): Record<string, Record<string, string[]>> {
+  const out: Record<string, Record<string, string[]>> = {};
+  for (const r of righe) {
+    ((out[r.comment_id] ??= {})[r.emoji] ??= []).push(r.user_id);
+  }
+  return out;
+}
+
+export async function fetchTaskComments(
+  supabase: SupabaseClient,
+): Promise<TaskComment[]> {
+  const [commenti, reazioni] = await Promise.all([
+    supabase
+      .from("task_comments")
+      .select("id, task_id, author_id, body, is_decision, created_at")
+      .order("created_at"),
+    supabase
+      .from("task_comment_reactions")
+      .select("comment_id, user_id, emoji"),
+  ]);
+  if (commenti.error) throw commenti.error;
+  if (reazioni.error) throw reazioni.error;
+
+  const mappa = raggruppaReazioni(
+    reazioni.data as { comment_id: string; user_id: string; emoji: string }[],
+  );
+  return (commenti.data as TaskComment[]).map((c) => ({
+    ...c,
+    reactions: mappa[c.id] ?? {},
+  }));
+}
+
+export async function fetchProjectComments(
+  supabase: SupabaseClient,
+): Promise<ProjectComment[]> {
+  const [commenti, reazioni] = await Promise.all([
+    supabase
+      .from("project_comments")
+      .select("id, project_id, author_id, body, is_decision, created_at")
+      .order("created_at"),
+    supabase
+      .from("project_comment_reactions")
+      .select("comment_id, user_id, emoji"),
+  ]);
+  if (commenti.error) throw commenti.error;
+  if (reazioni.error) throw reazioni.error;
+
+  const mappa = raggruppaReazioni(
+    reazioni.data as { comment_id: string; user_id: string; emoji: string }[],
+  );
+  return (commenti.data as ProjectComment[]).map((c) => ({
+    ...c,
+    reactions: mappa[c.id] ?? {},
+  }));
+}
+
+export async function insertTaskComment(
+  supabase: SupabaseClient,
+  c: TaskComment,
+): Promise<void> {
+  const { error } = await supabase.from("task_comments").insert({
+    id: c.id,
+    task_id: c.task_id,
+    author_id: c.author_id,
+    body: c.body,
+  });
+  if (error) throw error;
+}
+
+export async function insertProjectComment(
+  supabase: SupabaseClient,
+  c: ProjectComment,
+): Promise<void> {
+  const { error } = await supabase.from("project_comments").insert({
+    id: c.id,
+    project_id: c.project_id,
+    author_id: c.author_id,
+    body: c.body,
+  });
+  if (error) throw error;
+}
+
+/** `scope` decide la tabella: le due famiglie di commenti hanno chiavi
+ *  esterne diverse e non si possono unire senza polimorfismo. */
+export async function setDecision(
+  supabase: SupabaseClient,
+  scope: "task" | "project",
+  commentId: string,
+  isDecision: boolean,
+): Promise<void> {
+  const tabella = scope === "task" ? "task_comments" : "project_comments";
+  const { error } = await supabase
+    .from(tabella)
+    .update({ is_decision: isDecision })
+    .eq("id", commentId);
+  if (error) throw error;
+}
+
+export async function toggleReactionRow(
+  supabase: SupabaseClient,
+  scope: "task" | "project",
+  commentId: string,
+  userId: string,
+  emoji: string,
+  attiva: boolean,
+): Promise<void> {
+  const tabella =
+    scope === "task" ? "task_comment_reactions" : "project_comment_reactions";
+  if (attiva) {
+    const { error } = await supabase
+      .from(tabella)
+      .insert({ comment_id: commentId, user_id: userId, emoji });
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from(tabella)
+      .delete()
+      .eq("comment_id", commentId)
+      .eq("user_id", userId)
+      .eq("emoji", emoji);
+    if (error) throw error;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* Avvisi                                                                      */
 /* -------------------------------------------------------------------------- */
+
+/** Solo i propri: la policy `notifications_select_recipient` non concede gli
+ *  avvisi altrui a nessuno, nemmeno agli amministratori. */
+export async function fetchNotifications(
+  supabase: SupabaseClient,
+): Promise<AppNotification[]> {
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("id, to_user_id, from_user_id, message, task_id, kind, created_at, read_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data as AppNotification[];
+}
+
+/** Segna letti in blocco. `read_at` è l'unica colonna che la guardia del
+ *  database lascia cambiare dopo l'invio. */
+export async function markNotificationsRead(
+  supabase: SupabaseClient,
+  ids: string[],
+): Promise<void> {
+  if (ids.length === 0) return;
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) throw error;
+}
 
 /** Un avviso per ogni destinatario. La policy pretende
  *  `from_user_id = auth.uid()`: nessuno può scrivere a nome di un altro. */
