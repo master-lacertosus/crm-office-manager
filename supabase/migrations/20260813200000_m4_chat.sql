@@ -148,6 +148,16 @@ create policy message_reads_all_own
 -- avrebbe potuto leggere comunque.
 -- -----------------------------------------------------------------------------
 
+-- L'errore va CATTURATO, non lasciato correre. La pubblicazione appartiene a
+-- supabase_admin e il SQL Editor potrebbe non averne la proprietà; siccome
+-- l'editor esegue tutto in un'unica transazione, un errore qui annullerebbe
+-- anche le tabelle create sopra — e da fuori sembrerebbe che la migrazione
+-- non sia mai stata eseguita.
+--
+-- Il blocco con `exception` crea una sotto-transazione: se il permesso manca,
+-- si annulla solo questo pezzo e il resto resta. In quel caso Realtime si
+-- attiva a mano dal dashboard, in Database › Publications, spuntando
+-- `messages` — e il messaggio qui sotto lo ricorda.
 do $$
 begin
   if not exists (
@@ -157,6 +167,13 @@ begin
       and tablename = 'messages'
   ) then
     alter publication supabase_realtime add table public.messages;
+    raise notice 'Realtime attivo su public.messages.';
+  else
+    raise notice 'Realtime era gia attivo su public.messages.';
   end if;
+exception
+  when insufficient_privilege or wrong_object_type then
+    raise warning
+      'Realtime NON attivato: manca il permesso sulla pubblicazione. Attivalo dal dashboard, in Database > Publications, spuntando la tabella messages. Tutto il resto della migrazione e andato a buon fine.';
 end;
 $$;
