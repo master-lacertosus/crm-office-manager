@@ -6,7 +6,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  Check,
   ChevronDown,
   Compass,
   LogOut,
@@ -32,7 +31,6 @@ import {
   IconTasks,
   IconTeam,
 } from "@/components/shell/nav-icons";
-import { useToast } from "@/components/toaster";
 import { Button } from "@/components/ui/button";
 
 const NAV_ITEMS: {
@@ -132,8 +130,7 @@ function NavLink({
 }
 
 function UserFooter({ compact = false }: { compact?: boolean }) {
-  const { currentUser, profiles, switchUser } = useAppStore();
-  const toast = useToast();
+  const { currentUser } = useAppStore();
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
 
@@ -182,40 +179,11 @@ function UserFooter({ compact = false }: { compact?: boolean }) {
               Rivedi il tour
             </Link>
 
-            <p className="px-2.5 pt-2.5 pb-1 text-[10px] font-bold tracking-[0.06em] text-ink-muted uppercase">
-              Vedi come (demo)
-            </p>
-            {profiles
-              .filter((p) => p.is_active)
-              .map((p) => (
-                <button
-                  key={p.id}
-                  role="menuitem"
-                  onClick={() => {
-                    if (p.id !== currentUser.id) {
-                      switchUser(p.id);
-                      toast(`Ora vedi l'app come ${p.full_name.split(" ")[0]}`);
-                    }
-                    setOpen(false);
-                  }}
-                  className={item}
-                >
-                  <AvatarInitials
-                    name={p.full_name}
-                    src={p.avatar_url}
-                    size="sm"
-                  />
-                  <span className="min-w-0 flex-1 truncate">
-                    {p.full_name}
-                    <span className="ml-1 text-[11px] font-normal text-ink-muted">
-                      {p.role === "admin" ? "· admin" : ""}
-                    </span>
-                  </span>
-                  {p.id === currentUser.id ? (
-                    <Check className="size-4 text-brand-600" />
-                  ) : null}
-                </button>
-              ))}
+            {/* «Vedi come…» è sparito con l'autenticazione reale: era un
+                comodo trucco da demo, ma su sessioni vere sarebbe
+                impersonare un collega — e la RLS non lo consentirebbe
+                comunque, perché le policy leggono auth.uid(), non lo stato
+                del browser. */}
 
             <div className="my-1.5 h-px bg-border-soft" />
             {/* Uscita vera: un link a /login non basta più, perché il proxy

@@ -11,21 +11,13 @@ import {
 } from "@/lib/format";
 import { extractMentionIds } from "@/lib/mentions";
 import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
-  CURRENT_USER_ID,
-  MOCK_CLOSURES,
-  MOCK_COMMENTS,
-  MOCK_EVENTS,
-  MOCK_LEAVES,
-  MOCK_NOTIFICATIONS,
-  MOCK_PROFILES,
-  MOCK_PROJECTS,
-  MOCK_PROJECT_COMMENTS,
-  MOCK_REQUESTS,
-  MOCK_TASKS,
-  MOCK_TASK_LINKS,
-  MOCK_TEMPLATES,
-} from "@/lib/mock-data";
+  fetchProfiles,
+  fetchProjects,
+  insertProject,
+} from "@/lib/supabase/queries";
 import { formatRange, workingDaysCount } from "@/lib/leave";
 import type {
   AppNotification,
@@ -213,11 +205,20 @@ function diffTaskEvents(before: Task, after: Task, actorId: string): TaskEvent[]
 }
 
 interface AppStore {
+  /** Profilo dell'utente collegato. Durante il caricamento è una sentinella
+   *  con `id` vuoto: controllare `loading` prima di fidarsene. */
   currentUser: Profile;
-  /** Demo: cambia l'utente corrente («Vedi come…»). */
-  switchUser: (profileId: string) => void;
+  /** Vero finché la prima lettura da Supabase non è conclusa. */
+  loading: boolean;
+  /** Messaggio dell'errore di caricamento, se c'è stato. */
+  loadError: string | null;
   profiles: Profile[];
   projects: Project[];
+  /** Crea un progetto su Supabase e lo aggiunge alla lista. */
+  createProject: (input: {
+    name: string;
+    description?: string | null;
+  }) => Promise<Project>;
   tasks: Task[];
   comments: TaskComment[];
   createTask: (input: NewTask) => Promise<Task>;
@@ -361,34 +362,44 @@ interface AppStore {
   removeClosure: (id: string) => (() => void) | null;
 }
 
+/** Identità di ripiego finché la sessione non ha risposto. Non è un utente
+ *  reale: `id` vuoto non corrisponde a nessuna riga, quindi nessuna query
+ *  parte per sbaglio a suo nome e nessun dato gli viene attribuito. */
+const PROFILO_IN_CARICAMENTO: Profile = {
+  id: "",
+  full_name: "…",
+  email: "",
+  role: "member",
+  is_active: false,
+  avatar_url: null,
+};
+
 const StoreContext = React.createContext<AppStore | null>(null);
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
-  const [profiles, setProfiles] = React.useState<Profile[]>(MOCK_PROFILES);
-  const [projects] = React.useState<Project[]>(MOCK_PROJECTS);
-  const [tasks, setTasks] = React.useState<Task[]>(MOCK_TASKS);
-  const [comments, setComments] = React.useState<TaskComment[]>(MOCK_COMMENTS);
-  const [notifications, setNotifications] =
-    React.useState<AppNotification[]>(MOCK_NOTIFICATIONS);
-  const [taskLinks, setTaskLinks] =
-    React.useState<TaskLink[]>(MOCK_TASK_LINKS);
+  /* Workspace vuoto: i dati finti sono spariti con l'incremento 1. Profili e
+     progetti arrivano da Supabase (sotto); le altre entità restano in memoria
+     e verranno collegate una per una negli incrementi successivi. Nessuna
+     nasce più con dei seed, così non esiste mai lo stato misto vero/finto. */
+  const [profiles, setProfiles] = React.useState<Profile[]>([]);
+  const [projects, setProjects] = React.useState<Project[]>([]);
+  const [tasks, setTasks] = React.useState<Task[]>([]);
+  const [comments, setComments] = React.useState<TaskComment[]>([]);
+  const [notifications, setNotifications] = React.useState<AppNotification[]>([]);
+  const [taskLinks, setTaskLinks] = React.useState<TaskLink[]>([]);
   const [focusIds, setFocusIds] = React.useState<string[]>([]);
   const [customStatuses, setCustomStatuses] = React.useState<CustomStatus[]>([]);
-  const [currentUserId, setCurrentUserId] =
-    React.useState<string>(CURRENT_USER_ID);
-  const [projectComments, setProjectComments] = React.useState<
-    ProjectComment[]
-  >(MOCK_PROJECT_COMMENTS);
+  /* Identità reale: nasce vuota e si popola dalla sessione. Finché è vuota
+     l'app mostra lo stato di caricamento invece di un utente inventato. */
+  const [currentUserId, setCurrentUserId] = React.useState<string>("");
+  const [projectComments, setProjectComments] = React.useState<ProjectComment[]>([]);
   const [snoozes, setSnoozes] = React.useState<Record<string, string>>({});
   const [savedViews, setSavedViews] = React.useState<SavedView[]>([]);
-  const [templates, setTemplates] =
-    React.useState<WorkspaceTemplate[]>(MOCK_TEMPLATES);
-  const [events, setEvents] = React.useState<TaskEvent[]>(MOCK_EVENTS);
-  const [requests, setRequests] =
-    React.useState<TaskRequest[]>(MOCK_REQUESTS);
-  const [leaves, setLeaves] = React.useState<LeaveRequest[]>(MOCK_LEAVES);
-  const [closures, setClosures] =
-    React.useState<CompanyClosure[]>(MOCK_CLOSURES);
+  const [templates, setTemplates] = React.useState<WorkspaceTemplate[]>([]);
+  const [events, setEvents] = React.useState<TaskEvent[]>([]);
+  const [requests, setRequests] = React.useState<TaskRequest[]>([]);
+  const [leaves, setLeaves] = React.useState<LeaveRequest[]>([]);
+  const [closures, setClosures] = React.useState<CompanyClosure[]>([]);
   /* Marcatori «già segnalato» delle escalation: il ref fa da guardia
      sincrona dentro la sessione, lo stato è lo specchio PERSISTITO — senza,
      ogni ricarica ri-generava le stesse notifiche all'infinito. */
@@ -400,7 +411,53 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const leavesEscalatedRef = React.useRef(new Set<string>());
 
   /* ------------------------------------------------------------------ */
-  /* Persistenza locale dell'intero workspace (fase placeholder).        */
+  /* Caricamento da Supabase (incremento 1: identità, profili, progetti). */
+  /* ------------------------------------------------------------------ */
+  const [loading, setLoading] = React.useState(isSupabaseConfigured);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let annullato = false;
+
+    (async () => {
+      try {
+        const supabase = createClient();
+        /* `getClaims()` legge il token già in cookie senza interrogare il
+           server: l'id utente è il claim `sub`. Il proxy ha appena rinnovato
+           la sessione, quindi qui è sempre fresca. */
+        const { data: claims } = await supabase.auth.getClaims();
+        const userId = claims?.claims?.sub as string | undefined;
+
+        const [profileList, projectList] = await Promise.all([
+          fetchProfiles(supabase),
+          fetchProjects(supabase),
+        ]);
+
+        if (annullato) return;
+        setProfiles(profileList);
+        setProjects(projectList);
+        if (userId) setCurrentUserId(userId);
+      } catch (e) {
+        if (!annullato) {
+          setLoadError(
+            e instanceof Error ? e.message : "Caricamento dei dati non riuscito.",
+          );
+        }
+      } finally {
+        if (!annullato) setLoading(false);
+      }
+    })();
+
+    // Il provider può smontare mentre le query sono in volo (navigazione,
+    // logout): senza questa guardia si scriverebbe su un componente morto.
+    return () => {
+      annullato = true;
+    };
+  }, []);
+
+  /* ------------------------------------------------------------------ */
+  /* Persistenza locale delle entità non ancora collegate.               */
   /* «Si deve memorizzare tutto»: task, cronologia, commenti e avvisi    */
   /* sopravvivono al refresh; con Supabase questo strato sparisce.       */
   /* Bump di STATE_VERSION = reset pulito ai seed (schema cambiato).     */
@@ -626,8 +683,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         ...expired.map(([taskId]) => ({
           id: crypto.randomUUID(),
-          to_user_id: CURRENT_USER_ID,
-          from_user_id: CURRENT_USER_ID,
+          to_user_id: currentUserId,
+          from_user_id: currentUserId,
           message: `«${tasks.find((t) => t.id === taskId)?.title ?? "Task"}» è tornato dal posticipo.`,
           task_id: taskId,
           kind: "sistema" as const,
@@ -656,9 +713,14 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         (r) => !requestsEscalatedRef.current.has(r.id),
       );
       if (stale.length === 0) return;
+      // I profili possono non essere ancora arrivati da Supabase. Senza
+      // questa guardia la lista amministratori sarebbe vuota, nessuno
+      // riceverebbe l'avviso, ma il marcatore «gia segnalato» verrebbe
+      // scritto lo stesso: l'escalation si perderebbe per sempre.
+      if (profiles.length === 0) return;
       for (const r of stale) requestsEscalatedRef.current.add(r.id);
       setEscalatedRequests((prev) => [...prev, ...stale.map((r) => r.id)]);
-      const admins = MOCK_PROFILES.filter(
+      const admins = profiles.filter(
         (p) => p.is_active && p.role === "admin",
       );
       setNotifications((prev) => [
@@ -695,16 +757,21 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       // idratazione, quindi i marcatori persistiti sono già caricati.
       const stale = due.filter((l) => !leavesEscalatedRef.current.has(l.id));
       if (stale.length === 0) return;
+      // I profili possono non essere ancora arrivati da Supabase. Senza
+      // questa guardia la lista amministratori sarebbe vuota, nessuno
+      // riceverebbe l'avviso, ma il marcatore «gia segnalato» verrebbe
+      // scritto lo stesso: l'escalation si perderebbe per sempre.
+      if (profiles.length === 0) return;
       for (const l of stale) leavesEscalatedRef.current.add(l.id);
       setEscalatedLeaves((prev) => [...prev, ...stale.map((l) => l.id)]);
-      const admins = MOCK_PROFILES.filter(
+      const admins = profiles.filter(
         (p) => p.is_active && p.role === "admin",
       );
       setNotifications((prev) => [
         ...prev,
         ...stale.flatMap((leave) => {
           const who =
-            MOCK_PROFILES.find((p) => p.id === leave.requester_id)?.full_name.split(
+            profiles.find((p) => p.id === leave.requester_id)?.full_name.split(
               " ",
             )[0] ?? "collega";
           const label = leave.type === "ferie" ? "Ferie" : "Permesso";
@@ -749,12 +816,17 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         (t) => !escalatedRef.current.has(problemEpisodeKey(t)),
       );
       if (stale.length === 0) return;
+      // I profili possono non essere ancora arrivati da Supabase. Senza
+      // questa guardia la lista amministratori sarebbe vuota, nessuno
+      // riceverebbe l'avviso, ma il marcatore «gia segnalato» verrebbe
+      // scritto lo stesso: l'escalation si perderebbe per sempre.
+      if (profiles.length === 0) return;
       for (const t of stale) escalatedRef.current.add(problemEpisodeKey(t));
       setEscalatedProblems((prev) => [
         ...prev,
         ...stale.map(problemEpisodeKey),
       ]);
-      const admins = MOCK_PROFILES.filter((p) => p.is_active && p.role === "admin");
+      const admins = profiles.filter((p) => p.is_active && p.role === "admin");
       setNotifications((prev) => [
         ...prev,
         ...stale.flatMap((task) => {
@@ -797,9 +869,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const profilesResolved = profiles.map((p) =>
       avatars[p.id] ? { ...p, avatar_url: avatars[p.id] } : p,
     );
+    /* Sentinella per i momenti senza identità: primo render, caricamento in
+       corso, Supabase non configurato. Prima si ripiegava sul primo profilo
+       della lista — con i mock c'era sempre, ora la lista nasce vuota e
+       `currentUser.id` andrebbe in errore al primo render. */
     const currentUser =
       profilesResolved.find((p) => p.id === currentUserId) ??
-      profilesResolved[0];
+      PROFILO_IN_CARICAMENTO;
     const myNotifications = notifications
       .filter((n) => n.to_user_id === currentUser.id)
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -809,11 +885,28 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     return {
     currentUser,
 
-    switchUser(profileId) {
-      setCurrentUserId(profileId);
-    },
+    loading,
+    loadError,
     profiles: profilesResolved,
     projects,
+
+    async createProject(input) {
+      const nome = input.name.trim();
+      if (!nome) throw new Error("Il nome del progetto non può essere vuoto.");
+      const supabase = createClient();
+      const progetto = await insertProject(supabase, {
+        name: nome,
+        description: input.description?.trim() || null,
+        createdBy: currentUser.id,
+      });
+      /* Niente aggiornamento ottimistico qui: l'id lo assegna il database e
+         la lista è ordinata per nome, quindi si aspetta la riga vera invece
+         di indovinarne una. Il progetto è un'operazione rara, non un drag. */
+      setProjects((prev) =>
+        [...prev, progetto].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      return progetto;
+    },
     tasks,
     comments,
 
@@ -1836,6 +1929,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }, [
     avatars,
     closures,
+    loading,
+    loadError,
     comments,
     currentUserId,
     customStatuses,

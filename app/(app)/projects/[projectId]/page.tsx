@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 
-import { MOCK_PROJECTS } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/server";
+import { fetchProject } from "@/lib/supabase/queries";
 import { NewTaskButton } from "@/components/new-task-button";
 import {
   ProjectViewControls,
@@ -14,11 +15,9 @@ import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Progetto" };
 
-/** I progetti demo sono noti a build time: la route diventa statica e i
- *  link dalla lista progetti si prefetchano per intero. */
-export function generateStaticParams() {
-  return MOCK_PROJECTS.map((p) => ({ projectId: p.id }));
-}
+/* Niente `generateStaticParams`: i progetti ora nascono dagli utenti e non
+   sono noti a build time. La rotta diventa dinamica — ed è comunque quello
+   che serve, perché il contenuto dipende da chi guarda (la RLS decide). */
 
 export default async function ProjectPage({
   params,
@@ -26,7 +25,11 @@ export default async function ProjectPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+  const supabase = await createClient();
+  /* Lettura lato server con la sessione dell'utente: se la policy non
+     concede il progetto, torna null e si mostra «non trovato» — senza
+     rivelare che esiste ma non gli spetta. */
+  const project = await fetchProject(supabase, projectId);
 
   if (!project) {
     return (
