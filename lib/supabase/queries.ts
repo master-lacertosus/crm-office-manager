@@ -25,6 +25,8 @@ import type {
   TaskEvent,
   TaskLink,
   TaskRequest,
+  TemplatePackItem,
+  WorkspaceTemplate,
 } from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */
@@ -427,6 +429,187 @@ export async function toggleReactionRow(
       .eq("emoji", emoji);
     if (error) throw error;
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Template ricorrenti                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Template e voci del pacchetto in due richieste, ricomposti qui.
+ *
+ * `checklist` e `links` restano JSONB perché sono liste brevi sempre lette e
+ * scritte per intero insieme al template; le voci del pacchetto invece sono
+ * righe, perché hanno responsabile e scarto propri e servono a generare task.
+ */
+export async function fetchTemplates(
+  supabase: SupabaseClient,
+): Promise<WorkspaceTemplate[]> {
+  const [templates, voci] = await Promise.all([
+    supabase
+      .from("workspace_templates")
+      .select(
+        "id, name, description, project_id, owner_id, priority, repeat, due_day, checklist, links",
+      )
+      .order("name"),
+    supabase
+      .from("workspace_template_pack_items")
+      .select("template_id, title, owner_id, offset_days")
+      .order("position"),
+  ]);
+  if (templates.error) throw templates.error;
+  if (voci.error) throw voci.error;
+
+  const perTemplate: Record<string, TemplatePackItem[]> = {};
+  for (const v of voci.data as {
+    template_id: string;
+    title: string;
+    owner_id: string | null;
+    offset_days: number;
+  }[]) {
+    (perTemplate[v.template_id] ??= []).push({
+      title: v.title,
+      owner_id: v.owner_id,
+      offset_days: v.offset_days,
+    });
+  }
+
+  return (templates.data as unknown as (WorkspaceTemplate & {
+    due_day: number | null;
+  })[]).map((t) => ({
+    ...t,
+    checklist: (t.checklist as string[] | null) ?? [],
+    links: (t.links as { url: string; label: string }[] | null) ?? [],
+    pack: perTemplate[t.id],
+  }));
+}
+
+export async function upsertTemplate(
+  supabase: SupabaseClient,
+  t: WorkspaceTemplate,
+  createdBy: string,
+): Promise<void> {
+  const { error } = await supabase.from("workspace_templates").upsert({
+    id: t.id,
+    name: t.name,
+    description: t.description ?? "",
+    project_id: t.project_id,
+    owner_id: t.owner_id,
+    priority: t.priority,
+    repeat: t.repeat,
+    due_day: t.due_day,
+    checklist: t.checklist ?? [],
+    links: t.links ?? [],
+    created_by: createdBy,
+  });
+  if (error) throw error;
+
+  /* Le voci del pacchetto si riscrivono per intero: sono poche, non hanno
+     identità stabile lato app (il tipo non porta un id) e confrontarle una a
+     una costerebbe più di quanto valgano. */
+  const { error: pulizia } = await supabase
+    .from("workspace_template_pack_items")
+    .delete()
+    .eq("template_id", t.id);
+  if (pulizia) throw pulizia;
+
+  if (t.pack && t.pack.length > 0) {
+    const { error: inserimento } = await supabase
+      .from("workspace_template_pack_items")
+      .insert(
+        t.pack.map((v, i) => ({
+          template_id: t.id,
+          title: v.title,
+          owner_id: v.owner_id,
+          offset_days: v.offset_days,
+          position: i,
+        })),
+      );
+    if (inserimento) throw inserimento;
+  }
+}
+
+export async function deleteTemplate(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
+  // Le voci del pacchetto se ne vanno da sole: `on delete cascade`.
+  const { error } = await supabase
+    .from("workspace_templates")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Viste salvate e stato personale                                             */
+/* -------------------------------------------------------------------------- */
+
+export async function fetchSavedViews(
+  supabase: SupabaseClient,
+): Promise<{ id: string; name: string; params: string }[]> {
+  const { data, error } = await supabase
+    .from("saved_views")
+    .select("id, name, params")
+    .order("created_at");
+  if (error) throw error;
+  return data as { id: string; name: string; params: string }[];
+}
+
+export async function insertSavedView(
+  supabase: SupabaseClient,
+  userId: string,
+  vista: { id: string; name: string; params: string },
+): Promise<void> {
+  const { error } = await supabase
+    .from("saved_views")
+    .insert({ ...vista, user_id: userId });
+  if (error) throw error;
+}
+
+export async function deleteSavedView(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase.from("saved_views").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/** Focus di oggi e posticipi: righe private, una per task toccato. */
+export async function fetchUserTaskState(
+  supabase: SupabaseClient,
+): Promise<{ focusIds: string[]; snoozes: Record<string, string> }> {
+  const { data, error } = await supabase
+    .from("user_task_state")
+    .select("task_id, is_focus, snoozed_until");
+  if (error) throw error;
+
+  const focusIds: string[] = [];
+  const snoozes: Record<string, string> = {};
+  for (const r of data as {
+    task_id: string;
+    is_focus: boolean;
+    snoozed_until: string | null;
+  }[]) {
+    if (r.is_focus) focusIds.push(r.task_id);
+    if (r.snoozed_until) snoozes[r.task_id] = r.snoozed_until;
+  }
+  return { focusIds, snoozes };
+}
+
+/** Una riga per coppia utente-task: l'upsert la crea o la aggiorna senza
+ *  doversi chiedere quale dei due casi sia. */
+export async function setUserTaskState(
+  supabase: SupabaseClient,
+  userId: string,
+  taskId: string,
+  patch: { is_focus?: boolean; snoozed_until?: string | null },
+): Promise<void> {
+  const { error } = await supabase.from("user_task_state").upsert(
+    { user_id: userId, task_id: taskId, ...patch },
+    { onConflict: "user_id,task_id" },
+  );
+  if (error) throw error;
 }
 
 /* -------------------------------------------------------------------------- */

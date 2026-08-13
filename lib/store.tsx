@@ -18,7 +18,9 @@ import {
   deleteClosure,
   deleteCustomStatus,
   deleteLeaveRequest,
+  deleteSavedView,
   deleteTaskRequest,
+  deleteTemplate,
   deleteTaskLink,
   deleteTaskRow,
   decideLeaveRequest,
@@ -27,7 +29,10 @@ import {
   fetchClosures,
   fetchLeaveRequests,
   fetchNotifications,
+  fetchSavedViews,
   fetchTaskRequests,
+  fetchTemplates,
+  fetchUserTaskState,
   fetchProjectComments,
   fetchTaskComments,
   fetchTaskEvents,
@@ -40,6 +45,7 @@ import {
   insertClosure,
   insertCustomStatus,
   insertLeaveRequest,
+  insertSavedView,
   insertTaskRequest,
   insertNotifications,
   insertProject,
@@ -52,10 +58,12 @@ import {
   removeAvatarByUrl,
   setChecklistItemDone,
   setDecision,
+  setUserTaskState,
   toggleReactionRow,
   updateProfileRow,
   updateTaskRow,
   uploadAvatar,
+  upsertTemplate,
 } from "@/lib/supabase/queries";
 import { formatRange, workingDaysCount } from "@/lib/leave";
 import type {
@@ -168,44 +176,10 @@ const problemEpisodeKey = (t: Task) => `${t.id}:${t.problem_since}`;
 /** Soglie di escalation (promemoria one-shot ai responsabili). */
 const PROBLEM_ESCALATION_MS = 48 * 3600_000;
 const REQUEST_ESCALATION_MS = 3 * 86_400_000;
-
-/** Collassa gli avvisi di sistema identici (stesso destinatario, task e
- *  testo) accumulati dal vecchio bug dei marcatori non persistiti: resta
- *  l'originale più vecchio. Menzioni e solleciti (azioni umane, ripetibili
- *  di proposito) non vengono mai toccati. */
-function dedupeSystemNotifications(
-  list: AppNotification[],
-): AppNotification[] {
-  const seen = new Set<string>();
-  return list.filter((n) => {
-    if ((n.kind ?? "sistema") !== "sistema") return true;
-    const key = `${n.to_user_id}|${n.task_id ?? ""}|${n.message}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-/** Prima apertura senza marcatori salvati: considera già segnalato ciò che
- *  è oltre soglia — lo era di sicuro (i doppioni in campanella lo provano). */
-const seedEscalatedProblems = (tasks: Task[], now: number): string[] =>
-  tasks
-    .filter(
-      (t) =>
-        t.status === "alert" &&
-        t.problem_since &&
-        now - new Date(t.problem_since).getTime() > PROBLEM_ESCALATION_MS,
-    )
-    .map(problemEpisodeKey);
-
-const seedEscalatedRequests = (requests: TaskRequest[], now: number): string[] =>
-  requests
-    .filter(
-      (r) =>
-        r.status === "pending" &&
-        now - new Date(r.created_at).getTime() > REQUEST_ESCALATION_MS,
-    )
-    .map((r) => r.id);
+/* Le funzioni di bonifica dei doppioni e di deduzione dei marcatori di
+   escalation sono sparite insieme alla persistenza in localStorage: servivano
+   a rimettere in piedi lo stato salvato all'avvio, e non c'è più uno stato
+   salvato da rimettere in piedi. */
 
 /** Una richiesta ferie merita il promemoria? In attesa da più di 3 giorni,
  *  oppure partenza ormai vicina (≤3 g): decidere tardi è un no di fatto. */
@@ -217,13 +191,6 @@ const leaveEscalationDue = (
   l.status === "pending" &&
   (now - new Date(l.created_at).getTime() > REQUEST_ESCALATION_MS ||
     (l.start_date >= today && diffIsoDays(today, l.start_date) <= 3));
-
-const seedEscalatedLeaves = (
-  leaves: LeaveRequest[],
-  now: number,
-  today: string,
-): string[] =>
-  leaves.filter((l) => leaveEscalationDue(l, now, today)).map((l) => l.id);
 
 /** Eventi di cronologia derivati da una modifica (campi tracciati). */
 function diffTaskEvents(before: Task, after: Task, actorId: string): TaskEvent[] {
@@ -542,12 +509,22 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [requests, setRequests] = React.useState<TaskRequest[]>([]);
   const [leaves, setLeaves] = React.useState<LeaveRequest[]>([]);
   const [closures, setClosures] = React.useState<CompanyClosure[]>([]);
-  /* Marcatori «già segnalato» delle escalation: il ref fa da guardia
-     sincrona dentro la sessione, lo stato è lo specchio PERSISTITO — senza,
-     ogni ricarica ri-generava le stesse notifiche all'infinito. */
-  const [escalatedProblems, setEscalatedProblems] = React.useState<string[]>([]);
-  const [escalatedRequests, setEscalatedRequests] = React.useState<string[]>([]);
-  const [escalatedLeaves, setEscalatedLeaves] = React.useState<string[]>([]);
+  /* Marcatori «già segnalato» delle escalation.
+
+     Erano due: un ref come guardia sincrona dentro la sessione e uno stato
+     persistito in localStorage, perché senza quest'ultimo ogni ricarica
+     rigenerava le stesse notifiche.
+
+     Lo stato persistito è sparito con localStorage e NON è stato sostituito.
+     Non è una dimenticanza: le notifiche di escalation non finiscono nel
+     database — la policy pretende `from_user_id = auth.uid()` e queste sono
+     attribuite al richiedente. Sono quindi vive solo nella sessione, e con
+     loro i marcatori: ricaricando spariscono entrambi, quindi non si creano
+     doppioni, si riparte da zero. Coerente, anche se non ideale.
+
+     La sistemazione vera è spostare le escalation sul server (una funzione
+     pianificata), dove appartengono: generarle nel browser di chi ha per
+     caso una scheda aperta è comunque il posto sbagliato. */
   const escalatedRef = React.useRef(new Set<string>());
   const requestsEscalatedRef = React.useRef(new Set<string>());
   const leavesEscalatedRef = React.useRef(new Set<string>());
@@ -627,6 +604,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           requestList,
           leaveList,
           closureList,
+          templateList,
+          viewList,
+          statoPersonale,
         ] = await Promise.all([
           fetchProfiles(supabase),
           fetchProjects(supabase),
@@ -641,6 +621,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           fetchTaskRequests(supabase),
           fetchLeaveRequests(supabase),
           fetchClosures(supabase),
+          fetchTemplates(supabase),
+          fetchSavedViews(supabase),
+          fetchUserTaskState(supabase),
         ]);
 
         if (annullato) return;
@@ -662,6 +645,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         setRequests(requestList);
         setLeaves(leaveList);
         setClosures(closureList);
+        setTemplates(templateList);
+        setSavedViews(viewList);
+        setFocusIds(statoPersonale.focusIds);
+        setSnoozes(statoPersonale.snoozes);
         if (userId) setCurrentUserId(userId);
       } catch (e) {
         if (!annullato) {
@@ -776,6 +763,34 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   useSincronizza(
+    templates,
+    pronto,
+    async (nuovi) => {
+      const supabase = createClient();
+      for (const t of nuovi) await upsertTemplate(supabase, t, currentUserId);
+    },
+    async (ids) => {
+      const supabase = createClient();
+      for (const id of ids) await deleteTemplate(supabase, id);
+    },
+    setSyncError,
+  );
+
+  useSincronizza(
+    savedViews,
+    pronto,
+    async (nuove) => {
+      const supabase = createClient();
+      for (const v of nuove) await insertSavedView(supabase, currentUserId, v);
+    },
+    async (ids) => {
+      const supabase = createClient();
+      for (const id of ids) await deleteSavedView(supabase, id);
+    },
+    setSyncError,
+  );
+
+  useSincronizza(
     notifications,
     pronto,
     async (nuovi) => {
@@ -793,125 +808,20 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   /* ------------------------------------------------------------------ */
-  /* Persistenza locale delle entità non ancora collegate.               */
-  /* «Si deve memorizzare tutto»: task, cronologia, commenti e avvisi    */
-  /* sopravvivono al refresh; con Supabase questo strato sparisce.       */
-  /* Bump di STATE_VERSION = reset pulito ai seed (schema cambiato).     */
+  /* La persistenza in localStorage e sparita: ogni entita sta su         */
+  /* Supabase. Teneva una copia dell intero workspace in office-state e   */
+  /* la reidratava all avvio — con i dati veri sarebbe una seconda        */
+  /* sorgente di verita, destinata a divergere al primo accesso da un     */
+  /* altro computer.                                                      */
   /* ------------------------------------------------------------------ */
-  const STATE_KEY = "office-state";
-  // v2 (31/07): timestamp dei seed ancorati (fix idratazione #418) —
-  // il bump azzera i dati demo persistiti, come concordato.
-  const STATE_VERSION = 2;
-  const stateLoadedRef = React.useRef(false);
-  React.useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const raw = localStorage.getItem(STATE_KEY);
-        if (raw) {
-          const data = JSON.parse(raw);
-          if (data?.version === STATE_VERSION) {
-            if (data.tasks) setTasks(data.tasks);
-            if (data.events) setEvents(data.events);
-            if (data.comments) setComments(data.comments);
-            if (data.notifications) {
-              // Bonifica one-shot dei doppioni storici del vecchio bug.
-              setNotifications(dedupeSystemNotifications(data.notifications));
-            }
-            if (data.taskLinks) setTaskLinks(data.taskLinks);
-            if (data.projectComments) setProjectComments(data.projectComments);
-            if (data.snoozes) setSnoozes(data.snoozes);
-            if (data.focusIds) setFocusIds(data.focusIds);
-            if (data.customStatuses) setCustomStatuses(data.customStatuses);
-            if (data.requests) setRequests(data.requests);
-            if (data.leaves) setLeaves(data.leaves);
-            if (data.closures) setClosures(data.closures);
-            // Marcatori di escalation: caricati, o dedotti alla prima
-            // apertura post-fix (campo assente nello stato salvato).
-            const now = Date.now();
-            const problems: string[] = Array.isArray(data.escalatedProblems)
-              ? data.escalatedProblems
-              : seedEscalatedProblems(data.tasks ?? [], now);
-            const staleReqs: string[] = Array.isArray(data.escalatedRequests)
-              ? data.escalatedRequests
-              : seedEscalatedRequests(data.requests ?? [], now);
-            const staleLeaves: string[] = Array.isArray(data.escalatedLeaves)
-              ? data.escalatedLeaves
-              : seedEscalatedLeaves(data.leaves ?? [], now, todayIso());
-            escalatedRef.current = new Set(problems);
-            requestsEscalatedRef.current = new Set(staleReqs);
-            leavesEscalatedRef.current = new Set(staleLeaves);
-            setEscalatedProblems(problems);
-            setEscalatedRequests(staleReqs);
-            setEscalatedLeaves(staleLeaves);
-          }
-        }
-      } catch {
-        /* storage illeggibile: si riparte dai seed */
-      }
-      stateLoadedRef.current = true;
-    });
-  }, []);
-  React.useEffect(() => {
-    if (!stateLoadedRef.current) return;
-    const persist = () => {
-      try {
-        localStorage.setItem(
-          STATE_KEY,
-          JSON.stringify({
-            version: STATE_VERSION,
-            savedAt: new Date().toISOString(),
-            tasks,
-            events,
-            comments,
-            notifications,
-            taskLinks,
-            projectComments,
-            snoozes,
-            focusIds,
-            customStatuses,
-            requests,
-            leaves,
-            closures,
-            escalatedProblems,
-            escalatedRequests,
-            escalatedLeaves,
-          }),
-        );
-      } catch {
-        /* quota piena o storage assente: pazienza */
-      }
-    };
-    // Persiste al primo momento di quiete del browser (tetto 400ms):
-    // ogni mutazione annulla e riprogramma, così le raffiche producono
-    // una sola serializzazione e mai dentro un frame di interazione.
-    if (typeof requestIdleCallback === "undefined") {
-      const id = setTimeout(persist, 400);
-      return () => clearTimeout(id);
-    }
-    const id = requestIdleCallback(persist, { timeout: 400 });
-    return () => cancelIdleCallback(id);
-  }, [
-    tasks,
-    events,
-    comments,
-    notifications,
-    taskLinks,
-    projectComments,
-    snoozes,
-    focusIds,
-    customStatuses,
-    requests,
-    leaves,
-    closures,
-    escalatedProblems,
-    escalatedRequests,
-    escalatedLeaves,
-  ]);
 
   /* Auto-archivio: i Fatto completati da più di 14 giorni escono dalla
      board (restano in archivio e nei report). */
   React.useEffect(() => {
-    if (!stateLoadedRef.current) return;
+    // La guardia era sul caricamento da localStorage; ora è sul caricamento
+    // da Supabase. Senza, all'avvio la lista task è vuota e l'archiviazione
+    // girerebbe a vuoto — o peggio, su dati non ancora arrivati.
+    if (!pronto) return;
     const cutoff = Date.now() - 14 * 86_400_000;
     const stale = tasks.filter(
       (t) =>
@@ -931,78 +841,38 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         ...stale.map((t) => makeEvent(t.id, t.owner_id, "archived")),
       ]);
+      /* Gli eventi li scrive il confronto per id; l'archiviazione dei task è
+         una modifica e va scritta qui, altrimenti tornerebbero in board a
+         ogni ricarica. */
+      scriviCon(
+        async () => {
+          const supabase = createClient();
+          for (const t of stale) {
+            await updateTaskRow(supabase, t.id, { archived_at: nowIso });
+          }
+        },
+        () =>
+          setTasks((prev) =>
+            prev.map((t) => (ids.has(t.id) ? { ...t, archived_at: null } : t)),
+          ),
+      );
     });
-  }, [tasks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, pronto]);
 
-  /* Viste salvate e template: carica e persisti in localStorage. Il flag
-     "loaded" evita che il primo salvataggio (stato iniziale) sovrascriva
-     quanto memorizzato prima che la lettura sia avvenuta. */
-  const viewsLoadedRef = React.useRef(false);
-  React.useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const raw = localStorage.getItem("saved-views");
-        if (raw) setSavedViews(JSON.parse(raw));
-      } catch {
-        /* ignora */
-      }
-      viewsLoadedRef.current = true;
-    });
-  }, []);
-  React.useEffect(() => {
-    if (!viewsLoadedRef.current) return;
-    try {
-      localStorage.setItem("saved-views", JSON.stringify(savedViews));
-    } catch {
-      /* ignora */
-    }
-  }, [savedViews]);
+  /* Viste salvate, template e foto profilo non passano più dal browser:
+     stanno su Supabase e seguono la persona invece del computer. Le tre
+     coppie di effetti che li leggevano e riscrivevano in localStorage sono
+     sparite con la migrazione. */
 
-  const templatesLoadedRef = React.useRef(false);
-  React.useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const raw = localStorage.getItem("workspace-templates");
-        if (raw) setTemplates(JSON.parse(raw));
-      } catch {
-        /* ignora */
-      }
-      templatesLoadedRef.current = true;
-    });
-  }, []);
-  React.useEffect(() => {
-    if (!templatesLoadedRef.current) return;
-    try {
-      localStorage.setItem("workspace-templates", JSON.stringify(templates));
-    } catch {
-      /* ignora */
-    }
-  }, [templates]);
-
-  /* Foto profilo (id → data URL). Chiave separata da office-state: quel
-     payload si riserializza a ogni mutazione dei task e non deve portarsi
-     dietro le immagini; queste si riscrivono solo quando cambiano. */
-  const [avatars, setAvatars] = React.useState<Record<string, string>>({});
-  const avatarsLoadedRef = React.useRef(false);
-  React.useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const raw = localStorage.getItem("profile-avatars");
-        if (raw) setAvatars(JSON.parse(raw));
-      } catch {
-        /* ignora */
-      }
-      avatarsLoadedRef.current = true;
-    });
-  }, []);
-  React.useEffect(() => {
-    if (!avatarsLoadedRef.current) return;
-    try {
-      localStorage.setItem("profile-avatars", JSON.stringify(avatars));
-    } catch {
-      /* quota piena: la foto resta per la sessione, senza persistere */
-    }
-  }, [avatars]);
+  /* Le foto restano in una mappa a parte perché `profiles.avatar_url` è la
+     verità ma l'anteprima locale deve poter precedere il caricamento. Si
+     popola da `profiles`, non più da localStorage. */
+  const avatars = React.useMemo<Record<string, string>>(() => {
+    const out: Record<string, string> = {};
+    for (const p of profiles) if (p.avatar_url) out[p.id] = p.avatar_url;
+    return out;
+  }, [profiles]);
 
   /* Risveglio degli snooze scaduti: il task torna con un avviso */
   React.useEffect(() => {
@@ -1055,7 +925,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       // scritto lo stesso: l'escalation si perderebbe per sempre.
       if (profiles.length === 0) return;
       for (const r of stale) requestsEscalatedRef.current.add(r.id);
-      setEscalatedRequests((prev) => [...prev, ...stale.map((r) => r.id)]);
       const admins = profiles.filter(
         (p) => p.is_active && p.role === "admin",
       );
@@ -1099,7 +968,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       // scritto lo stesso: l'escalation si perderebbe per sempre.
       if (profiles.length === 0) return;
       for (const l of stale) leavesEscalatedRef.current.add(l.id);
-      setEscalatedLeaves((prev) => [...prev, ...stale.map((l) => l.id)]);
       const admins = profiles.filter(
         (p) => p.is_active && p.role === "admin",
       );
@@ -1158,10 +1026,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       // scritto lo stesso: l'escalation si perderebbe per sempre.
       if (profiles.length === 0) return;
       for (const t of stale) escalatedRef.current.add(problemEpisodeKey(t));
-      setEscalatedProblems((prev) => [
-        ...prev,
-        ...stale.map(problemEpisodeKey),
-      ]);
       const admins = profiles.filter((p) => p.is_active && p.role === "admin");
       setNotifications((prev) => [
         ...prev,
@@ -1804,16 +1668,46 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     snoozes,
 
+    /* Focus e posticipi non sono collezioni di righe con un id ma una lista
+       e una mappa: il confronto per id non li copre, e si scrivono qui. Una
+       riga per coppia utente-task, con upsert perché non interessa sapere se
+       esisteva già. */
+
     snoozeTask(taskId, untilIso) {
+      const prima = snoozes[taskId];
       setSnoozes((prev) => ({ ...prev, [taskId]: untilIso }));
+      scriviCon(
+        () =>
+          setUserTaskState(createClient(), currentUserId, taskId, {
+            snoozed_until: untilIso,
+          }),
+        () =>
+          setSnoozes((prev) => {
+            const next = { ...prev };
+            if (prima) next[taskId] = prima;
+            else delete next[taskId];
+            return next;
+          }),
+      );
     },
 
     unsnoozeTask(taskId) {
+      const prima = snoozes[taskId];
       setSnoozes((prev) => {
         const next = { ...prev };
         delete next[taskId];
         return next;
       });
+      scriviCon(
+        () =>
+          setUserTaskState(createClient(), currentUserId, taskId, {
+            snoozed_until: null,
+          }),
+        () =>
+          setSnoozes((prev) =>
+            prima ? { ...prev, [taskId]: prima } : prev,
+          ),
+      );
     },
 
     async reportProblem(taskId, reason) {
@@ -1895,8 +1789,15 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     updateTemplate(id, patch) {
-      setTemplates((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+      const prima = templates.find((t) => t.id === id);
+      if (!prima) return;
+      const dopo = { ...prima, ...patch };
+      setTemplates((prev) => prev.map((t) => (t.id === id ? dopo : t)));
+      /* Modifica a una riga esistente: il confronto per id non la vede.
+         `upsertTemplate` riscrive anche le voci del pacchetto. */
+      scriviCon(
+        () => upsertTemplate(createClient(), dopo, currentUserId),
+        () => setTemplates((prev) => prev.map((t) => (t.id === id ? prima : t))),
       );
     },
 
@@ -2016,11 +1917,23 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     focusIds,
 
     toggleFocus(taskId) {
-      setFocusIds((prev) => {
-        if (prev.includes(taskId)) return prev.filter((id) => id !== taskId);
-        if (prev.length >= 3) return prev;
-        return [...prev, taskId];
-      });
+      const era = focusIds.includes(taskId);
+      // Il tetto di tre è una regola di prodotto: se è pieno non succede
+      // nulla, e non deve nemmeno partire una scrittura.
+      if (!era && focusIds.length >= 3) return;
+      setFocusIds((prev) =>
+        era ? prev.filter((id) => id !== taskId) : [...prev, taskId],
+      );
+      scriviCon(
+        () =>
+          setUserTaskState(createClient(), currentUserId, taskId, {
+            is_focus: !era,
+          }),
+        () =>
+          setFocusIds((prev) =>
+            era ? [...prev, taskId] : prev.filter((id) => id !== taskId),
+          ),
+      );
     },
 
     async addComment(taskId, body) {
@@ -2080,13 +1993,30 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       );
     },
 
-    setAvatar(profileId, dataUrl) {
-      setAvatars((prev) => {
-        const next = { ...prev };
-        if (dataUrl) next[profileId] = dataUrl;
-        else delete next[profileId];
-        return next;
-      });
+    /* La firma resta invariata per i chiamanti, ma il significato è
+       cambiato: non si salva più una data URL nel browser, si scrive
+       `profiles.avatar_url`. Il caricamento del file su Storage avviene nel
+       componente che ha il File in mano — qui arriva già un URL. */
+    setAvatar(profileId, url) {
+      const prima = profiles.find((p) => p.id === profileId)?.avatar_url ?? null;
+      setProfiles((prev) =>
+        prev.map((p) => (p.id === profileId ? { ...p, avatar_url: url } : p)),
+      );
+      scriviCon(
+        async () => {
+          const supabase = createClient();
+          await updateProfileRow(supabase, profileId, { avatar_url: url });
+          // La precedente si rimuove solo dopo: fallire prima lascerebbe il
+          // profilo senza immagine e senza rimedio.
+          if (prima !== url) void removeAvatarByUrl(supabase, prima);
+        },
+        () =>
+          setProfiles((prev) =>
+            prev.map((p) =>
+              p.id === profileId ? { ...p, avatar_url: prima } : p,
+            ),
+          ),
+      );
     },
 
     notifications: myNotifications,
