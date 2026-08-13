@@ -37,7 +37,7 @@ if (!url || !key) {
   process.exit(1);
 }
 
-/** Le 20 tabelle attese: 4 da M1, 16 da M2. */
+/** Le tabelle attese: 4 da M1, 16 da M2, 2 da M4. */
 const ATTESE = [
   "profiles", "projects", "tasks", "task_comments",
   "task_statuses", "task_checklist_items", "task_links", "task_events",
@@ -45,6 +45,8 @@ const ATTESE = [
   "notifications", "leave_requests", "company_closures", "task_requests",
   "workspace_templates", "workspace_template_pack_items", "user_task_state",
   "saved_views", "user_preferences",
+  // M4
+  "messages", "message_reads",
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };
