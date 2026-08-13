@@ -25,7 +25,11 @@ interface ProfileRow {
   title: string | null;
   avatar_url: string | null;
   is_active: boolean;
+  onboarded_at: string | null;
 }
+
+const PROFILE_COLUMNS =
+  "id, full_name, email, role, title, avatar_url, is_active, onboarded_at";
 
 function toProfile(row: ProfileRow): Profile {
   return {
@@ -37,6 +41,7 @@ function toProfile(row: ProfileRow): Profile {
     title: row.title ?? undefined,
     avatar_url: row.avatar_url,
     is_active: row.is_active,
+    onboarded_at: row.onboarded_at,
   };
 }
 
@@ -47,11 +52,104 @@ export async function fetchProfiles(
 ): Promise<Profile[]> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, email, role, title, avatar_url, is_active")
+    .select(PROFILE_COLUMNS)
     .order("full_name");
 
   if (error) throw error;
-  return (data as ProfileRow[]).map(toProfile);
+  return (data as unknown as ProfileRow[]).map(toProfile);
+}
+
+/** Aggiorna il proprio profilo. La policy `profiles_update_self_or_admin`
+ *  decide chi può toccare cosa; `role` e `is_active` restano fuori di
+ *  proposito — li governa la guardia `profiles_guard`, non questo modulo. */
+export async function updateProfileRow(
+  supabase: SupabaseClient,
+  id: string,
+  patch: {
+    full_name?: string;
+    title?: string | null;
+    avatar_url?: string | null;
+    onboarded_at?: string | null;
+  },
+): Promise<void> {
+  const { error } = await supabase.from("profiles").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Foto profilo su Storage                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Carica la foto e restituisce l'URL pubblico.
+ *
+ * Il percorso è «<id utente>/<nome>»: il primo segmento è quello che le
+ * policy del bucket confrontano con auth.uid(). Cambiarne la forma
+ * significherebbe rendere impossibile ogni caricamento.
+ *
+ * Il nome cambia a ogni caricamento — la CDN tiene in cache per URL, e
+ * riusare lo stesso nome mostrerebbe la foto vecchia per ore.
+ */
+export async function uploadAvatar(
+  supabase: SupabaseClient,
+  userId: string,
+  file: File,
+): Promise<string> {
+  const estensione = file.type === "image/png"
+    ? "png"
+    : file.type === "image/webp"
+      ? "webp"
+      : "jpg";
+  const percorso = `${userId}/${crypto.randomUUID()}.${estensione}`;
+
+  const { error } = await supabase.storage
+    .from("avatars")
+    .upload(percorso, file, { contentType: file.type, upsert: false });
+  if (error) throw error;
+
+  const { data } = supabase.storage.from("avatars").getPublicUrl(percorso);
+  return data.publicUrl;
+}
+
+/** Rimuove la foto precedente. Fallire qui non è grave — resta un file
+ *  orfano, non un errore per l'utente — quindi non si propaga. */
+export async function removeAvatarByUrl(
+  supabase: SupabaseClient,
+  url: string | null | undefined,
+): Promise<void> {
+  if (!url) return;
+  const marcatore = "/avatars/";
+  const i = url.indexOf(marcatore);
+  if (i === -1) return;
+  const percorso = url.slice(i + marcatore.length);
+  await supabase.storage.from("avatars").remove([percorso]);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Preferenze d'aspetto                                                        */
+/* -------------------------------------------------------------------------- */
+
+export async function fetchAppearance(
+  supabase: SupabaseClient,
+): Promise<Record<string, unknown> | null> {
+  const { data, error } = await supabase
+    .from("user_preferences")
+    .select("appearance")
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data?.appearance as Record<string, unknown>) ?? null;
+}
+
+export async function saveAppearance(
+  supabase: SupabaseClient,
+  userId: string,
+  appearance: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await supabase
+    .from("user_preferences")
+    .upsert({ user_id: userId, appearance }, { onConflict: "user_id" });
+  if (error) throw error;
 }
 
 /* -------------------------------------------------------------------------- */

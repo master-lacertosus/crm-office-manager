@@ -61,6 +61,9 @@ export interface Profile {
    *  in locale; con Supabase: URL di Storage (colonna già a schema). */
   avatar_url?: string | null;
   is_active: boolean;
+  /** Quando il proprietario ha completato il primo accesso guidato.
+   *  `null` = mai: l'app gli propone la procedura. */
+  onboarded_at?: string | null;
 }
 
 export interface Project {

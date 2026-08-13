@@ -3,6 +3,10 @@
 import * as React from "react";
 import { MotionConfig } from "motion/react";
 
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { fetchAppearance, saveAppearance } from "@/lib/supabase/queries";
+
 /**
  * Preferenze personali d'aspetto — vivono nel browser (localStorage) e si
  * applicano all'app intera via variabili CSS e attributi su <html>. Con
@@ -210,6 +214,28 @@ export function PreferencesProvider({
     });
   }, []);
 
+  /* Poi il database, che vince sul browser: le preferenze devono seguire la
+     persona fra computer diversi. Il passaggio dal locale resta perché
+     applica il tema prima che la rete risponda — senza, a ogni caricamento
+     si vedrebbe un istante di arancio predefinito prima del colore scelto. */
+  React.useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let annullato = false;
+    (async () => {
+      try {
+        const salvate = await fetchAppearance(createClient());
+        if (!annullato && salvate) {
+          setPrefs((p) => ({ ...p, ...(salvate as Partial<Preferences>) }));
+        }
+      } catch {
+        /* non collegato o tabella irraggiungibile: restano quelle locali */
+      }
+    })();
+    return () => {
+      annullato = true;
+    };
+  }, []);
+
   // Applica (sempre) e persiste (solo dopo il primo caricamento).
   React.useEffect(() => {
     applyAccent(prefs.accent);
@@ -221,6 +247,17 @@ export function PreferencesProvider({
     } catch {
       /* quota piena o storage assente: pazienza */
     }
+    if (!isSupabaseConfigured) return;
+    void (async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getClaims();
+        const userId = data?.claims?.sub as string | undefined;
+        if (userId) await saveAppearance(supabase, userId, { ...prefs });
+      } catch {
+        /* il salvataggio remoto è un di più: quello locale è già avvenuto */
+      }
+    })();
   }, [prefs]);
 
   const value = React.useMemo<PreferencesContextValue>(

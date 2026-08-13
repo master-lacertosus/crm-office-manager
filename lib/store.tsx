@@ -23,7 +23,10 @@ import {
   insertCustomStatus,
   insertProject,
   insertTask,
+  removeAvatarByUrl,
+  updateProfileRow,
   updateTaskRow,
+  uploadAvatar,
 } from "@/lib/supabase/queries";
 import { formatRange, workingDaysCount } from "@/lib/leave";
 import type {
@@ -224,6 +227,17 @@ interface AppStore {
   syncError: string | null;
   /** Nasconde l'avviso di scrittura fallita dopo che l'utente l'ha letto. */
   clearSyncError: () => void;
+  /** Vero quando il profilo non è mai stato configurato dal suo proprietario
+   *  (`onboarded_at` nullo) e i dati sono già stati caricati. */
+  needsOnboarding: boolean;
+  /** Conclude il primo accesso: salva nome, qualifica ed eventuale foto, e
+   *  marca il profilo come configurato. Lancia se la scrittura fallisce —
+   *  qui l'utente sta aspettando, quindi l'errore va mostrato, non ingoiato. */
+  completeOnboarding: (input: {
+    full_name: string;
+    title: string | null;
+    avatarFile: File | null;
+  }) => Promise<void>;
   profiles: Profile[];
   projects: Project[];
   /** Crea un progetto su Supabase e lo aggiunge alla lista. */
@@ -973,6 +987,54 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     loadError,
     syncError,
     clearSyncError: () => setSyncError(null),
+
+    /* Solo a caricamento concluso: durante l'attesa `currentUser` è la
+       sentinella, che ovviamente non ha `onboarded_at` — proporre la
+       procedura in quel momento la mostrerebbe a ogni ricarica, per un
+       istante, anche a chi l'ha già fatta. */
+    needsOnboarding:
+      isSupabaseConfigured &&
+      !loading &&
+      Boolean(currentUser.id) &&
+      !currentUser.onboarded_at,
+
+    async completeOnboarding({ full_name, title, avatarFile }) {
+      const supabase = createClient();
+      const nome = full_name.trim();
+      if (!nome) throw new Error("Il nome non può essere vuoto.");
+
+      let avatarUrl = currentUser.avatar_url ?? null;
+      if (avatarFile) {
+        const precedente = avatarUrl;
+        avatarUrl = await uploadAvatar(supabase, currentUser.id, avatarFile);
+        // La vecchia foto si toglie solo a nuova caricata: fallire prima
+        // lascerebbe il profilo senza immagine e senza rimedio.
+        void removeAvatarByUrl(supabase, precedente);
+      }
+
+      const onboardedAt = new Date().toISOString();
+      await updateProfileRow(supabase, currentUser.id, {
+        full_name: nome,
+        title: title?.trim() || null,
+        avatar_url: avatarUrl,
+        onboarded_at: onboardedAt,
+      });
+
+      setProfiles((prev) =>
+        prev.map((p) =>
+          p.id === currentUser.id
+            ? {
+                ...p,
+                full_name: nome,
+                title: title?.trim() || undefined,
+                avatar_url: avatarUrl,
+                onboarded_at: onboardedAt,
+              }
+            : p,
+        ),
+      );
+    },
+
     profiles: profilesResolved,
     projects,
 

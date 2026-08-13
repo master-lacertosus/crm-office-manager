@@ -106,8 +106,43 @@ const fasi = await fetch(`${url}/rest/v1/task_statuses?select=key,label,kind&ord
 const fasiBody = await fasi.text();
 console.log(`   HTTP ${fasi.status} — ${fasiBody.slice(0, 200)}`);
 
+// --- 4. Colonne di M3 -------------------------------------------------------
+// Trucco: la RLS nasconde le RIGHE, non le COLONNE. Chiedere una colonna che
+// non esiste produce 400 con codice 42703; se invece esiste, la risposta è
+// 200 con lista vuota. Basta a distinguere «migrazione applicata» da «no».
+console.log("\n4. Colonne aggiunte da M3");
+let m3Ok = true;
+for (const [tabella, colonna] of [["profiles", "onboarded_at"]]) {
+  const res = await fetch(
+    `${url}/rest/v1/${tabella}?select=${colonna}&limit=1`,
+    { headers },
+  );
+  if (res.ok) {
+    console.log(`   ${tabella}.${colonna.padEnd(14)} OK`);
+  } else {
+    m3Ok = false;
+    const body = await res.text();
+    console.log(`   ${tabella}.${colonna.padEnd(14)} MANCA — ${body.slice(0, 120)}`);
+  }
+}
+
+// --- 5. Bucket delle foto ---------------------------------------------------
+// Stessa logica: un bucket assente risponde «Bucket not found», uno presente
+// si lamenta dell'oggetto inesistente. Due errori diversi, due significati.
+console.log("\n5. Deposito delle foto profilo");
+const sonda = await fetch(
+  `${url}/storage/v1/object/public/avatars/sonda-inesistente.png`,
+);
+const sondaBody = await sonda.text();
+const bucketAssente = /bucket not found/i.test(sondaBody);
 console.log(
-  mancanti.length === 0 && perdite === 0
+  bucketAssente
+    ? `   bucket «avatars»   MANCA — ${sondaBody.slice(0, 100)}`
+    : "   bucket «avatars»   OK — risponde, l'oggetto di prova non esiste (atteso)",
+);
+
+console.log(
+  mancanti.length === 0 && perdite === 0 && m3Ok && !bucketAssente
     ? "\nSchema applicato e RLS attiva."
     : "\nCi sono problemi da guardare sopra.",
 );
