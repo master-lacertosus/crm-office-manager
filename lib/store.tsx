@@ -14,9 +14,16 @@ import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
+  deleteCustomStatus,
+  deleteTaskRow,
+  fetchCustomStatuses,
   fetchProfiles,
   fetchProjects,
+  fetchTasks,
+  insertCustomStatus,
   insertProject,
+  insertTask,
+  updateTaskRow,
 } from "@/lib/supabase/queries";
 import { formatRange, workingDaysCount } from "@/lib/leave";
 import type {
@@ -212,6 +219,11 @@ interface AppStore {
   loading: boolean;
   /** Messaggio dell'errore di caricamento, se c'è stato. */
   loadError: string | null;
+  /** Messaggio dell'ultima scrittura fallita: la modifica è già stata
+   *  annullata quando questo campo si valorizza. */
+  syncError: string | null;
+  /** Nasconde l'avviso di scrittura fallita dopo che l'utente l'ha letto. */
+  clearSyncError: () => void;
   profiles: Profile[];
   projects: Project[];
   /** Crea un progetto su Supabase e lo aggiunge alla lista. */
@@ -458,6 +470,30 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   /* ------------------------------------------------------------------ */
   const [loading, setLoading] = React.useState(isSupabaseConfigured);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [syncError, setSyncError] = React.useState<string | null>(null);
+
+  /* Scrittura in sottofondo con annullamento.
+
+     L'interfaccia si aggiorna subito — trascinare una scheda deve essere
+     istantaneo, non attendere la rete — e la scrittura parte dopo. Se il
+     database rifiuta (una policy, la connessione, un vincolo), si ripristina
+     lo stato precedente e si espone l'errore: senza il ripristino l'utente
+     resterebbe convinto di aver salvato qualcosa che non esiste.
+
+     La RLS è l'ultima parola: se una policy nega, qui si vede: l'app non
+     decide i permessi, li subisce. */
+  const scriviCon = React.useCallback(
+    (operazione: () => Promise<void>, ripristina: () => void) => {
+      if (!isSupabaseConfigured) return;
+      void operazione().catch((e: unknown) => {
+        ripristina();
+        setSyncError(
+          e instanceof Error ? e.message : "Salvataggio non riuscito.",
+        );
+      });
+    },
+    [],
+  );
 
   React.useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -472,14 +508,19 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         const { data: claims } = await supabase.auth.getClaims();
         const userId = claims?.claims?.sub as string | undefined;
 
-        const [profileList, projectList] = await Promise.all([
-          fetchProfiles(supabase),
-          fetchProjects(supabase),
-        ]);
+        const [profileList, projectList, taskList, customList] =
+          await Promise.all([
+            fetchProfiles(supabase),
+            fetchProjects(supabase),
+            fetchTasks(supabase),
+            fetchCustomStatuses(supabase),
+          ]);
 
         if (annullato) return;
         setProfiles(profileList);
         setProjects(projectList);
+        setTasks(taskList);
+        setCustomStatuses(customList);
         if (userId) setCurrentUserId(userId);
       } catch (e) {
         if (!annullato) {
@@ -930,6 +971,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     loading,
     loadError,
+    syncError,
+    clearSyncError: () => setSyncError(null),
     profiles: profilesResolved,
     projects,
 
@@ -975,6 +1018,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         makeEvent(task.id, currentUser.id, "created"),
       ]);
+      scriviCon(
+        () => insertTask(createClient(), task),
+        () => setTasks((prev) => prev.filter((t) => t.id !== task.id)),
+      );
       return task;
     },
 
@@ -1010,6 +1057,24 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       ]);
       if (evs.length > 0) setEvents((prev) => [...prev, ...evs]);
 
+      /* `completed_at` e `problem_since` non si inviano: li impongono i
+         trigger del database. Si mandano solo i campi che l'utente ha
+         davvero cambiato — il resto lo calcola Postgres, una volta sola. */
+      scriviCon(
+        async () => {
+          const supabase = createClient();
+          await updateTaskRow(supabase, id, patch);
+          // La ricorrenza genera un task nuovo: va inserito, non aggiornato.
+          for (const s of spawned) await insertTask(supabase, s);
+        },
+        () =>
+          setTasks((prev) =>
+            prev
+              .filter((t) => !spawned.some((s) => s.id === t.id))
+              .map((t) => (t.id === id ? before : t)),
+          ),
+      );
+
       if (before.status === next.status) return null;
       const spawnedIds = new Set(spawned.map((s) => s.id));
       const evIds = new Set(evs.map((e) => e.id));
@@ -1020,6 +1085,19 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             .map((t) => (t.id === id ? before : t)),
         );
         setEvents((prev) => prev.filter((e) => !evIds.has(e.id)));
+        /* L'annulla deve raggiungere anche il database: ripristinare la sola
+           interfaccia lascerebbe la modifica scritta, e alla ricarica
+           tornerebbe fuori quello che l'utente credeva di aver annullato. */
+        scriviCon(
+          async () => {
+            const supabase = createClient();
+            await updateTaskRow(supabase, id, before);
+            for (const spawnedId of spawnedIds) {
+              await deleteTaskRow(supabase, spawnedId);
+            }
+          },
+          () => setTasks((prev) => prev.map((t) => (t.id === id ? next : t))),
+        );
       };
     },
 
@@ -1059,6 +1137,21 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       ]);
       if (evs.length > 0) setEvents((prev) => [...prev, ...evs]);
 
+      // Il trascinamento cambia fase e posizione: solo quelle due colonne.
+      scriviCon(
+        async () => {
+          const supabase = createClient();
+          await updateTaskRow(supabase, id, { status, position });
+          for (const s of spawned) await insertTask(supabase, s);
+        },
+        () =>
+          setTasks((prev) =>
+            prev
+              .filter((t) => !spawned.some((s) => s.id === t.id))
+              .map((t) => (t.id === id ? before : t)),
+          ),
+      );
+
       if (before.status === status) return null;
       const spawnedIds = new Set(spawned.map((s) => s.id));
       const evIds = new Set(evs.map((e) => e.id));
@@ -1069,6 +1162,19 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             .map((t) => (t.id === id ? before : t)),
         );
         setEvents((prev) => prev.filter((e) => !evIds.has(e.id)));
+        /* L'annulla deve raggiungere anche il database: ripristinare la sola
+           interfaccia lascerebbe la modifica scritta, e alla ricarica
+           tornerebbe fuori quello che l'utente credeva di aver annullato. */
+        scriviCon(
+          async () => {
+            const supabase = createClient();
+            await updateTaskRow(supabase, id, before);
+            for (const spawnedId of spawnedIds) {
+              await deleteTaskRow(supabase, spawnedId);
+            }
+          },
+          () => setTasks((prev) => prev.map((t) => (t.id === id ? next : t))),
+        );
       };
     },
 
@@ -1175,17 +1281,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "_")
         .replace(/^_+|_+$/g, "");
-      const key = `custom_${base || "fase"}_${customStatuses.length + 1}`;
-      setCustomStatuses((prev) => [
-        ...prev,
-        {
-          key,
-          label: label.trim(),
-          color: preset.color,
-          soft: preset.soft,
-          text: preset.text,
-        },
-      ]);
+      /* La colonna `key` accetta al massimo 32 caratteri (vincolo
+         task_statuses_key_format): con un'etichetta lunga la chiave
+         sforerebbe e il database rifiuterebbe l'inserimento. Si tronca la
+         parte variabile lasciando intatti prefisso e suffisso, che sono
+         quelli che garantiscono l'unicità. */
+      const suffisso = `_${customStatuses.length + 1}`;
+      const spazio = 32 - "custom_".length - suffisso.length;
+      const key = `custom_${(base || "fase").slice(0, spazio)}${suffisso}`;
+
+      const nuova = {
+        key,
+        label: label.trim(),
+        color: preset.color,
+        soft: preset.soft,
+        text: preset.text,
+      };
+      setCustomStatuses((prev) => [...prev, nuova]);
+      scriviCon(
+        () => insertCustomStatus(createClient(), nuova, customStatuses.length),
+        () => setCustomStatuses((prev) => prev.filter((c) => c.key !== key)),
+      );
       return true;
     },
 
@@ -1199,6 +1315,24 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       setTasks((prev) =>
         prev.map((t) => (t.status === key ? { ...t, status: "todo" } : t)),
       );
+      /* Lato database lo spostamento dei task avviene da solo: la chiave
+         esterna è `on delete set default`, e il default è «todo». Qui si
+         cancella la fase e basta. */
+      scriviCon(
+        () => deleteCustomStatus(createClient(), key),
+        () => {
+          setCustomStatuses((prev) => {
+            const next = [...prev];
+            next.splice(Math.min(index, next.length), 0, removed);
+            return next;
+          });
+          setTasks((prev) =>
+            prev.map((t) =>
+              movedIds.includes(t.id) ? { ...t, status: key } : t,
+            ),
+          );
+        },
+      );
       return () => {
         setCustomStatuses((prev) => {
           const next = [...prev];
@@ -1209,6 +1343,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           prev.map((t) =>
             movedIds.includes(t.id) ? { ...t, status: key } : t,
           ),
+        );
+        /* Ricreare la fase non basta: i task erano stati riportati in «Da
+           fare» dalla chiave esterna, e vanno rimessi a mano dove stavano.
+           L'ordine conta — prima la fase, poi i task, altrimenti la chiave
+           esterna rifiuta. */
+        scriviCon(
+          async () => {
+            const supabase = createClient();
+            await insertCustomStatus(supabase, removed, index);
+            for (const taskId of movedIds) {
+              await updateTaskRow(supabase, taskId, { status: key });
+            }
+          },
+          () => {
+            setCustomStatuses((prev) => prev.filter((c) => c.key !== key));
+            setTasks((prev) =>
+              prev.map((t) =>
+                movedIds.includes(t.id) ? { ...t, status: "todo" } : t,
+              ),
+            );
+          },
         );
       };
     },
@@ -1974,6 +2129,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     closures,
     loading,
     loadError,
+    syncError,
+    scriviCon,
     comments,
     currentUserId,
     customStatuses,

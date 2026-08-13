@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import { NewProjectButton } from "@/components/new-project-button";
 import { ProjectsContent } from "@/components/projects-content";
 import { Topbar } from "@/components/shell/topbar";
-import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Progetti" };
 
@@ -13,9 +13,9 @@ export default function ProjectsPage() {
       <Topbar
         title="Progetti"
         actions={
-          <Button disabled title="Si attiverà con il collegamento a Supabase">
-            Nuovo progetto
-          </Button>
+          <Suspense>
+            <NewProjectButton />
+          </Suspense>
         }
       />
       <Suspense>
