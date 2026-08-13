@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import { InviteButton } from "@/components/invite-button";
 import { TeamViews, TeamViewToggle } from "@/components/team-views";
 import { Topbar } from "@/components/shell/topbar";
-import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Team" };
 
@@ -19,9 +19,9 @@ export default function TeamPage() {
             <Suspense>
               <TeamViewToggle />
             </Suspense>
-            <Button disabled title="Si attiverà con il collegamento a Supabase">
-              Invita
-            </Button>
+            <Suspense>
+              <InviteButton />
+            </Suspense>
           </>
         }
       />
