@@ -126,6 +126,35 @@ export async function removeAvatarByUrl(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Avvisi                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/** Un avviso per ogni destinatario. La policy pretende
+ *  `from_user_id = auth.uid()`: nessuno può scrivere a nome di un altro. */
+export async function insertNotifications(
+  supabase: SupabaseClient,
+  avvisi: {
+    to_user_id: string;
+    from_user_id: string;
+    message: string;
+    task_id?: string | null;
+    kind?: "mention" | "sollecito" | "sistema";
+  }[],
+): Promise<void> {
+  if (avvisi.length === 0) return;
+  const { error } = await supabase.from("notifications").insert(
+    avvisi.map((a) => ({
+      to_user_id: a.to_user_id,
+      from_user_id: a.from_user_id,
+      message: a.message,
+      task_id: a.task_id ?? null,
+      kind: a.kind ?? "sistema",
+    })),
+  );
+  if (error) throw error;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Preferenze d'aspetto                                                        */
 /* -------------------------------------------------------------------------- */
 
