@@ -10,8 +10,8 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   GENERAL,
-  fetchMessages,
   fetchReads,
+  fetchRecentMessages,
   insertMessage,
   markChannelRead,
   subscribeToChat,
@@ -79,17 +79,15 @@ export function ChatPanel() {
     (async () => {
       try {
         const supabase = createClient();
-        const [generali, salvate] = await Promise.all([
-          fetchMessages(supabase, GENERAL),
+        /* Una richiesta sola per tutti i canali. La versione precedente ne
+           faceva una per progetto: con venti progetti erano ventuno viaggi
+           di rete a ogni apertura dell'app. */
+        const [recenti, salvate] = await Promise.all([
+          fetchRecentMessages(supabase),
           fetchReads(supabase),
         ]);
-        const perProgetto = await Promise.all(
-          projects
-            .filter((p) => !p.is_archived)
-            .map((p) => fetchMessages(supabase, p.id)),
-        );
         if (annullato) return;
-        setMessaggi([...generali, ...perProgetto.flat()]);
+        setMessaggi(recenti);
         setLetture(salvate);
       } catch (e) {
         if (!annullato) {
@@ -102,7 +100,9 @@ export function ChatPanel() {
     return () => {
       annullato = true;
     };
-  }, [pronto, projects]);
+    // projects non serve piu fra le dipendenze: i messaggi arrivano tutti
+    // insieme, non piu un canale per volta.
+  }, [pronto]);
 
   /* Sottoscrizione dal vivo. Una sola per tutta la chat: il filtro sul
      canale si applica quando si disegna, non quando si ascolta. */

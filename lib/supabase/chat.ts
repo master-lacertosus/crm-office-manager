@@ -63,6 +63,32 @@ export async function fetchMessages(
   return (data as unknown as ChatMessage[]).reverse();
 }
 
+/**
+ * Gli ultimi messaggi di TUTTI i canali, in una sola richiesta.
+ *
+ * Caricarli canale per canale costava una richiesta a progetto: con venti
+ * progetti, ventuno viaggi di rete all'apertura dell'app. Qui se ne fa uno
+ * solo e si raggruppa a valle.
+ *
+ * Il limite è globale, non per canale: un canale molto attivo può quindi
+ * mangiarsi la quota degli altri. È accettabile perché serve a popolare i
+ * contatori dei non letti e le ultime battute; quando un canale si apre
+ * davvero, `fetchMessages` ne carica la storia per intero.
+ */
+export async function fetchRecentMessages(
+  supabase: SupabaseClient,
+  limite = 400,
+): Promise<ChatMessage[]> {
+  const { data, error } = await supabase
+    .from("messages")
+    .select(COLUMNS)
+    .order("created_at", { ascending: false })
+    .limit(limite);
+
+  if (error) throw error;
+  return (data as unknown as ChatMessage[]).reverse();
+}
+
 export async function insertMessage(
   supabase: SupabaseClient,
   messaggio: ChatMessage,

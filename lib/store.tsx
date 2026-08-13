@@ -15,11 +15,19 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   deleteChecklistItem,
+  deleteClosure,
   deleteCustomStatus,
+  deleteLeaveRequest,
+  deleteTaskRequest,
   deleteTaskLink,
   deleteTaskRow,
+  decideLeaveRequest,
+  decideTaskRequest,
   fetchChecklists,
+  fetchClosures,
+  fetchLeaveRequests,
   fetchNotifications,
+  fetchTaskRequests,
   fetchProjectComments,
   fetchTaskComments,
   fetchTaskEvents,
@@ -29,7 +37,10 @@ import {
   fetchProjects,
   fetchTasks,
   insertChecklistItem,
+  insertClosure,
   insertCustomStatus,
+  insertLeaveRequest,
+  insertTaskRequest,
   insertNotifications,
   insertProject,
   insertProjectComment,
@@ -613,6 +624,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           commentList,
           projectCommentList,
           notificationList,
+          requestList,
+          leaveList,
+          closureList,
         ] = await Promise.all([
           fetchProfiles(supabase),
           fetchProjects(supabase),
@@ -624,6 +638,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           fetchTaskComments(supabase),
           fetchProjectComments(supabase),
           fetchNotifications(supabase),
+          fetchTaskRequests(supabase),
+          fetchLeaveRequests(supabase),
+          fetchClosures(supabase),
         ]);
 
         if (annullato) return;
@@ -642,6 +659,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         setComments(commentList);
         setProjectComments(projectCommentList);
         setNotifications(notificationList);
+        setRequests(requestList);
+        setLeaves(leaveList);
+        setClosures(closureList);
         if (userId) setCurrentUserId(userId);
       } catch (e) {
         if (!annullato) {
@@ -706,6 +726,51 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     async (ids) => {
       const supabase = createClient();
       for (const id of ids) await deleteTaskLink(supabase, id);
+    },
+    setSyncError,
+  );
+
+  /* Richieste, ferie e chiusure: creazione e ritiro passano dal confronto
+     per id, come le altre collezioni. Le DECISIONI invece sono modifiche a
+     righe esistenti e si scrivono dove avvengono, più sotto. */
+  useSincronizza(
+    requests,
+    pronto,
+    async (nuove) => {
+      const supabase = createClient();
+      for (const r of nuove) await insertTaskRequest(supabase, r);
+    },
+    async (ids) => {
+      const supabase = createClient();
+      for (const id of ids) await deleteTaskRequest(supabase, id);
+    },
+    setSyncError,
+  );
+
+  useSincronizza(
+    leaves,
+    pronto,
+    async (nuove) => {
+      const supabase = createClient();
+      for (const l of nuove) await insertLeaveRequest(supabase, l);
+    },
+    async (ids) => {
+      const supabase = createClient();
+      for (const id of ids) await deleteLeaveRequest(supabase, id);
+    },
+    setSyncError,
+  );
+
+  useSincronizza(
+    closures,
+    pronto,
+    async (nuove) => {
+      const supabase = createClient();
+      for (const c of nuove) await insertClosure(supabase, c);
+    },
+    async (ids) => {
+      const supabase = createClient();
+      for (const id of ids) await deleteClosure(supabase, id);
     },
     setSyncError,
   );
@@ -2185,6 +2250,28 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             : r,
         ),
       );
+      /* Il task nasce come riga nuova e il confronto per id lo prende da
+         solo; l'approvazione invece è una modifica alla richiesta e va
+         scritta qui. L'ordine conta: prima il task, perché `task_id` è una
+         chiave esterna e la richiesta non può puntare a ciò che non esiste. */
+      scriviCon(
+        async () => {
+          const supabase = createClient();
+          await insertTask(supabase, task);
+          await decideTaskRequest(supabase, id, {
+            status: "approved",
+            owner_id: task.owner_id,
+            due_date: task.due_date,
+            project_id: task.project_id,
+            task_id: task.id,
+          });
+        },
+        () => {
+          setTasks((prev) => prev.filter((t) => t.id !== task.id));
+          setRequests((prev) => prev.map((r) => (r.id === id ? req : r)));
+        },
+      );
+
       // Avvisi: al richiedente e all'assegnatario (senza doppioni né auto-avvisi)
       const ownerName =
         profiles.find((p) => p.id === task.owner_id)?.full_name.split(" ")[0] ??
@@ -2259,6 +2346,18 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
               }
             : r,
         ),
+      );
+      /* Il vincolo `request_rejection_needs_reason` esige una motivazione:
+         un rifiuto senza spiegazione verrebbe respinto dal database, ed è
+         giusto così. L'interfaccia la rende obbligatoria, questa è la rete
+         di sicurezza. */
+      scriviCon(
+        () =>
+          decideTaskRequest(createClient(), id, {
+            status: "rejected",
+            rejection_reason: trimmed,
+          }),
+        () => setRequests((prev) => prev.map((r) => (r.id === id ? req : r))),
       );
       if (req.requester_id !== currentUser.id) {
         setNotifications((prev) => [
@@ -2357,6 +2456,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
               }
             : l,
         ),
+      );
+      /* La guardia `leave_requests_guard` verifica anche che chi decide non
+         sia il richiedente: se qualcuno provasse ad approvarsi le ferie da
+         solo, il rifiuto arriva dal database e l'annulla riporta indietro. */
+      scriviCon(
+        () => decideLeaveRequest(createClient(), id, decision, trimmed),
+        () => setLeaves((prev) => prev.map((l) => (l.id === id ? leave : l))),
       );
       const isFerie = leave.type === "ferie";
       const label = isFerie ? "Ferie" : "Permesso";

@@ -14,7 +14,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   AppNotification,
   ChecklistItem,
+  CompanyClosure,
   CustomStatus,
+  LeaveRequest,
   Profile,
   Project,
   ProjectComment,
@@ -22,6 +24,7 @@ import type {
   TaskComment,
   TaskEvent,
   TaskLink,
+  TaskRequest,
 } from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */
@@ -424,6 +427,163 @@ export async function toggleReactionRow(
       .eq("emoji", emoji);
     if (error) throw error;
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Richieste di task                                                           */
+/* -------------------------------------------------------------------------- */
+
+const REQUEST_COLUMNS =
+  "id, title, description, requester_id, status, requested_due, priority, " +
+  "decided_by, decided_at, rejection_reason, owner_id, due_date, project_id, " +
+  "task_id, created_at";
+
+export async function fetchTaskRequests(
+  supabase: SupabaseClient,
+): Promise<TaskRequest[]> {
+  const { data, error } = await supabase
+    .from("task_requests")
+    .select(REQUEST_COLUMNS)
+    .order("created_at");
+  if (error) throw error;
+  return data as unknown as TaskRequest[];
+}
+
+export async function insertTaskRequest(
+  supabase: SupabaseClient,
+  r: TaskRequest,
+): Promise<void> {
+  /* Lo stato non si invia: la policy pretende `status = 'pending'`
+     all'inserimento, ed è anche il default. Mandarlo sarebbe un modo per
+     sbagliarlo. */
+  const { error } = await supabase.from("task_requests").insert({
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    requester_id: r.requester_id,
+    requested_due: r.requested_due ?? null,
+    priority: r.priority ?? "normal",
+  });
+  if (error) throw error;
+}
+
+/** La decisione: `decided_by` e `decided_at` NON si inviano, li scrive la
+ *  guardia `task_requests_guard` verificando che chi decide sia un
+ *  responsabile. Mandarli da qui sarebbe dichiarare chi ha deciso. */
+export async function decideTaskRequest(
+  supabase: SupabaseClient,
+  id: string,
+  esito:
+    | {
+        status: "approved";
+        owner_id: string;
+        due_date: string | null;
+        project_id: string | null;
+        task_id: string;
+      }
+    | { status: "rejected"; rejection_reason: string },
+): Promise<void> {
+  const { error } = await supabase.from("task_requests").update(esito).eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteTaskRequest(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase.from("task_requests").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ferie, permessi e chiusure                                                  */
+/* -------------------------------------------------------------------------- */
+
+const LEAVE_COLUMNS =
+  "id, requester_id, type, start_date, end_date, time_range, note, status, " +
+  "decided_by, decided_at, decision_note, created_at";
+
+export async function fetchLeaveRequests(
+  supabase: SupabaseClient,
+): Promise<LeaveRequest[]> {
+  const { data, error } = await supabase
+    .from("leave_requests")
+    .select(LEAVE_COLUMNS)
+    .order("start_date");
+  if (error) throw error;
+  return data as unknown as LeaveRequest[];
+}
+
+export async function insertLeaveRequest(
+  supabase: SupabaseClient,
+  l: LeaveRequest,
+): Promise<void> {
+  const { error } = await supabase.from("leave_requests").insert({
+    id: l.id,
+    requester_id: l.requester_id,
+    type: l.type,
+    start_date: l.start_date,
+    end_date: l.end_date,
+    time_range: l.time_range ?? null,
+    note: l.note,
+  });
+  if (error) throw error;
+}
+
+/** Come per le richieste, `decided_by` e `decided_at` li scrive la guardia —
+ *  che verifica anche che nessuno decida sulla propria assenza. */
+export async function decideLeaveRequest(
+  supabase: SupabaseClient,
+  id: string,
+  status: "approved" | "rejected",
+  decisionNote: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("leave_requests")
+    .update({ status, decision_note: decisionNote })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteLeaveRequest(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase.from("leave_requests").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function fetchClosures(
+  supabase: SupabaseClient,
+): Promise<CompanyClosure[]> {
+  const { data, error } = await supabase
+    .from("company_closures")
+    .select("id, title, start_date, end_date, created_by")
+    .order("start_date");
+  if (error) throw error;
+  return data as CompanyClosure[];
+}
+
+export async function insertClosure(
+  supabase: SupabaseClient,
+  c: CompanyClosure,
+): Promise<void> {
+  const { error } = await supabase.from("company_closures").insert({
+    id: c.id,
+    title: c.title,
+    start_date: c.start_date,
+    end_date: c.end_date,
+    created_by: c.created_by,
+  });
+  if (error) throw error;
+}
+
+export async function deleteClosure(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase.from("company_closures").delete().eq("id", id);
+  if (error) throw error;
 }
 
 /* -------------------------------------------------------------------------- */
