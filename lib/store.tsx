@@ -374,6 +374,31 @@ const PROFILO_IN_CARICAMENTO: Profile = {
   avatar_url: null,
 };
 
+/* --------------------------------------------------------------------------
+   Bonifica del browser.
+
+   I dati finti non stavano solo nel codice: lo store li ha salvati in
+   localStorage per mesi, e li reidratava all'avvio. Toglierli dai sorgenti
+   non basta — vanno tolti anche dai browser che li hanno già.
+
+   Una marcatura di generazione risolve in un colpo: quando non corrisponde,
+   le chiavi del workspace vengono svuotate una volta sola. Alzare il numero
+   in futuro ripulisce di nuovo, senza che nessuno debba svuotare la cache a
+   mano.
+
+   Le preferenze d'aspetto e il layout della dashboard NON sono qui: sono
+   scelte personali per-browser, non contengono dati inventati e non c'è
+   motivo di buttarle.
+   -------------------------------------------------------------------------- */
+const STORAGE_GENERATION = "3";
+const STORAGE_GENERATION_KEY = "office-storage-generation";
+const WORKSPACE_STORAGE_KEYS = [
+  "office-state",
+  "profile-avatars",
+  "saved-views",
+  "workspace-templates",
+];
+
 const StoreContext = React.createContext<AppStore | null>(null);
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
@@ -409,6 +434,24 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const escalatedRef = React.useRef(new Set<string>());
   const requestsEscalatedRef = React.useRef(new Set<string>());
   const leavesEscalatedRef = React.useRef(new Set<string>());
+
+  /* Bonifica prima di ogni idratazione. Dichiarato per primo di proposito:
+     gli effetti girano nell'ordine dei sorgenti, quindi qui le chiavi sono
+     già sparite quando gli effetti sotto provano a rileggerle. */
+  React.useEffect(() => {
+    try {
+      if (localStorage.getItem(STORAGE_GENERATION_KEY) === STORAGE_GENERATION) {
+        return;
+      }
+      for (const chiave of WORKSPACE_STORAGE_KEYS) {
+        localStorage.removeItem(chiave);
+      }
+      localStorage.setItem(STORAGE_GENERATION_KEY, STORAGE_GENERATION);
+    } catch {
+      /* storage non disponibile (navigazione privata, quota): pazienza,
+         non è un motivo per impedire l'avvio dell'app */
+    }
+  }, []);
 
   /* ------------------------------------------------------------------ */
   /* Caricamento da Supabase (incremento 1: identità, profili, progetti). */
