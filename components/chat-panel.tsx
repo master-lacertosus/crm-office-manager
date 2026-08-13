@@ -233,7 +233,17 @@ export function ChatPanel() {
   if (!pronto) return null;
 
   const pannello = (
-    <div className="fixed right-4 bottom-4 z-90 flex max-h-[min(600px,calc(100dvh-2rem))] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-[0_24px_64px_rgb(15_23_42/0.22)]">
+    /* `--capo-altezza` la dichiara il Cavaliere di Parma quando compare, così
+       la chat gli si alza sopra invece di coprirlo; quando non c'è, la
+       variabile non esiste e il ripiego a 0px riporta tutto in basso. */
+    <div
+      style={{
+        bottom: "calc(1rem + var(--capo-altezza, 0px))",
+        maxHeight:
+          "min(600px, calc(100dvh - 2rem - var(--capo-altezza, 0px)))",
+      }}
+      className="fixed right-4 z-90 flex w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-[0_24px_64px_rgb(15_23_42/0.22)]"
+    >
       <div className="flex items-center gap-2 border-b border-border-soft px-3 py-2.5">
         <MessageSquare className="size-4 text-ink-muted" strokeWidth={1.75} />
         <span className="flex-1 text-[13px] font-semibold text-ink">
@@ -371,7 +381,8 @@ export function ChatPanel() {
     <button
       onClick={apri}
       aria-label="Apri la comunicazione rapida"
-      className="btn-glow fixed right-4 bottom-4 z-90 flex size-12 items-center justify-center rounded-full text-white shadow-[0_12px_32px_rgb(15_23_42/0.24)] transition-transform hover:scale-105"
+      style={{ bottom: "calc(1rem + var(--capo-altezza, 0px))" }}
+      className="btn-glow fixed right-4 z-90 flex size-12 items-center justify-center rounded-full text-white shadow-[0_12px_32px_rgb(15_23_42/0.24)] transition-[bottom,transform] duration-300 hover:scale-105"
     >
       <MessageSquare className="size-5" strokeWidth={1.75} />
       {totaleNonLetti > 0 ? (
