@@ -3,14 +3,12 @@
 import * as React from "react";
 import { MotionConfig } from "motion/react";
 
-import { createClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { fetchAppearance, saveAppearance } from "@/lib/supabase/queries";
+import { usePreferenzaSincronizzata } from "@/lib/use-preferenza";
 
 /**
- * Preferenze personali d'aspetto — vivono nel browser (localStorage) e si
- * applicano all'app intera via variabili CSS e attributi su <html>. Con
- * Supabase potranno migrare sul profilo, a parità di forma.
+ * Preferenze personali d'aspetto. Si applicano all'app intera via variabili
+ * CSS e attributi su <html>, e vivono in due posti: il browser le applica
+ * subito, Supabase le fa seguire la persona fra computer diversi.
  *
  * Tre leve REALI, non decorative:
  *  - accento: sovrascrive la scala --brand-* (primary, ring, selected,
@@ -198,66 +196,29 @@ export function PreferencesProvider({
   children: React.ReactNode;
 }) {
   const [prefs, setPrefs] = React.useState<Preferences>(DEFAULTS);
-  const loadedRef = React.useRef(false);
 
-  // Carica una volta le preferenze salvate (post-mount: niente mismatch SSR).
-  // queueMicrotask evita il setState sincrono nell'effect (come nello store).
-  React.useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) setPrefs({ ...DEFAULTS, ...JSON.parse(raw) });
-      } catch {
-        /* storage illeggibile: si resta sui default */
-      }
-      loadedRef.current = true;
-    });
-  }, []);
+  /* Browser per l'applicazione immediata, database per la portabilità: lo
+     stesso meccanismo del layout della dashboard e delle fasi compresse,
+     scritto una volta sola in `usePreferenzaSincronizzata`. */
+  usePreferenzaSincronizzata<Preferences>(
+    STORAGE_KEY,
+    "appearance",
+    prefs,
+    (v) => setPrefs((p) => ({ ...p, ...v })),
+    // I valori salvati si fondono con i predefiniti: una preferenza aggiunta
+    // dopo non deve trovarsi indefinita in un salvataggio più vecchio.
+    (grezzo) =>
+      grezzo && typeof grezzo === "object"
+        ? { ...DEFAULTS, ...(grezzo as Partial<Preferences>) }
+        : null,
+  );
 
-  /* Poi il database, che vince sul browser: le preferenze devono seguire la
-     persona fra computer diversi. Il passaggio dal locale resta perché
-     applica il tema prima che la rete risponda — senza, a ogni caricamento
-     si vedrebbe un istante di arancio predefinito prima del colore scelto. */
-  React.useEffect(() => {
-    if (!isSupabaseConfigured) return;
-    let annullato = false;
-    (async () => {
-      try {
-        const salvate = await fetchAppearance(createClient());
-        if (!annullato && salvate) {
-          setPrefs((p) => ({ ...p, ...(salvate as Partial<Preferences>) }));
-        }
-      } catch {
-        /* non collegato o tabella irraggiungibile: restano quelle locali */
-      }
-    })();
-    return () => {
-      annullato = true;
-    };
-  }, []);
-
-  // Applica (sempre) e persiste (solo dopo il primo caricamento).
+  // L'applicazione al documento resta un effetto a sé: è una scrittura sul
+  // DOM, non una persistenza.
   React.useEffect(() => {
     applyAccent(prefs.accent);
     applyDensity(prefs.density);
     applyReduceMotion(prefs.reduceMotion);
-    if (!loadedRef.current) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-    } catch {
-      /* quota piena o storage assente: pazienza */
-    }
-    if (!isSupabaseConfigured) return;
-    void (async () => {
-      try {
-        const supabase = createClient();
-        const { data } = await supabase.auth.getClaims();
-        const userId = data?.claims?.sub as string | undefined;
-        if (userId) await saveAppearance(supabase, userId, { ...prefs });
-      } catch {
-        /* il salvataggio remoto è un di più: quello locale è già avvenuto */
-      }
-    })();
   }, [prefs]);
 
   const value = React.useMemo<PreferencesContextValue>(

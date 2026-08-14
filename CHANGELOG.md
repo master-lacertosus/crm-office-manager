@@ -14,12 +14,20 @@ _(vuoto)_
 ## Update 2026-08-14
 
 ### Aggiunto
+- **Layout della dashboard e fasi compresse seguono la persona**: erano le
+  ultime due preferenze rimaste chiuse in un browser. Ora stanno su
+  `user_preferences`, come accento e densita. (#19)
 - **Ruoli e disattivazione** dalla pagina Team: promozione e retrocessione
   fra Member e Admin, disattivazione di chi lascia. Le regole le impone il
   database — non si resta senza amministratori attivi e non si disattiva chi
   ha ancora task aperti — e il suo rifiuto viene mostrato cosi com'e. (#18)
 
 ### Corretto
+- **Residui della fase placeholder**: il pulsante «Azzera dati demo»
+  cancellava una chiave di `localStorage` che non esiste piu — non
+  azzerava nulla, ricaricava soltanto. Il pannello «In arrivo con il
+  collegamento a Supabase» prometteva funzioni gia fatte. La schermata Info
+  dichiarava «Dati salvati in questo browser». Tutti corretti. (#19)
 - **I promemoria automatici funzionano davvero**. Problemi fermi da oltre 48
   ore, richieste e ferie in attesa: erano generati dal browser di chi aveva
   per caso una scheda aperta, e per tre ragioni non arrivavano a destinazione

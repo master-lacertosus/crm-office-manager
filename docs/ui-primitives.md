@@ -62,8 +62,10 @@ cerca qui**. Se una primitiva esiste, si usa; se manca, si estende qui.
 
 I blocchi sotto l'hero (KPI + 6 sezioni) sono un layout per utente:
 ordine, larghezza a preset (S=3 · M=4 · L=5 · XL=6 colonne su 12, `lg`+)
-e visibilità vivono in `lib/dashboard-layout.ts` (localStorage
-`dashboard-layout`, pattern «loaded flag», validato al load). La modalità
+e visibilita vivono in `lib/dashboard-layout.ts`: applicati subito dal
+browser, salvati su `user_preferences.dashboard_layout` e quindi portabili
+fra computer (validati al caricamento, i layout di versioni precedenti si
+scartano). La modalità
 «Personalizza» (`components/dashboard-customize.tsx`) offre: drag con
 maniglia e FLIP (`layout="position"`), resize del bordo destro che scatta
 sui preset, chip S–XL, occhio per nascondere, frecce su/giù sotto `lg`

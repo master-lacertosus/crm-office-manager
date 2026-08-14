@@ -79,7 +79,7 @@ sulla parte locale dell'email. Nessuna INSERT/DELETE via API (niente policy).
 | `body` | text NOT NULL | 1–4000 caratteri (trim); piatti, niente thread |
 | `created_at` / `updated_at` | timestamptz NOT NULL DEFAULT now() | |
 
-### `leave_requests` — ferie e permessi (fase placeholder: `lib/types.ts`)
+### `leave_requests` — ferie e permessi (migrazione M2)
 
 | Colonna | Tipo | Vincoli |
 |---|---|---|
@@ -93,7 +93,7 @@ sulla parte locale dell'email. Nessuna INSERT/DELETE via API (niente policy).
 | `decided_by` / `decided_at` / `decision_note` | uuid / timestamptz / text NULL | decisione admin con motivazione |
 | `created_at` | timestamptz NOT NULL DEFAULT now() | |
 
-### `company_closures` — chiusure aziendali (fase placeholder: `lib/types.ts`)
+### `company_closures` — chiusure aziendali (migrazione M2)
 
 | Colonna | Tipo | Vincoli |
 |---|---|---|

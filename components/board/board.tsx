@@ -18,6 +18,7 @@ import {
   type StatusMeta,
   type Task,
 } from "@/lib/types";
+import { usePreferenzaSincronizzata } from "@/lib/use-preferenza";
 import { cn } from "@/lib/utils";
 import { StatusPip } from "@/components/status-pip";
 import { CardVisual, TaskCard } from "@/components/board/task-card";
@@ -44,32 +45,24 @@ const DRAG_THRESHOLD = 6;
 
 const COLLAPSE_KEY = "board-collapsed-phases";
 
-/** Fasi compresse, persistite in localStorage (stesso pattern dello store:
- *  flag «loaded» per non sovrascrivere il salvato col primo render). */
+/** Fasi compresse: nel browser per applicarle subito, su Supabase per
+ *  ritrovarle da un altro computer (`user_preferences.collapsed_statuses`). */
 function useCollapsedPhases() {
   const [collapsed, setCollapsed] = React.useState<string[]>([]);
-  const loadedRef = React.useRef(false);
-  React.useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const data = JSON.parse(localStorage.getItem(COLLAPSE_KEY) ?? "[]");
-        if (Array.isArray(data)) {
-          setCollapsed(data.filter((k): k is string => typeof k === "string"));
-        }
-      } catch {
-        /* ignora */
-      }
-      loadedRef.current = true;
-    });
-  }, []);
-  React.useEffect(() => {
-    if (!loadedRef.current) return;
-    try {
-      localStorage.setItem(COLLAPSE_KEY, JSON.stringify(collapsed));
-    } catch {
-      /* ignora */
-    }
-  }, [collapsed]);
+
+  usePreferenzaSincronizzata<string[]>(
+    COLLAPSE_KEY,
+    "collapsed_statuses",
+    collapsed,
+    setCollapsed,
+    // Si accetta solo un elenco di stringhe: un valore corrotto o di una
+    // versione precedente non deve rompere la board.
+    (grezzo) =>
+      Array.isArray(grezzo)
+        ? grezzo.filter((k): k is string => typeof k === "string")
+        : null,
+  );
+
   const toggle = React.useCallback((key: string) => {
     setCollapsed((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
