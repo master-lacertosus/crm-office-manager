@@ -9,7 +9,17 @@ versioni (fase pre-1.0).
 
 ## Non rilasciato
 
-_(vuoto)_
+### Corretto
+- **Gli inviti non portavano da nessuna parte**: il link riportava alla radice
+  del sito invece che alla pagina della password, e il token — che viaggia
+  nel frammento dell'URL — si perdeva nel rimbalzo al login. Ora l'invito
+  punta a `/auth/confirm`, dove il token viene consumato. (#20)
+
+### Aggiunto
+- **Password dimenticata** nella pagina di accesso. Serviva anche a chi e
+  stato invitato e ha perso il link: un secondo invito verrebbe rifiutato
+  perche l'account esiste gia, e senza recupero resterebbe fuori senza
+  rimedio. (#20)
 
 ## Update 2026-08-14
 

@@ -14,6 +14,7 @@
  * definizione — ma vale per tutte quelle che scriveremo dopo.
  */
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { createClient } from "./server";
@@ -67,6 +68,44 @@ export async function signIn(
      fuori da qualunque try/catch, altrimenti la si cattura per errore e la
      navigazione non avviene mai. */
   redirect(destinazione);
+}
+
+/**
+ * Recupero della password.
+ *
+ * Serve anche a chi è stato invitato e ha perso il link: un secondo invito
+ * verrebbe rifiutato, perché l'account ormai esiste.
+ *
+ * Risponde allo stesso modo che l'indirizzo esista o no. Dire «questa email
+ * non è registrata» direbbe a chiunque quali indirizzi hanno un account qui.
+ */
+export async function requestPasswordReset(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (!email || !email.includes("@")) {
+    return { error: "Inserisci il tuo indirizzo email." };
+  }
+
+  const h = await headers();
+  const origine = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origine}/auth/confirm?next=/auth/imposta-password`,
+  });
+
+  // Un errore di invio è un problema nostro, non dell'utente: si mostra.
+  // L'indirizzo sconosciuto invece non produce errore, per costruzione.
+  if (error && !/not found|user/i.test(error.message)) {
+    return { error: messaggio(error.code, "Invio non riuscito. Riprova.") };
+  }
+
+  return { error: null };
 }
 
 export async function signOut(): Promise<void> {

@@ -8,9 +8,95 @@ import { TiltCard } from "@/components/tilt-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signIn, type AuthState } from "@/lib/supabase/auth";
+import {
+  requestPasswordReset,
+  signIn,
+  type AuthState,
+} from "@/lib/supabase/auth";
 
 const STATO_INIZIALE: AuthState = { error: null };
+
+/**
+ * Recupero password.
+ *
+ * Serve piu spesso di quanto sembri: chi e stato invitato e ha perso il link
+ * non puo essere reinvitato — l'account esiste gia — e senza questa via
+ * resterebbe fuori senza rimedio.
+ */
+function RecuperoPassword({ onIndietro }: { onIndietro: () => void }) {
+  const [state, formAction, pending] = React.useActionState(
+    requestPasswordReset,
+    STATO_INIZIALE,
+  );
+  const [mandato, setMandato] = React.useState(false);
+
+  return (
+    <form
+      action={(fd) => {
+        setMandato(true);
+        formAction(fd);
+      }}
+      className="glass-strong space-y-4 rounded-2xl p-5"
+    >
+      <div>
+        <h1 className="text-[17px]/6 font-semibold tracking-[-0.008em] text-ink">
+          Recupera l&rsquo;accesso
+        </h1>
+        <p className="mt-1 text-[13px] text-ink-secondary">
+          Ti mandiamo un link per impostare una password nuova.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="reset-email">Email</Label>
+        <Input
+          id="reset-email"
+          name="email"
+          type="email"
+          placeholder="nome@lacertosus.com"
+          autoComplete="email"
+          required
+          autoFocus
+        />
+      </div>
+
+      {state.error ? (
+        <p
+          role="alert"
+          className="flex items-start gap-2 rounded-xl bg-danger-soft px-3 py-2 text-[13px] text-danger-text"
+        >
+          <TriangleAlert className="mt-px size-4 shrink-0" aria-hidden />
+          {state.error}
+        </p>
+      ) : null}
+
+      {/* Nessuna conferma diversa fra indirizzo noto e sconosciuto: dirlo
+          rivelerebbe a chiunque quali email hanno un account qui. */}
+      {mandato && !pending && !state.error ? (
+        <p
+          role="status"
+          className="rounded-xl bg-success-soft px-3 py-2 text-[13px] text-success-text"
+        >
+          Se quell&rsquo;indirizzo ha un account, il link è appena partito.
+          Controlla la posta, anche nello spam.
+        </p>
+      ) : null}
+
+      <Button type="submit" size="lg" className="w-full" disabled={pending}>
+        {pending ? <LoaderCircle className="animate-spin" /> : null}
+        Mandami il link
+      </Button>
+
+      <button
+        type="button"
+        onClick={onIndietro}
+        className="w-full text-center text-xs text-ink-muted hover:text-ink hover:underline"
+      >
+        Torna all&rsquo;accesso
+      </button>
+    </form>
+  );
+}
 
 export function LoginForm({ configurato }: { configurato: boolean }) {
   /* useActionState (React 19) tiene insieme invio, stato di attesa ed errore
@@ -22,6 +108,15 @@ export function LoginForm({ configurato }: { configurato: boolean }) {
   );
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "";
+  const [recupero, setRecupero] = React.useState(false);
+
+  if (recupero) {
+    return (
+      <TiltCard>
+        <RecuperoPassword onIndietro={() => setRecupero(false)} />
+      </TiltCard>
+    );
+  }
 
   return (
     <TiltCard>
@@ -82,6 +177,16 @@ export function LoginForm({ configurato }: { configurato: boolean }) {
           {pending ? <LoaderCircle className="animate-spin" /> : null}
           Accedi
         </Button>
+
+        {configurato ? (
+          <button
+            type="button"
+            onClick={() => setRecupero(true)}
+            className="w-full text-center text-xs text-ink-muted hover:text-ink hover:underline"
+          >
+            Password dimenticata?
+          </button>
+        ) : null}
 
         {!configurato ? (
           <p className="text-center text-xs text-ink-muted">
