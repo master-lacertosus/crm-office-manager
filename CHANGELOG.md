@@ -16,6 +16,9 @@ versioni (fase pre-1.0).
   punta a `/auth/confirm`, dove il token viene consumato. (#20)
 
 ### Aggiunto
+- **Link password rimandabile da un responsabile**, dalla scheda della persona
+  in Team: quando un collega non trova l'email dell'invito, si rimanda per
+  lui invece di spiegargli dove cliccare. (#21)
 - **Password dimenticata** nella pagina di accesso. Serviva anche a chi e
   stato invitato e ha perso il link: un secondo invito verrebbe rifiutato
   perche l'account esiste gia, e senza recupero resterebbe fuori senza

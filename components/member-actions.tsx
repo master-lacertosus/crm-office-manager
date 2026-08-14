@@ -1,9 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { KeyRound, LoaderCircle, TriangleAlert, UserCheck, UserX } from "lucide-react";
+import {
+  CheckCircle2,
+  KeyRound,
+  LoaderCircle,
+  MailPlus,
+  TriangleAlert,
+  UserCheck,
+  UserX,
+} from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
+import {
+  resendPasswordLink,
+  type InviteState,
+} from "@/lib/supabase/invites";
 import type { Profile } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 
@@ -23,6 +35,10 @@ export function MemberActions({ profile }: { profile: Profile }) {
   const { currentUser, setProfileRole, setProfileActive, tasks } = useAppStore();
   const [inCorso, setInCorso] = React.useState<"ruolo" | "stato" | null>(null);
   const [errore, setErrore] = React.useState<string | null>(null);
+  const [linkStato, linkAction, linkPending] = React.useActionState(
+    resendPasswordLink,
+    { error: null, ok: null } as InviteState,
+  );
 
   // Su di sé non si agisce: né retrocedersi né disattivarsi.
   if (currentUser.role !== "admin" || profile.id === currentUser.id) return null;
@@ -101,13 +117,49 @@ export function MemberActions({ profile }: { profile: Profile }) {
         {profile.is_active ? "Disattiva" : "Riattiva"}
       </Button>
 
-      {errore ? (
+      {/* Rimanda il link per impostare la password. Serve quando qualcuno non
+          trova l'email dell'invito: potrebbe arrangiarsi da «Password
+          dimenticata», ma un responsabile deve poterlo fare per lui invece di
+          spiegargli dove cliccare. */}
+      <form action={linkAction} className="contents">
+        <input type="hidden" name="email" value={profile.email} />
+        <Button
+          type="submit"
+          variant="ghost"
+          size="sm"
+          disabled={linkPending || !profile.is_active}
+          title={
+            profile.is_active
+              ? "Manda a questa persona il link per impostare la password"
+              : "Riattiva il profilo prima di mandare il link"
+          }
+        >
+          {linkPending ? (
+            <LoaderCircle className="animate-spin" data-icon="inline-start" />
+          ) : (
+            <MailPlus data-icon="inline-start" />
+          )}
+          Link password
+        </Button>
+      </form>
+
+      {errore || linkStato.error ? (
         <p
           role="alert"
           className="flex w-full items-start gap-2 rounded-lg bg-danger-soft px-2.5 py-1.5 text-[12px] text-danger-text"
         >
           <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden />
-          {errore}
+          {errore ?? linkStato.error}
+        </p>
+      ) : null}
+
+      {linkStato.ok ? (
+        <p
+          role="status"
+          className="flex w-full items-start gap-2 rounded-lg bg-success-soft px-2.5 py-1.5 text-[12px] text-success-text"
+        >
+          <CheckCircle2 className="mt-px size-3.5 shrink-0" aria-hidden />
+          {linkStato.ok}
         </p>
       ) : null}
     </>
