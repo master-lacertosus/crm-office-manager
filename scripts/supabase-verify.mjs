@@ -47,6 +47,8 @@ const ATTESE = [
   "saved_views", "user_preferences",
   // M4
   "messages", "message_reads",
+  // M6
+  "task_collaborators",
 ];
 
 const headers = { apikey: key, Authorization: `Bearer ${key}` };
