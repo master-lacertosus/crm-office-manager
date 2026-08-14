@@ -10,6 +10,14 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Corretto
+- **Le scritture rifiutate dal database ora si vedono.** Lo store annullava
+  da solo le modifiche non salvate, ma in silenzio: si vedeva la propria
+  modifica sparire senza sapere perche. Il difetto peggiore possibile, perche
+  non sembrava nemmeno un errore. (#22)
+- **Ferie: niente pulsanti che non possono funzionare.** Sulla propria
+  richiesta non compaiono piu Approva e Rifiuta — la guardia del database
+  vieta di decidere sulla propria assenza, e offrire l'azione portava solo a
+  un rifiuto invisibile. (#22)
 - **Gli inviti non portavano da nessuna parte**: il link riportava alla radice
   del sito invece che alla pagina della password, e il token — che viaggia
   nel frammento dell'URL — si perdeva nel rimbalzo al login. Ora l'invito
