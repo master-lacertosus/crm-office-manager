@@ -32,6 +32,31 @@ Servono quindi due passaggi, di due persone diverse.
 
 ---
 
+## Se Vercel rifiuta il deploy: «not a member of the team»
+
+Sintomo — una email di Vercel:
+
+> `<utente>` attempted to deploy a commit to `<team>` on Vercel through GitHub,
+> but they're not a member of the team.
+
+Non è il codice a essere rifiutato, è **chi ha spinto il commit**. Vercel
+associa ogni deploy all'utente GitHub che ha fatto il push, e se quello non
+appartiene al team blocca — è una protezione contro deploy da account non
+autorizzati, non un errore di configurazione.
+
+Il caso tipico qui: il repo sta su `master-lacertosus`, ma i push arrivano da
+un account personale che al team Vercel non risulta.
+
+Le vie d'uscita, dalla più economica:
+
+| Via | Costo | Effetto |
+|---|---|---|
+| Far **mergiare la PR** dall'account proprietario | zero | Produzione sì, anteprime del branch no |
+| **Spingere** con l'account proprietario (`gh auth switch`) | zero | Produzione e anteprime |
+| Collegare il GitHub in *Vercel → Settings → Authentication* | zero, se l'account è già membro | Da controllare prima di spendere |
+| Aggiungere l'account al team Vercel | piano Pro | Tutto, per ogni collaboratore |
+| Rendere pubblico il repo | zero | **Sconsigliato**: è il gestionale dell'ufficio |
+
 ## 2. Dopo l'installazione, sul progetto Vercel
 
 Nella dashboard Vercel: **Add New → Project**, si sceglie
