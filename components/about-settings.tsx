@@ -119,13 +119,14 @@ export function AboutSettings() {
           <div className="flex items-center justify-between gap-3">
             <dt className="text-ink-muted">Dati</dt>
             <dd className="text-right font-medium text-ink">
-              Salvati in questo browser
+              Su Supabase, con RLS
             </dd>
           </div>
         </dl>
         <p className="mt-3 border-t border-border-soft pt-3 text-[12px] text-ink-muted">
-          Al collegamento con Supabase i dati passeranno al cloud, condivisi
-          dal team, a parità di funzioni.
+          I dati sono condivisi con la squadra. Ogni tabella ha la Row Level
+          Security attiva: quello che vedi è quello che le regole ti
+          concedono, deciso dal database e non dall&rsquo;interfaccia.
         </p>
       </section>
 

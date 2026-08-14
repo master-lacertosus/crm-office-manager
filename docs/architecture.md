@@ -89,6 +89,40 @@ trappole di complessità.
 > è `lib/shallow-nav.ts` (`updateSearch` a patch) e, per i link,
 > `components/search-link.tsx` — mai History API a mano nei componenti.
 
+> **Settimo emendamento (13–14/08/2026, collegamento a Supabase):** finisce
+> la fase placeholder. Gli emendamenti precedenti restano come sono — sono
+> il registro di come ci si è arrivati — ma quanto vi si dice sulla
+> persistenza è superato da questo.
+>
+> **Dati.** Non esiste più uno strato locale: `lib/mock-data.ts` è
+> eliminato e `localStorage` non conserva più il workspace. Ogni entità sta
+> su Supabase con RLS: profili, progetti, task, fasi, commenti, cronologia,
+> checklist, allegati, richieste, ferie, chiusure, avvisi, template, viste
+> salvate, focus e posticipi. Restano nel browser solo le preferenze
+> personali (aspetto, layout della dashboard, fasi compresse), e comunque
+> come copia: la verità è in `user_preferences`, così seguono la persona.
+>
+> **Migrazioni.** M2 porta lo schema da 4 a 20 tabelle; M3 aggiunge il primo
+> accesso guidato (`profiles.onboarded_at`) e il bucket `avatars`; M4 la
+> chat interna (`messages`, `message_reads`) con Realtime; M5 sposta le
+> escalation su una funzione pianificata con `pg_cron`.
+>
+> **Regole nel database, non nell'interfaccia.** `completed_at`,
+> `problem_since` ed `edited_at` li scrivono i trigger; `decided_by` e
+> `decided_at` le guardie, che verificano anche chi sta decidendo. L'app non
+> li invia mai. Le fasi della board sono diventate dati: `tasks.status` è
+> una chiave esterna verso `task_statuses`.
+>
+> **Scritture.** Lo store mantiene la stessa API pubblica di prima, ma ogni
+> mutazione è ottimistica e si annulla se il database rifiuta. Le collezioni
+> append-only si sincronizzano per confronto di id (`useSincronizza`); le
+> modifiche a righe esistenti si scrivono dove avvengono.
+>
+> **Next 16:** `middleware.ts` è deprecato — il file è `proxy.ts` con
+> funzione `proxy`, e in questa versione gira di default su runtime Node.
+> Le Server Action non sono coperte dal suo matcher: l'autorizzazione va
+> verificata dentro ciascuna.
+
 ---
 
 ## 1. Architettura dell'informazione
@@ -177,7 +211,7 @@ fisicamente (si disattiva, così lo storico conserva gli autori).
 |---|---|---|
 | `id` | uuid PK | = `auth.users.id` |
 | `full_name` | text not null | |
-| `avatar_url` | text null | dall'OAuth o dall'upload in Impostazioni (fase placeholder: data URL ridotta in locale; con Supabase: Storage) |
+| `avatar_url` | text null | URL pubblico del file su Supabase Storage, bucket `avatars` (upload dal primo accesso o da Impostazioni) |
 | `role` | text not null default `'member'` | CHECK in (`admin`, `member`) |
 | `is_active` | boolean not null default true | disattivazione al posto della cancellazione |
 | `created_at` / `updated_at` | timestamptz | `updated_at` via trigger |

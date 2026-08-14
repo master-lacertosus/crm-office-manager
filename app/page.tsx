@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 
-// Fase placeholder: la home porta alla dashboard. Con l'autenticazione
-// reale (Supabase) il middleware smisterà tra /login e /dashboard.
+/* La home manda alla dashboard e basta: lo smistamento fra accesso e app lo
+   fa già il proxy, che intercetta prima di arrivare qui. Chi non ha sessione
+   non vede mai questo redirect — viene mandato al login con la destinazione
+   in coda. */
 export default function Home() {
   redirect("/dashboard");
 }

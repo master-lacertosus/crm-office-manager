@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { DatabaseBackup, Download, RotateCcw, Upload } from "lucide-react";
+import { DatabaseBackup, Download, Upload } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
 import type { CustomStatus, WorkspaceTemplate } from "@/lib/types";
@@ -19,9 +19,13 @@ interface BackupFile {
 }
 
 /**
- * Backup della configurazione del workspace: template, fasi custom e
- * viste salvate vivono nel browser finché non c'è Supabase — questo file
- * è l'assicurazione (e il modo per passarli a un altro PC).
+ * Backup della configurazione del workspace: template, fasi custom e viste
+ * salvate.
+ *
+ * Ora che i dati stanno su Supabase non serve più a trasportarli fra
+ * computer — quello lo fa il database. Resta utile per due cose che il
+ * database non copre: portarsi la configurazione su un altro workspace, e
+ * tenersi una copia prima di una modifica corposa ai template.
  */
 export function ConfigBackup() {
   const { templates, customStatuses, savedViews, importConfig, currentUser } =
@@ -82,21 +86,12 @@ export function ConfigBackup() {
     }
   };
 
-  const resetDemo = () => {
-    if (
-      !window.confirm(
-        "Azzerare i dati demo? Task, commenti e cronologia tornano ai valori iniziali (template e viste restano).",
-      )
-    ) {
-      return;
-    }
-    try {
-      localStorage.removeItem("office-state");
-    } catch {
-      /* ignora */
-    }
-    window.location.reload();
-  };
+  /* «Azzera dati demo» è sparito. Cancellava la chiave `office-state` del
+     browser, che non esiste più da quando i dati stanno su Supabase: non
+     azzerava nulla, ricaricava soltanto. Un pulsante che promette
+     un'azione e non la compie è peggio di un pulsante assente — e riscriverlo
+     per cancellare i dati veri sarebbe stato un modo per perdere il lavoro
+     dell'ufficio con un clic. */
 
   if (!isAdmin) return null;
 
@@ -107,9 +102,9 @@ export function ConfigBackup() {
         Backup configurazione
       </p>
       <p className="mt-1 text-[13px] text-ink-muted">
-        Template, fasi custom e viste salvate vivono in questo browser
-        (finché non arriva Supabase): esportali come assicurazione o per
-        portarli su un altro PC.
+        Template, fasi custom e viste salvate stanno su Supabase e ti seguono
+        ovunque. Esportale per tenerne una copia prima di una modifica
+        corposa, o per portarle su un altro workspace.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" onClick={exportConfig}>
@@ -135,15 +130,6 @@ export function ConfigBackup() {
             e.target.value = "";
           }}
         />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={resetDemo}
-          className="ml-auto text-ink-muted hover:text-danger-text"
-        >
-          <RotateCcw data-icon="inline-start" />
-          Azzera dati demo
-        </Button>
       </div>
     </div>
   );

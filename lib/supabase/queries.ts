@@ -847,26 +847,46 @@ export async function insertNotifications(
 /* Preferenze d'aspetto                                                        */
 /* -------------------------------------------------------------------------- */
 
-export async function fetchAppearance(
+/** Le tre colonne di `user_preferences`. Sono preferenze personali diverse
+ *  ma con lo stesso ciclo di vita, quindi condividono le funzioni invece di
+ *  averne tre coppie quasi identiche. */
+export type ColonnaPreferenza =
+  | "appearance"
+  | "dashboard_layout"
+  | "collapsed_statuses";
+
+/** `maybeSingle` e non `single`: alla prima apertura la riga non esiste
+ *  ancora, e non averla non è un errore. */
+export async function fetchPreference<T>(
   supabase: SupabaseClient,
-): Promise<Record<string, unknown> | null> {
+  colonna: ColonnaPreferenza,
+): Promise<T | null> {
   const { data, error } = await supabase
     .from("user_preferences")
-    .select("appearance")
+    .select(colonna)
     .maybeSingle();
 
   if (error) throw error;
-  return (data?.appearance as Record<string, unknown>) ?? null;
+  // Il tipo della select con colonna variabile è un'unione: il cast qui
+  // vale più di una firma generica illeggibile.
+  return ((data as Record<string, unknown> | null)?.[colonna] as T) ?? null;
 }
 
-export async function saveAppearance(
+/**
+ * Scrive una sola colonna, lasciando intatte le altre.
+ *
+ * L'upsert aggiorna solo le colonne passate: chi cambia il tema non azzera
+ * il layout della dashboard di chi lo stava sistemando in un'altra scheda.
+ */
+export async function savePreference(
   supabase: SupabaseClient,
   userId: string,
-  appearance: Record<string, unknown>,
+  colonna: ColonnaPreferenza,
+  valore: unknown,
 ): Promise<void> {
   const { error } = await supabase
     .from("user_preferences")
-    .upsert({ user_id: userId, appearance }, { onConflict: "user_id" });
+    .upsert({ user_id: userId, [colonna]: valore }, { onConflict: "user_id" });
   if (error) throw error;
 }
 

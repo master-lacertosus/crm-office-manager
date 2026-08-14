@@ -111,7 +111,7 @@ export const CORE_STATUS_META: Record<
 export const MAX_CUSTOM_STATUSES = 3;
 
 /**
- * Store placeholder in memoria: fa da contratto per lo strato dati vero.
+ * Store dell'applicazione: stato client e scritture su Supabase.
  * Le mutazioni sono istantanee ma mantengono firme async: gli stati di
  * loading richiesti da CLAUDE.md restano implementati nei form e, al
  * collegamento con Supabase, queste funzioni diventeranno query/mutazioni

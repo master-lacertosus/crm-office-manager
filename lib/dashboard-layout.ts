@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { usePreferenzaSincronizzata } from "@/lib/use-preferenza";
+
 /** Blocchi componibili della dashboard; l'hero resta fisso in testa. */
 export type DashboardBlockId =
   | "kpi"
@@ -98,8 +100,9 @@ function sanitize(raw: unknown): DashboardBlockState[] | null {
 }
 
 /**
- * Layout della dashboard persistito in localStorage per utente/browser
- * (stesso pattern «loaded flag» dello store e delle fasi della board).
+ * Layout della dashboard: nel browser per applicarlo prima che la rete
+ * risponda, su Supabase per ritrovarlo da un altro computer
+ * (`user_preferences.dashboard_layout`).
  */
 export function useDashboardLayout() {
   const [blocks, setBlocks] = React.useState<DashboardBlockState[]>(() =>
@@ -110,32 +113,24 @@ export function useDashboardLayout() {
     blocksRef.current = blocks;
   }, [blocks]);
 
-  const loadedRef = React.useRef(false);
-  React.useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = sanitize(JSON.parse(raw));
-          if (parsed) setBlocks(parsed);
-        }
-      } catch {
-        /* ignora */
-      }
-      loadedRef.current = true;
-    });
-  }, []);
-  React.useEffect(() => {
-    if (!loadedRef.current) return;
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ version: LAYOUT_VERSION, blocks }),
-      );
-    } catch {
-      /* ignora */
-    }
-  }, [blocks]);
+  /* Si salva l'involucro con la versione, non il solo elenco: `sanitize`
+     scarta i layout di versioni precedenti invece di disegnare blocchi che
+     non esistono più. */
+  const salvato = React.useMemo(
+    () => ({ version: LAYOUT_VERSION, blocks }),
+    [blocks],
+  );
+
+  usePreferenzaSincronizzata(
+    STORAGE_KEY,
+    "dashboard_layout",
+    salvato,
+    (v) => {
+      const pulito = sanitize(v);
+      if (pulito) setBlocks(pulito);
+    },
+    (grezzo) => grezzo as { version: number; blocks: DashboardBlockState[] },
+  );
 
   /** Sposta di ±1; ritorna l'indice di arrivo (null se già al bordo). */
   const move = React.useCallback(
