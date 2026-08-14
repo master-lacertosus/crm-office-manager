@@ -9,6 +9,13 @@ versioni (fase pre-1.0).
 
 ## Non rilasciato
 
+### Aggiunto
+- **Eliminazione di un task**, dal pannello di dettaglio. Mancava del tutto:
+  un task creato per sbaglio non si poteva togliere in nessun modo. Con
+  conferma esplicita e senza annulla, perche spariscono anche commenti,
+  cronologia, checklist e allegati. Per togliere un task dalla board
+  conservandone la storia resta l'archivio. (#24)
+
 ### Corretto
 - **Niente piu avvisi per decisioni mai avvenute.** Approvazioni, rifiuti e
   decisioni sulle ferie annunciavano l'esito prima di sapere se il database

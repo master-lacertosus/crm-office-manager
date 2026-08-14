@@ -954,6 +954,99 @@ function TaskMeta({ task }: { task: Task }) {
           Sollecita {owner.full_name.split(" ")[0]}
         </Button>
       ) : null}
+
+      <DeleteTask task={task} />
+    </div>
+  );
+}
+
+/**
+ * Eliminazione definitiva di un task.
+ *
+ * Chi può: chi l'ha creato, chi ne è responsabile, gli amministratori — le
+ * stesse condizioni della policy `tasks_delete_owner_creator_admin`. Il
+ * pulsante si nasconde a chi non può, ma la decisione resta del database:
+ * qui si evita solo di mostrare una porta che si aprirebbe con un no.
+ *
+ * Non c'è annulla. Con il task se ne vanno commenti, cronologia, checklist,
+ * allegati e avvisi collegati: ricostruirli sarebbe una finzione. Per far
+ * sparire un task dalla board conservandone la storia c'è l'archivio, e i
+ * «Fatto» ci finiscono da soli dopo 14 giorni.
+ */
+function DeleteTask({ task }: { task: Task }) {
+  const { currentUser, deleteTask } = useAppStore();
+  const toast = useToast();
+  const [conferma, setConferma] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+
+  const puo =
+    currentUser.role === "admin" ||
+    task.created_by === currentUser.id ||
+    task.owner_id === currentUser.id;
+  if (!puo) return null;
+
+  const elimina = async () => {
+    setBusy(true);
+    try {
+      await deleteTask(task.id);
+      toast(`«${task.title}» eliminato`);
+      // Il pannello si chiude da solo: il task non esiste più e il suo
+      // parametro nell'URL non trova nulla.
+    } catch (e) {
+      toast(
+        e instanceof Error
+          ? `Non eliminato: ${e.message}`
+          : "Eliminazione non riuscita",
+      );
+      setBusy(false);
+      setConferma(false);
+    }
+  };
+
+  if (!conferma) {
+    return (
+      <button
+        type="button"
+        onClick={() => setConferma(true)}
+        className="self-start rounded-sm text-xs text-ink-muted underline-offset-2 outline-none hover:text-danger-text hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        Elimina questo task
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl bg-danger-soft p-3">
+      <p className="text-[13px] font-medium text-danger-text">
+        Eliminare «{task.title}»?
+      </p>
+      <p className="text-[12px] text-ink-secondary">
+        Spariscono anche commenti, cronologia, checklist e allegati. Non si può
+        annullare. Se vuoi solo toglierlo dalla board, spostalo in «Fatto»:
+        finisce in archivio da solo.
+      </p>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          onClick={elimina}
+          disabled={busy}
+          aria-busy={busy}
+        >
+          {busy ? <LoaderCircle className="animate-spin" /> : null}
+          Elimina per sempre
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setConferma(false)}
+          disabled={busy}
+        >
+          Annulla
+        </Button>
+      </div>
     </div>
   );
 }
