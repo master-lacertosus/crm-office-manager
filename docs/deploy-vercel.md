@@ -54,13 +54,45 @@ prefissata con `NEXT_PUBLIC_`. Serve solo alla Server Action di invito.
 
 ## 3. Su Supabase, dopo il primo deploy
 
-**Authentication → URL Configuration**: aggiungere il dominio Vercel a *Site URL*
-e a *Redirect URLs*. Senza, i link delle email di invito e di recupero password
-rimandano a `localhost` e non funzionano per nessuno.
+### URL di reindirizzo
+
+**Authentication → URL Configuration**
+(`https://supabase.com/dashboard/project/<ref>/auth/url-configuration`)
+
+| Campo | Valore |
+|---|---|
+| Site URL | `https://<progetto>.vercel.app` |
+| Redirect URLs | `http://localhost:3000/**` e `https://<progetto>.vercel.app/**` |
+
+Il `/**` finale non è decorativo: senza, Supabase accetta solo quell'esatto
+indirizzo e rifiuta ogni percorso sotto — compreso `/auth/confirm`, dove
+atterrano tutti i link delle email. Per far funzionare anche le anteprime delle
+pull request si aggiunge il carattere jolly che Vercel assegna ai deploy di
+anteprima, nella forma `https://<progetto>-*-<scope>.vercel.app/**`.
+
+### Template delle email (consigliato)
+
+**Authentication → Email Templates**, modello *Invite user*. Il testo predefinito
+usa `{{ .ConfirmationURL }}`, che passa dall'endpoint di verifica di Supabase e
+consegna il token nel **frammento** dell'URL — che il server non vede mai.
+Funziona lo stesso (la pagina lo legge dal browser), ma il percorso più solido è
+puntare direttamente alla nostra rotta:
+
+```
+{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/auth/imposta-password
+```
+
+Lo stesso vale per il modello *Reset password*, con `type=recovery`.
+
+La rotta `app/auth/confirm/route.ts` gestisce comunque entrambe le forme: si può
+lasciare il modello predefinito e cambiarlo più avanti.
+
+### Mittente delle email
 
 **Authentication → Emails → SMTP Settings**: configurare un mittente proprio. Il
 mittente di prova di Supabase ha limiti molto stretti (poche email all'ora) ed è
-pensato per lo sviluppo: con una squadra da invitare si esaurisce subito.
+pensato per lo sviluppo: con una squadra da invitare si esaurisce subito, e gli
+inviti falliscono senza una ragione evidente per chi li manda.
 
 ## Ripiego senza GitHub
 
