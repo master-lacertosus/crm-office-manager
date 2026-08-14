@@ -103,6 +103,10 @@ export interface Task {
   template_id?: string | null;
   /** Task creati insieme da un template «pacchetto» condividono il batch. */
   batch_id?: string | null;
+  /** Chi collabora, oltre al responsabile. Il responsabile resta uno solo
+   *  (`owner_id`): questi affiancano, non rispondono del risultato — e per
+   *  questo non contano nel carico di lavoro. */
+  collaborators?: string[];
   checklist?: ChecklistItem[];
   /** Uscito dalla board (auto-archivio dei Fatto): resta nei report. */
   archived_at?: string | null;

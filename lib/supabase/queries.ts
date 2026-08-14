@@ -227,6 +227,52 @@ export async function deleteChecklistItem(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Collaboratori                                                               */
+/* -------------------------------------------------------------------------- */
+
+/** Raggruppati per task, come le checklist: il tipo `Task` li porta dentro
+ *  di sé, il database li tiene in tabella perché sono una relazione. */
+export async function fetchCollaborators(
+  supabase: SupabaseClient,
+): Promise<Record<string, string[]>> {
+  const { data, error } = await supabase
+    .from("task_collaborators")
+    .select("task_id, user_id");
+  if (error) throw error;
+
+  const out: Record<string, string[]> = {};
+  for (const r of data as { task_id: string; user_id: string }[]) {
+    (out[r.task_id] ??= []).push(r.user_id);
+  }
+  return out;
+}
+
+export async function insertCollaborator(
+  supabase: SupabaseClient,
+  taskId: string,
+  userId: string,
+  addedBy: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("task_collaborators")
+    .insert({ task_id: taskId, user_id: userId, added_by: addedBy });
+  if (error) throw error;
+}
+
+export async function deleteCollaborator(
+  supabase: SupabaseClient,
+  taskId: string,
+  userId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("task_collaborators")
+    .delete()
+    .eq("task_id", taskId)
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Allegati-link                                                               */
 /* -------------------------------------------------------------------------- */
 

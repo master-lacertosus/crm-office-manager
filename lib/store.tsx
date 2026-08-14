@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   deleteChecklistItem,
+  deleteCollaborator,
   deleteClosure,
   deleteCustomStatus,
   deleteLeaveRequest,
@@ -26,6 +27,7 @@ import {
   decideTaskRequest,
   fetchChecklists,
   fetchClosures,
+  fetchCollaborators,
   fetchLeaveRequests,
   fetchNotifications,
   fetchSavedViews,
@@ -42,6 +44,7 @@ import {
   fetchTasks,
   insertChecklistItem,
   insertClosure,
+  insertCollaborator,
   insertCustomStatus,
   insertLeaveRequest,
   insertSavedView,
@@ -249,6 +252,15 @@ interface AppStore {
   removeChecklistItem: (taskId: string, itemId: string) => void;
   /** Riporta in board un task auto-archiviato. */
   restoreTask: (taskId: string) => void;
+  /**
+   * Aggiunge o toglie un collaboratore.
+   *
+   * Il responsabile resta uno solo: questi affiancano. Chi entra riceve un
+   * avviso, perché essere coinvolti in un lavoro senza saperlo non serve a
+   * nulla. Lancia se il database rifiuta — per esempio se si prova ad
+   * aggiungere il responsabile stesso.
+   */
+  toggleCollaborator: (taskId: string, userId: string) => Promise<void>;
   /**
    * Elimina un task per sempre, con tutto ciò che vi è appeso: commenti,
    * cronologia, checklist, allegati, avvisi.
@@ -605,6 +617,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           templateList,
           viewList,
           statoPersonale,
+          collaboratori,
         ] = await Promise.all([
           fetchProfiles(supabase),
           fetchProjects(supabase),
@@ -622,6 +635,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           fetchTemplates(supabase),
           fetchSavedViews(supabase),
           fetchUserTaskState(supabase),
+          fetchCollaborators(supabase),
         ]);
 
         if (annullato) return;
@@ -630,9 +644,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         // Le voci di checklist stanno in tabella a parte ma il tipo `Task` le
         // porta dentro di sé: si ricompongono qui, una volta sola.
         setTasks(
-          taskList.map((t) =>
-            checklists[t.id] ? { ...t, checklist: checklists[t.id] } : t,
-          ),
+          taskList.map((t) => ({
+            ...t,
+            ...(checklists[t.id] ? { checklist: checklists[t.id] } : {}),
+            ...(collaboratori[t.id]
+              ? { collaborators: collaboratori[t.id] }
+              : {}),
+          })),
         );
         setCustomStatuses(customList);
         setTaskLinks(linkList);
@@ -937,7 +955,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     );
     /* Sentinella per i momenti senza identità: primo render, caricamento in
        corso, Supabase non configurato. Prima si ripiegava sul primo profilo
-       della lista — con i mock c'era sempre, ora la lista nasce vuota e
+       della lista — con i mock giaPresente sempre, ora la lista nasce vuota e
        `currentUser.id` andrebbe in errore al primo render. */
     const currentUser =
       profilesResolved.find((p) => p.id === currentUserId) ??
@@ -1293,6 +1311,53 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             ),
           ),
       );
+    },
+
+    async toggleCollaborator(taskId, userId) {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+      const attuali = task.collaborators ?? [];
+      const giaPresente = attuali.includes(userId);
+
+      const supabase = createClient();
+      /* Si aspetta l'esito prima di aggiornare: la guardia rifiuta il
+         responsabile stesso, e mostrarlo fra i collaboratori per poi vederlo
+         sparire sarebbe peggio che non mostrarlo mai. */
+      if (giaPresente) {
+        await deleteCollaborator(supabase, taskId, userId);
+      } else {
+        await insertCollaborator(supabase, taskId, userId, currentUser.id);
+      }
+
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                collaborators: giaPresente
+                  ? attuali.filter((u) => u !== userId)
+                  : [...attuali, userId],
+              }
+            : t,
+        ),
+      );
+
+      // Essere coinvolti in un lavoro senza saperlo non serve a nulla.
+      if (!giaPresente && userId !== currentUser.id) {
+        setNotifications((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            to_user_id: userId,
+            from_user_id: currentUser.id,
+            message: `👥 Ti hanno aggiunto come collaboratore su «${task.title}»`,
+            task_id: taskId,
+            kind: "sistema" as const,
+            created_at: new Date().toISOString(),
+            read_at: null,
+          },
+        ]);
+      }
     },
 
     async deleteTask(taskId) {
