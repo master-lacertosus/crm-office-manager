@@ -249,6 +249,18 @@ interface AppStore {
   removeChecklistItem: (taskId: string, itemId: string) => void;
   /** Riporta in board un task auto-archiviato. */
   restoreTask: (taskId: string) => void;
+  /**
+   * Elimina un task per sempre, con tutto ciò che vi è appeso: commenti,
+   * cronologia, checklist, allegati, avvisi.
+   *
+   * Non ha annulla, e non è una dimenticanza: le righe collegate se ne vanno
+   * in cascata e ricostruirle sarebbe una finzione. Per far sparire un task
+   * dalla board senza perderne la storia esiste l'archivio.
+   *
+   * Lancia se la RLS nega: la policy la concede a chi l'ha creato, a chi ne è
+   * responsabile e agli amministratori.
+   */
+  deleteTask: (taskId: string) => Promise<void>;
   taskLinks: TaskLink[];
   addTaskLink: (taskId: string, url: string, label: string) => Promise<void>;
   removeTaskLink: (id: string) => void;
@@ -1281,6 +1293,31 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             ),
           ),
       );
+    },
+
+    async deleteTask(taskId) {
+      const prima = tasks.find((t) => t.id === taskId);
+      if (!prima) return;
+
+      /* Si aspetta l'esito invece di rimuovere e sperare: una cancellazione
+         negata che sparisse comunque dall'interfaccia farebbe credere di aver
+         eliminato qualcosa che al prossimo caricamento riappare. */
+      await deleteTaskRow(createClient(), taskId);
+
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      /* Le righe collegate se ne vanno in cascata sul database; qui si
+         ripulisce lo stato locale, altrimenti resterebbero commenti e
+         cronologia che puntano a un task che non c'è più. */
+      setComments((prev) => prev.filter((c) => c.task_id !== taskId));
+      setEvents((prev) => prev.filter((e) => e.task_id !== taskId));
+      setTaskLinks((prev) => prev.filter((l) => l.task_id !== taskId));
+      setNotifications((prev) => prev.filter((n) => n.task_id !== taskId));
+      setFocusIds((prev) => prev.filter((id) => id !== taskId));
+      setSnoozes((prev) => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
     },
 
     restoreTask(taskId) {
