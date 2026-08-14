@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import {
-  diffIsoDays,
   nextMonthlyIso,
   shiftIsoDays,
   shiftIsoMonths,
@@ -169,28 +168,10 @@ const makeEvent = (
   created_at: new Date().toISOString(),
 });
 
-/** Chiave dell'episodio di blocco: task + inizio problema. Risolto e
- *  ri-segnalato = episodio nuovo → l'avviso agli admin riparte. */
-const problemEpisodeKey = (t: Task) => `${t.id}:${t.problem_since}`;
-
-/** Soglie di escalation (promemoria one-shot ai responsabili). */
-const PROBLEM_ESCALATION_MS = 48 * 3600_000;
-const REQUEST_ESCALATION_MS = 3 * 86_400_000;
-/* Le funzioni di bonifica dei doppioni e di deduzione dei marcatori di
-   escalation sono sparite insieme alla persistenza in localStorage: servivano
-   a rimettere in piedi lo stato salvato all'avvio, e non c'è più uno stato
-   salvato da rimettere in piedi. */
-
-/** Una richiesta ferie merita il promemoria? In attesa da più di 3 giorni,
- *  oppure partenza ormai vicina (≤3 g): decidere tardi è un no di fatto. */
-const leaveEscalationDue = (
-  l: LeaveRequest,
-  now: number,
-  today: string,
-): boolean =>
-  l.status === "pending" &&
-  (now - new Date(l.created_at).getTime() > REQUEST_ESCALATION_MS ||
-    (l.start_date >= today && diffIsoDays(today, l.start_date) <= 3));
+/* Le soglie di escalation e i loro marcatori non stanno piu qui: sono
+   passati nella funzione run_escalations() del database (migrazione M5),
+   dove girano su pianificazione invece che a ogni render di chi ha una
+   scheda aperta. */
 
 /** Eventi di cronologia derivati da una modifica (campi tracciati). */
 function diffTaskEvents(before: Task, after: Task, actorId: string): TaskEvent[] {
@@ -525,9 +506,6 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
      La sistemazione vera è spostare le escalation sul server (una funzione
      pianificata), dove appartengono: generarle nel browser di chi ha per
      caso una scheda aperta è comunque il posto sbagliato. */
-  const escalatedRef = React.useRef(new Set<string>());
-  const requestsEscalatedRef = React.useRef(new Set<string>());
-  const leavesEscalatedRef = React.useRef(new Set<string>());
 
   /* Bonifica prima di ogni idratazione. Dichiarato per primo di proposito:
      gli effetti girano nell'ordine dei sorgenti, quindi qui le chiavi sono
@@ -794,13 +772,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     notifications,
     pronto,
     async (nuovi) => {
-      /* Si scrivono solo gli avvisi che l'utente corrente sta mandando: la
-         policy pretende `from_user_id = auth.uid()`. Le escalation
-         automatiche li attribuiscono al richiedente, quindi verrebbero
-         rifiutate — e comunque non hanno senso generate dal browser di chi
-         ha per caso una scheda aperta. Restano locali finché richieste e
-         ferie non passano al database, dove quelle notifiche appartengono. */
-      const miei = nuovi.filter((n) => n.from_user_id === currentUserId);
+      /* Solo gli avvisi mandati da una persona: la policy pretende
+         `from_user_id = auth.uid()`. Quelli senza mittente li scrive il
+         lavoro pianificato del database (M5), non il browser. */
+      const miei = nuovi.filter(
+        (n): n is typeof n & { from_user_id: string } =>
+          n.from_user_id === currentUserId,
+      );
       if (miei.length > 0) await insertNotifications(createClient(), miei);
     },
     async () => {},
@@ -902,151 +880,19 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snoozes]);
 
-  /* Richieste dimenticate: in attesa da più di 3 giorni → promemoria
-     one-shot ai responsabili (stesso pattern dell'escalation problemi). */
-  React.useEffect(() => {
-    const now = Date.now();
-    const overdue = requests.filter(
-      (r) =>
-        r.status === "pending" &&
-        now - new Date(r.created_at).getTime() > REQUEST_ESCALATION_MS,
-    );
-    if (overdue.length === 0) return;
-    queueMicrotask(() => {
-      // Il «già segnalato» si valuta QUI: la microtask gira dopo quella di
-      // idratazione, quindi i marcatori persistiti sono già caricati.
-      const stale = overdue.filter(
-        (r) => !requestsEscalatedRef.current.has(r.id),
-      );
-      if (stale.length === 0) return;
-      // I profili possono non essere ancora arrivati da Supabase. Senza
-      // questa guardia la lista amministratori sarebbe vuota, nessuno
-      // riceverebbe l'avviso, ma il marcatore «gia segnalato» verrebbe
-      // scritto lo stesso: l'escalation si perderebbe per sempre.
-      if (profiles.length === 0) return;
-      for (const r of stale) requestsEscalatedRef.current.add(r.id);
-      const admins = profiles.filter(
-        (p) => p.is_active && p.role === "admin",
-      );
-      setNotifications((prev) => [
-        ...prev,
-        ...stale.flatMap((req) => {
-          const days = Math.floor(
-            (now - new Date(req.created_at).getTime()) / 86_400_000,
-          );
-          return admins.map((admin) => ({
-            id: crypto.randomUUID(),
-            to_user_id: admin.id,
-            from_user_id: req.requester_id,
-            message: `⏳ Richiesta in attesa da ${days} g: «${req.title}»`,
-            task_id: null,
-            kind: "sistema" as const,
-            created_at: new Date().toISOString(),
-            read_at: null,
-          }));
-        }),
-      ]);
-    });
-  }, [requests]);
-
-  /* Ferie in attesa: promemoria one-shot ai responsabili quando la
-     richiesta langue (>3 g) o quando la partenza è ormai vicina (≤3 g) —
-     una decisione tardiva è un no di fatto. */
-  React.useEffect(() => {
-    const now = Date.now();
-    const today = todayIso();
-    const due = leaves.filter((l) => leaveEscalationDue(l, now, today));
-    if (due.length === 0) return;
-    queueMicrotask(() => {
-      // Il «già segnalato» si valuta QUI: la microtask gira dopo quella di
-      // idratazione, quindi i marcatori persistiti sono già caricati.
-      const stale = due.filter((l) => !leavesEscalatedRef.current.has(l.id));
-      if (stale.length === 0) return;
-      // I profili possono non essere ancora arrivati da Supabase. Senza
-      // questa guardia la lista amministratori sarebbe vuota, nessuno
-      // riceverebbe l'avviso, ma il marcatore «gia segnalato» verrebbe
-      // scritto lo stesso: l'escalation si perderebbe per sempre.
-      if (profiles.length === 0) return;
-      for (const l of stale) leavesEscalatedRef.current.add(l.id);
-      const admins = profiles.filter(
-        (p) => p.is_active && p.role === "admin",
-      );
-      setNotifications((prev) => [
-        ...prev,
-        ...stale.flatMap((leave) => {
-          const who =
-            profiles.find((p) => p.id === leave.requester_id)?.full_name.split(
-              " ",
-            )[0] ?? "collega";
-          const label = leave.type === "ferie" ? "Ferie" : "Permesso";
-          const days = diffIsoDays(today, leave.start_date);
-          const when =
-            days > 0
-              ? `parte tra ${days} g`
-              : days === 0
-                ? "parte oggi"
-                : "data già passata";
-          return admins.map((admin) => ({
-            id: crypto.randomUUID(),
-            to_user_id: admin.id,
-            from_user_id: leave.requester_id,
-            message: `⏳ ${label} di ${who} da decidere (${formatRange(leave.start_date, leave.end_date)} — ${when}).`,
-            task_id: null,
-            kind: "sistema" as const,
-            created_at: new Date().toISOString(),
-            read_at: null,
-          }));
-        }),
-      ]);
-    });
-  }, [leaves]);
-
-  /* Escalation: problemi fermi da più di 48h → avviso one-shot agli admin
-     per EPISODIO di blocco (task + problem_since): sbloccato e ri-segnalato
-     riparte, ricaricare la pagina no. */
-  React.useEffect(() => {
-    const now = Date.now();
-    const overdue = tasks.filter(
-      (t) =>
-        t.status === "alert" &&
-        t.problem_since &&
-        now - new Date(t.problem_since).getTime() > PROBLEM_ESCALATION_MS,
-    );
-    if (overdue.length === 0) return;
-    queueMicrotask(() => {
-      // Il «già segnalato» si valuta QUI: la microtask gira dopo quella di
-      // idratazione, quindi i marcatori persistiti sono già caricati.
-      const stale = overdue.filter(
-        (t) => !escalatedRef.current.has(problemEpisodeKey(t)),
-      );
-      if (stale.length === 0) return;
-      // I profili possono non essere ancora arrivati da Supabase. Senza
-      // questa guardia la lista amministratori sarebbe vuota, nessuno
-      // riceverebbe l'avviso, ma il marcatore «gia segnalato» verrebbe
-      // scritto lo stesso: l'escalation si perderebbe per sempre.
-      if (profiles.length === 0) return;
-      for (const t of stale) escalatedRef.current.add(problemEpisodeKey(t));
-      const admins = profiles.filter((p) => p.is_active && p.role === "admin");
-      setNotifications((prev) => [
-        ...prev,
-        ...stale.flatMap((task) => {
-          const days = Math.floor(
-            (now - new Date(task.problem_since as string).getTime()) / 86_400_000,
-          );
-          return admins.map((admin) => ({
-            id: crypto.randomUUID(),
-            to_user_id: admin.id,
-            from_user_id: task.owner_id,
-            message: `⛔ Problema fermo da ${days} g: «${task.title}»${task.problem_reason ? ` — ${task.problem_reason}` : ""}`,
-            task_id: task.id,
-            kind: "sistema" as const,
-            created_at: new Date().toISOString(),
-            read_at: null,
-          }));
-        }),
-      ]);
-    });
-  }, [tasks]);
+  /* ------------------------------------------------------------------ */
+  /* Le escalation sono passate al database (migrazione M5).             */
+  /*                                                                     */
+  /* Erano tre effetti che, a ogni render, cercavano problemi fermi e    */
+  /* richieste dimenticate e creavano gli avvisi. Tre difetti:           */
+  /* nessuno veniva avvisato se nessuno teneva l app aperta; la policy   */
+  /* rifiutava quegli avvisi perche attribuiti al richiedente e non a    */
+  /* chi scriveva; due persone con l app aperta producevano due avvisi   */
+  /* per lo stesso fatto.                                                */
+  /*                                                                     */
+  /* Ora e un lavoro pianificato che gira ogni ora lato server, con una  */
+  /* chiave di deduplicazione che rende impossibili i doppioni.          */
+  /* ------------------------------------------------------------------ */
 
   /* Un solo valore di context, ricreato solo quando cambia davvero lo
      stato (mai per un render del provider, es. un cambio di preferenze

@@ -419,8 +419,9 @@ export function DashboardContent() {
               const sender = profiles.find((p) => p.id === n.from_user_id);
               const inner = (
                 <>
+                  {/* Mittente nullo = promemoria automatico del sistema. */}
                   <AvatarInitials
-                    name={sender?.full_name ?? "?"}
+                    name={sender?.full_name ?? "Sistema"}
                     src={sender?.avatar_url}
                     size="sm"
                     className="mt-0.5"
@@ -428,7 +429,7 @@ export function DashboardContent() {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
                       <span className="truncate text-[13px] font-medium text-ink">
-                        {sender?.full_name ?? "—"}
+                        {sender?.full_name ?? (n.from_user_id ? "—" : "Sistema")}
                       </span>
                       <span className="shrink-0 font-mono text-[10px] text-ink-muted">
                         {timeAgo(n.created_at)}
