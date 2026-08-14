@@ -9,21 +9,23 @@ import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Workspace" };
 
-const UPCOMING = [
+/** Gestione delle persone: tutto sulla pagina Team, non qui. Questo riquadro
+ *  serve solo a dire dove sta, perché in Impostazioni la si cerca. */
+const GESTIONE_PERSONE = [
   {
     icon: MailPlus,
     title: "Inviti",
-    text: "Invito via email dei nuovi membri (solo admin).",
+    text: "«Invita» sulla pagina Team manda l'email per impostare la password.",
   },
   {
     icon: KeyRound,
     title: "Ruoli",
-    text: "Promozione e retrocessione tra Member e Admin.",
+    text: "Promozione e retrocessione fra Member e Admin, dalla scheda della persona.",
   },
   {
     icon: UserX,
     title: "Disattivazione",
-    text: "Uscita di un membro con riassegnazione guidata dei task aperti.",
+    text: "Un membro non si cancella: si disattiva, dopo aver riassegnato i suoi task aperti.",
   },
 ];
 
@@ -49,12 +51,19 @@ export default function WorkspaceSettingsPage() {
 
       <ConfigBackup />
 
-      <div className="rounded-xl border border-dashed border-border p-4">
+      <div className="card-soft p-4">
         <p className="text-[13px] font-medium text-ink-secondary">
-          In arrivo con il collegamento a Supabase (M2)
+          Gestione delle persone
+        </p>
+        <p className="mt-1 text-[13px] text-ink-muted">
+          Si fa dalla pagina{" "}
+          <Link href="/team" className="font-medium text-brand-600 hover:underline">
+            Team
+          </Link>
+          .
         </p>
         <ul className="mt-3 space-y-3">
-          {UPCOMING.map((item) => (
+          {GESTIONE_PERSONE.map((item) => (
             <li key={item.title} className="flex gap-2.5">
               <item.icon
                 aria-hidden

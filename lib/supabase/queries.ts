@@ -92,6 +92,24 @@ export async function updateProfileRow(
   if (error) throw error;
 }
 
+/**
+ * Ruolo e stato attivo di un collega.
+ *
+ * Separata da `updateProfileRow` di proposito: queste due colonne le governa
+ * la guardia `profiles_guard`, che le rifiuta se chi chiede non è un
+ * amministratore, se resterebbe il workspace senza admin attivi, o se la
+ * persona ha ancora task aperti. Tenerle in una funzione a parte rende
+ * evidente che qui il database può dire di no — e che quel no va mostrato.
+ */
+export async function updateProfileAccess(
+  supabase: SupabaseClient,
+  id: string,
+  patch: { role?: "admin" | "member"; is_active?: boolean },
+): Promise<void> {
+  const { error } = await supabase.from("profiles").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Foto profilo su Storage                                                     */
 /* -------------------------------------------------------------------------- */
