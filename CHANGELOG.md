@@ -9,6 +9,10 @@ versioni (fase pre-1.0).
 
 ## Non rilasciato
 
+_(vuoto)_
+
+## Update 2026-08-13
+
 ### Aggiunto
 - **Supabase collegato**: l'app esce dalla fase placeholder. Autenticazione
   reale con email e password, sessione rinnovata a ogni richiesta, protezione
@@ -52,11 +56,11 @@ versioni (fase pre-1.0).
   annullava l'intera migrazione — tabelle comprese — senza alcun segnale.
 
 ### Note per chi aggiorna
-- Servono le migrazioni **M2, M3 e M4** e un `.env.local` compilato.
+- Servono le migrazioni **M2, M3 e M4** e un `.env.local` compilato. (#16)
 - Le notifiche di escalation (problemi fermi, richieste e ferie in attesa)
   restano vive solo nella sessione: sono generate dal browser e la policy non
   ne consente la scrittura a nome altrui. Vanno spostate su una funzione
-  pianificata lato server.
+  pianificata lato server. (#16)
 
 ## Update 2026-08-05
 
