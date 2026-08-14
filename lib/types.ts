@@ -203,7 +203,9 @@ export type NotificationKind = "mention" | "sollecito" | "sistema";
 export interface AppNotification {
   id: string;
   to_user_id: string;
-  from_user_id: string;
+  /** `null` = generato dal sistema (promemoria automatici). Attribuirlo a una
+   *  persona sarebbe una piccola bugia che poi si legge in interfaccia. */
+  from_user_id: string | null;
   message: string;
   task_id: string | null;
   kind?: NotificationKind;

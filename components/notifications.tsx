@@ -229,8 +229,11 @@ export function NotificationsBell() {
                               group.items.length > 1 && "pl-4",
                             )}
                           >
+                            {/* `from_user_id` nullo = promemoria automatico:
+                                non ha un mittente, e fingerne uno si
+                                leggerebbe come un messaggio mai scritto. */}
                             <AvatarInitials
-                              name={sender?.full_name ?? "?"}
+                              name={sender?.full_name ?? "Sistema"}
                               src={sender?.avatar_url}
                               size="sm"
                               className="mt-0.5"
@@ -238,7 +241,8 @@ export function NotificationsBell() {
                             <span className="min-w-0 flex-1">
                               <span className="flex items-baseline justify-between gap-2">
                                 <span className="text-[13px] font-medium text-ink">
-                                  {sender?.full_name ?? "—"}
+                                  {sender?.full_name ??
+                                    (n.from_user_id ? "—" : "Sistema")}
                                 </span>
                                 <span className="shrink-0 font-mono text-[10px] text-ink-muted">
                                   {timeAgo(n.created_at)}
