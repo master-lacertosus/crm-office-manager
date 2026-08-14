@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { ChatPanel } from "@/components/chat-panel";
+import { OnboardingProfile } from "@/components/onboarding-profile";
 import { MobileDrawer, Sidebar } from "@/components/shell/sidebar";
 
 interface ShellContextValue {
@@ -31,6 +33,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
         <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        {/* Copre l'app finché il profilo non è configurato: si decide una
+            volta come apparire ai colleghi, e non si rimanda. */}
+        <OnboardingProfile />
+        {/* Comunicazione rapida: raggiungibile da ogni pagina, perché serve
+            mentre si sta facendo altro. */}
+        <ChatPanel />
       </div>
     </ShellContext.Provider>
   );

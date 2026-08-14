@@ -390,6 +390,11 @@ export function IlCapo() {
     setVisible(false);
   };
 
+  /* Il Capo tiene l'angolo in basso a destra tutto per sé: la chat è passata
+     al centro del bordo inferiore, quindi il coordinamento che c'era qui —
+     un'altezza dichiarata in una variabile CSS — non serve più. Spostare la
+     chat ha risolto la sovrapposizione meglio di quanto facesse coordinarla. */
+
   return (
     <AnimatePresence>
       {visible ? (

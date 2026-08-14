@@ -12,7 +12,7 @@ Task, progetti, richieste, ferie e report in un'unica app: semplice, veloce, sen
 ![React Compiler](https://img.shields.io/badge/React_Compiler-attivo_(Rust)-6D5DFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white)
-![Supabase](https://img.shields.io/badge/Supabase-pronto-3FCF8E?logo=supabase&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-collegato-3FCF8E?logo=supabase&logoColor=white)
 
 <img src="docs/screenshots/dashboard.png" alt="Dashboard di Lacertosus Office OS" width="920" />
 
@@ -44,7 +44,9 @@ Principi di prodotto (da [`docs/CLAUDE.md`](docs/CLAUDE.md)):
 - **Pannelli laterali, non modali**: ogni task è linkabile e condivisibile via URL.
 - L'arancio Lacertosus è riservato ad azioni primarie ed evidenze.
 
-**Stato del progetto**: frontend completo e verificato, con **strato dati placeholder** (localStorage versionato) che replica il contratto delle future query Supabase — schema SQL, RLS e piano di migrazione sono già scritti (`supabase/migrations/`, [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md), [`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md)). Al collegamento del backend cambia lo strato dati, non l'interfaccia.
+**Stato del progetto**: **collegato a Supabase**. Autenticazione reale con email e password, dati su PostgreSQL con Row Level Security su ogni tabella, foto profilo su Storage e chat interna in tempo reale. Lo strato dati è cambiato mantenendo invariata l'API dello store, quindi l'interfaccia è rimasta quella verificata a luglio. Schema e modello di sicurezza in [`supabase/migrations/`](supabase/migrations/), [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) e [`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md).
+
+Per far girare l'app serve un `.env.local` compilato (traccia in [`.env.example`](.env.example)) e le migrazioni **M1–M4** applicate sul progetto Supabase. Lo stato dello schema si verifica con `node scripts/supabase-verify.mjs`.
 
 ## Funzionalità
 
@@ -74,7 +76,7 @@ Dettaglio in **vista grande** centrata o pannello laterale compatto (preferenza 
 
 - Stato, priorità, responsabile, scadenza con **chip di urgenza**, progetto e **ripetizione furba** (settimanale, ogni 2 settimane, mensile: al completamento il task si ricrea con la scadenza avanzata e la checklist azzerata).
 - **Checklist interattiva** con barra di avanzamento, visibile anche sulle card («2/4»).
-- **Allegati-link** con anteprima delle immagini (in attesa di Supabase Storage).
+- **Allegati-link** con anteprima delle immagini.
 - **Commenti e attività**: menzioni `@Nome` e `@Team` che generano avvisi reali, reazioni rapide, marcatura **«Decisione»**, citazione, e la **cronologia eventi** append-only (creazioni, cambi stato/scadenza/responsabile/priorità) fusa nella timeline.
 - **Snooze personale** (domani / +3 giorni): il task sparisce dalle proprie viste e torna con un avviso.
 - **Segnala problema** con motivo: il task entra in fase Problema, admin e responsabile vengono avvisati; pagina dedicata con tempo-in-fase ed **escalation automatica** oltre le 48h.
@@ -137,7 +139,7 @@ Easter egg motivazionale: *Claudio P., il Cavaliere di Parma* appare a sorpresa 
 | Framework | **Next.js 16.3** (App Router, Turbopack) con **React Compiler nativo Rust** |
 | UI | **React 19**, Tailwind CSS 4, shadcn/ui + Radix, Motion 12, grafici SVG in casa |
 | Linguaggio | TypeScript **strict** |
-| Dati (oggi) | Store client placeholder (`lib/store.tsx`) + **localStorage versionato** |
+| Dati | **Supabase** (PostgreSQL + RLS): store in `lib/store.tsx`, query in `lib/supabase/` |
 | Dati (domani) | **Supabase** (PostgreSQL + RLS): migrazione iniziale già scritta, store a parità di firma |
 | Qualità | ESLint 9, `tsc --noEmit`, suite di verifica end-to-end via Edge CDP |
 
@@ -203,7 +205,7 @@ node scripts/mobile-probe.mjs       # sonde responsive
 app/
   (app)/            # area autenticata: dashboard, tasks, calendar, projects,
                     # problems, requests, leave, reports, team, settings
-  login/            # accesso (placeholder)
+  login/            # accesso reale (email e password)
 components/
   board/            # board Kanban: corsie, card, filtri
   charts/           # grafici SVG: trend, barre, sparkline, stat tile
@@ -211,14 +213,13 @@ components/
   ui/               # primitive: button, input, segmented, select…
   *.tsx             # feature: task-panel, calendar-view, leave-content, report…
 lib/
-  store.tsx         # store placeholder: contratto per Supabase + persistenza
+  store.tsx         # store: stato client + scritture ottimistiche su Supabase
   shallow-nav.ts    # navigazione shallow (History API integrata nel router)
   leave.ts          # logica pura ferie/chiusure (giorni lavorativi…)
   analytics.ts      # motore dei report
-  mock-data.ts      # seed demo deterministici
-docs/               # requisiti, architettura, schema DB, sicurezza, design system
+  docs/               # requisiti, architettura, schema DB, sicurezza, design system
 scripts/            # verifiche end-to-end via CDP + gestione worktree
-supabase/           # migrazione SQL iniziale (schema + RLS + trigger)
+supabase/           # migrazioni SQL (schema + RLS + trigger + Realtime)
 ```
 
 ## Documentazione

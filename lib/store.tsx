@@ -11,21 +11,60 @@ import {
 } from "@/lib/format";
 import { extractMentionIds } from "@/lib/mentions";
 import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
-  CURRENT_USER_ID,
-  MOCK_CLOSURES,
-  MOCK_COMMENTS,
-  MOCK_EVENTS,
-  MOCK_LEAVES,
-  MOCK_NOTIFICATIONS,
-  MOCK_PROFILES,
-  MOCK_PROJECTS,
-  MOCK_PROJECT_COMMENTS,
-  MOCK_REQUESTS,
-  MOCK_TASKS,
-  MOCK_TASK_LINKS,
-  MOCK_TEMPLATES,
-} from "@/lib/mock-data";
+  deleteChecklistItem,
+  deleteClosure,
+  deleteCustomStatus,
+  deleteLeaveRequest,
+  deleteSavedView,
+  deleteTaskRequest,
+  deleteTemplate,
+  deleteTaskLink,
+  deleteTaskRow,
+  decideLeaveRequest,
+  decideTaskRequest,
+  fetchChecklists,
+  fetchClosures,
+  fetchLeaveRequests,
+  fetchNotifications,
+  fetchSavedViews,
+  fetchTaskRequests,
+  fetchTemplates,
+  fetchUserTaskState,
+  fetchProjectComments,
+  fetchTaskComments,
+  fetchTaskEvents,
+  fetchTaskLinks,
+  fetchCustomStatuses,
+  fetchProfiles,
+  fetchProjects,
+  fetchTasks,
+  insertChecklistItem,
+  insertClosure,
+  insertCustomStatus,
+  insertLeaveRequest,
+  insertSavedView,
+  insertTaskRequest,
+  insertNotifications,
+  insertProject,
+  insertProjectComment,
+  insertTaskComment,
+  insertTaskEvents,
+  insertTaskLink,
+  insertTask,
+  markNotificationsRead,
+  removeAvatarByUrl,
+  setChecklistItemDone,
+  setDecision,
+  setUserTaskState,
+  toggleReactionRow,
+  updateProfileRow,
+  updateTaskRow,
+  uploadAvatar,
+  upsertTemplate,
+} from "@/lib/supabase/queries";
 import { formatRange, workingDaysCount } from "@/lib/leave";
 import type {
   AppNotification,
@@ -137,44 +176,10 @@ const problemEpisodeKey = (t: Task) => `${t.id}:${t.problem_since}`;
 /** Soglie di escalation (promemoria one-shot ai responsabili). */
 const PROBLEM_ESCALATION_MS = 48 * 3600_000;
 const REQUEST_ESCALATION_MS = 3 * 86_400_000;
-
-/** Collassa gli avvisi di sistema identici (stesso destinatario, task e
- *  testo) accumulati dal vecchio bug dei marcatori non persistiti: resta
- *  l'originale più vecchio. Menzioni e solleciti (azioni umane, ripetibili
- *  di proposito) non vengono mai toccati. */
-function dedupeSystemNotifications(
-  list: AppNotification[],
-): AppNotification[] {
-  const seen = new Set<string>();
-  return list.filter((n) => {
-    if ((n.kind ?? "sistema") !== "sistema") return true;
-    const key = `${n.to_user_id}|${n.task_id ?? ""}|${n.message}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-/** Prima apertura senza marcatori salvati: considera già segnalato ciò che
- *  è oltre soglia — lo era di sicuro (i doppioni in campanella lo provano). */
-const seedEscalatedProblems = (tasks: Task[], now: number): string[] =>
-  tasks
-    .filter(
-      (t) =>
-        t.status === "alert" &&
-        t.problem_since &&
-        now - new Date(t.problem_since).getTime() > PROBLEM_ESCALATION_MS,
-    )
-    .map(problemEpisodeKey);
-
-const seedEscalatedRequests = (requests: TaskRequest[], now: number): string[] =>
-  requests
-    .filter(
-      (r) =>
-        r.status === "pending" &&
-        now - new Date(r.created_at).getTime() > REQUEST_ESCALATION_MS,
-    )
-    .map((r) => r.id);
+/* Le funzioni di bonifica dei doppioni e di deduzione dei marcatori di
+   escalation sono sparite insieme alla persistenza in localStorage: servivano
+   a rimettere in piedi lo stato salvato all'avvio, e non c'è più uno stato
+   salvato da rimettere in piedi. */
 
 /** Una richiesta ferie merita il promemoria? In attesa da più di 3 giorni,
  *  oppure partenza ormai vicina (≤3 g): decidere tardi è un no di fatto. */
@@ -186,13 +191,6 @@ const leaveEscalationDue = (
   l.status === "pending" &&
   (now - new Date(l.created_at).getTime() > REQUEST_ESCALATION_MS ||
     (l.start_date >= today && diffIsoDays(today, l.start_date) <= 3));
-
-const seedEscalatedLeaves = (
-  leaves: LeaveRequest[],
-  now: number,
-  today: string,
-): string[] =>
-  leaves.filter((l) => leaveEscalationDue(l, now, today)).map((l) => l.id);
 
 /** Eventi di cronologia derivati da una modifica (campi tracciati). */
 function diffTaskEvents(before: Task, after: Task, actorId: string): TaskEvent[] {
@@ -213,11 +211,36 @@ function diffTaskEvents(before: Task, after: Task, actorId: string): TaskEvent[]
 }
 
 interface AppStore {
+  /** Profilo dell'utente collegato. Durante il caricamento è una sentinella
+   *  con `id` vuoto: controllare `loading` prima di fidarsene. */
   currentUser: Profile;
-  /** Demo: cambia l'utente corrente («Vedi come…»). */
-  switchUser: (profileId: string) => void;
+  /** Vero finché la prima lettura da Supabase non è conclusa. */
+  loading: boolean;
+  /** Messaggio dell'errore di caricamento, se c'è stato. */
+  loadError: string | null;
+  /** Messaggio dell'ultima scrittura fallita: la modifica è già stata
+   *  annullata quando questo campo si valorizza. */
+  syncError: string | null;
+  /** Nasconde l'avviso di scrittura fallita dopo che l'utente l'ha letto. */
+  clearSyncError: () => void;
+  /** Vero quando il profilo non è mai stato configurato dal suo proprietario
+   *  (`onboarded_at` nullo) e i dati sono già stati caricati. */
+  needsOnboarding: boolean;
+  /** Conclude il primo accesso: salva nome, qualifica ed eventuale foto, e
+   *  marca il profilo come configurato. Lancia se la scrittura fallisce —
+   *  qui l'utente sta aspettando, quindi l'errore va mostrato, non ingoiato. */
+  completeOnboarding: (input: {
+    full_name: string;
+    title: string | null;
+    avatarFile: File | null;
+  }) => Promise<void>;
   profiles: Profile[];
   projects: Project[];
+  /** Crea un progetto su Supabase e lo aggiunge alla lista. */
+  createProject: (input: {
+    name: string;
+    description?: string | null;
+  }) => Promise<Project>;
   tasks: Task[];
   comments: TaskComment[];
   createTask: (input: NewTask) => Promise<Task>;
@@ -361,164 +384,444 @@ interface AppStore {
   removeClosure: (id: string) => (() => void) | null;
 }
 
+/** Identità di ripiego finché la sessione non ha risposto. Non è un utente
+ *  reale: `id` vuoto non corrisponde a nessuna riga, quindi nessuna query
+ *  parte per sbaglio a suo nome e nessun dato gli viene attribuito. */
+const PROFILO_IN_CARICAMENTO: Profile = {
+  id: "",
+  full_name: "…",
+  email: "",
+  role: "member",
+  is_active: false,
+  avatar_url: null,
+};
+
+/* --------------------------------------------------------------------------
+   Bonifica del browser.
+
+   I dati finti non stavano solo nel codice: lo store li ha salvati in
+   localStorage per mesi, e li reidratava all'avvio. Toglierli dai sorgenti
+   non basta — vanno tolti anche dai browser che li hanno già.
+
+   Una marcatura di generazione risolve in un colpo: quando non corrisponde,
+   le chiavi del workspace vengono svuotate una volta sola. Alzare il numero
+   in futuro ripulisce di nuovo, senza che nessuno debba svuotare la cache a
+   mano.
+
+   Le preferenze d'aspetto e il layout della dashboard NON sono qui: sono
+   scelte personali per-browser, non contengono dati inventati e non c'è
+   motivo di buttarle.
+   -------------------------------------------------------------------------- */
+const STORAGE_GENERATION = "3";
+const STORAGE_GENERATION_KEY = "office-storage-generation";
+const WORKSPACE_STORAGE_KEYS = [
+  "office-state",
+  "profile-avatars",
+  "saved-views",
+  "workspace-templates",
+];
+
+/**
+ * Sincronizza una collezione con il database confrontando gli id.
+ *
+ * Le collezioni append-only dell'app — cronologia, commenti, allegati,
+ * avvisi — hanno una quarantina di punti che le modificano, sparsi in tutto
+ * lo store. Attaccare una scrittura a ognuno significherebbe quaranta
+ * occasioni di dimenticarne una, e ogni dimenticanza sarebbe un dato perso
+ * senza errore.
+ *
+ * Qui si osserva il risultato invece del gesto: a ogni cambiamento si
+ * confrontano gli id presenti con quelli già noti al server, si inserisce
+ * ciò che è comparso e si elimina ciò che è sparito. I punti di mutazione
+ * restano com'erano.
+ *
+ * Il limite da conoscere: le MODIFICHE a una riga esistente non si vedono,
+ * perché l'id non cambia. Reazioni, decisioni, spunte e letture si scrivono
+ * quindi esplicitamente dove avvengono.
+ */
+function useSincronizza<T extends { id: string }>(
+  righe: T[],
+  pronto: boolean,
+  inserisci: (nuove: T[]) => Promise<void>,
+  elimina: (ids: string[]) => Promise<void>,
+  segnalaErrore: (messaggio: string) => void,
+) {
+  const noteRef = React.useRef<Set<string> | null>(null);
+
+  React.useEffect(() => {
+    if (!pronto) return;
+
+    // Prima passata: quello che c'è arriva dal server, non va reinserito.
+    if (noteRef.current === null) {
+      noteRef.current = new Set(righe.map((r) => r.id));
+      return;
+    }
+
+    const attuali = new Set(righe.map((r) => r.id));
+    const nuove = righe.filter((r) => !noteRef.current!.has(r.id));
+    const rimosse = [...noteRef.current].filter((id) => !attuali.has(id));
+    if (nuove.length === 0 && rimosse.length === 0) return;
+
+    /* Si aggiorna PRIMA di scrivere: se la scrittura è lenta e nel frattempo
+       arriva un altro cambiamento, senza questo la stessa riga verrebbe
+       inserita due volte. */
+    noteRef.current = attuali;
+
+    void (async () => {
+      try {
+        if (nuove.length > 0) await inserisci(nuove);
+        if (rimosse.length > 0) await elimina(rimosse);
+      } catch (e) {
+        segnalaErrore(
+          e instanceof Error ? e.message : "Salvataggio non riuscito.",
+        );
+      }
+    })();
+    // `inserisci` ed `elimina` sono ricreate a ogni render dai chiamanti:
+    // includerle farebbe girare l'effetto in continuo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [righe, pronto]);
+}
+
 const StoreContext = React.createContext<AppStore | null>(null);
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
-  const [profiles, setProfiles] = React.useState<Profile[]>(MOCK_PROFILES);
-  const [projects] = React.useState<Project[]>(MOCK_PROJECTS);
-  const [tasks, setTasks] = React.useState<Task[]>(MOCK_TASKS);
-  const [comments, setComments] = React.useState<TaskComment[]>(MOCK_COMMENTS);
-  const [notifications, setNotifications] =
-    React.useState<AppNotification[]>(MOCK_NOTIFICATIONS);
-  const [taskLinks, setTaskLinks] =
-    React.useState<TaskLink[]>(MOCK_TASK_LINKS);
+  /* Workspace vuoto: i dati finti sono spariti con l'incremento 1. Profili e
+     progetti arrivano da Supabase (sotto); le altre entità restano in memoria
+     e verranno collegate una per una negli incrementi successivi. Nessuna
+     nasce più con dei seed, così non esiste mai lo stato misto vero/finto. */
+  const [profiles, setProfiles] = React.useState<Profile[]>([]);
+  const [projects, setProjects] = React.useState<Project[]>([]);
+  const [tasks, setTasks] = React.useState<Task[]>([]);
+  const [comments, setComments] = React.useState<TaskComment[]>([]);
+  const [notifications, setNotifications] = React.useState<AppNotification[]>([]);
+  const [taskLinks, setTaskLinks] = React.useState<TaskLink[]>([]);
   const [focusIds, setFocusIds] = React.useState<string[]>([]);
   const [customStatuses, setCustomStatuses] = React.useState<CustomStatus[]>([]);
-  const [currentUserId, setCurrentUserId] =
-    React.useState<string>(CURRENT_USER_ID);
-  const [projectComments, setProjectComments] = React.useState<
-    ProjectComment[]
-  >(MOCK_PROJECT_COMMENTS);
+  /* Identità reale: nasce vuota e si popola dalla sessione. Finché è vuota
+     l'app mostra lo stato di caricamento invece di un utente inventato. */
+  const [currentUserId, setCurrentUserId] = React.useState<string>("");
+  const [projectComments, setProjectComments] = React.useState<ProjectComment[]>([]);
   const [snoozes, setSnoozes] = React.useState<Record<string, string>>({});
   const [savedViews, setSavedViews] = React.useState<SavedView[]>([]);
-  const [templates, setTemplates] =
-    React.useState<WorkspaceTemplate[]>(MOCK_TEMPLATES);
-  const [events, setEvents] = React.useState<TaskEvent[]>(MOCK_EVENTS);
-  const [requests, setRequests] =
-    React.useState<TaskRequest[]>(MOCK_REQUESTS);
-  const [leaves, setLeaves] = React.useState<LeaveRequest[]>(MOCK_LEAVES);
-  const [closures, setClosures] =
-    React.useState<CompanyClosure[]>(MOCK_CLOSURES);
-  /* Marcatori «già segnalato» delle escalation: il ref fa da guardia
-     sincrona dentro la sessione, lo stato è lo specchio PERSISTITO — senza,
-     ogni ricarica ri-generava le stesse notifiche all'infinito. */
-  const [escalatedProblems, setEscalatedProblems] = React.useState<string[]>([]);
-  const [escalatedRequests, setEscalatedRequests] = React.useState<string[]>([]);
-  const [escalatedLeaves, setEscalatedLeaves] = React.useState<string[]>([]);
+  const [templates, setTemplates] = React.useState<WorkspaceTemplate[]>([]);
+  const [events, setEvents] = React.useState<TaskEvent[]>([]);
+  const [requests, setRequests] = React.useState<TaskRequest[]>([]);
+  const [leaves, setLeaves] = React.useState<LeaveRequest[]>([]);
+  const [closures, setClosures] = React.useState<CompanyClosure[]>([]);
+  /* Marcatori «già segnalato» delle escalation.
+
+     Erano due: un ref come guardia sincrona dentro la sessione e uno stato
+     persistito in localStorage, perché senza quest'ultimo ogni ricarica
+     rigenerava le stesse notifiche.
+
+     Lo stato persistito è sparito con localStorage e NON è stato sostituito.
+     Non è una dimenticanza: le notifiche di escalation non finiscono nel
+     database — la policy pretende `from_user_id = auth.uid()` e queste sono
+     attribuite al richiedente. Sono quindi vive solo nella sessione, e con
+     loro i marcatori: ricaricando spariscono entrambi, quindi non si creano
+     doppioni, si riparte da zero. Coerente, anche se non ideale.
+
+     La sistemazione vera è spostare le escalation sul server (una funzione
+     pianificata), dove appartengono: generarle nel browser di chi ha per
+     caso una scheda aperta è comunque il posto sbagliato. */
   const escalatedRef = React.useRef(new Set<string>());
   const requestsEscalatedRef = React.useRef(new Set<string>());
   const leavesEscalatedRef = React.useRef(new Set<string>());
 
-  /* ------------------------------------------------------------------ */
-  /* Persistenza locale dell'intero workspace (fase placeholder).        */
-  /* «Si deve memorizzare tutto»: task, cronologia, commenti e avvisi    */
-  /* sopravvivono al refresh; con Supabase questo strato sparisce.       */
-  /* Bump di STATE_VERSION = reset pulito ai seed (schema cambiato).     */
-  /* ------------------------------------------------------------------ */
-  const STATE_KEY = "office-state";
-  // v2 (31/07): timestamp dei seed ancorati (fix idratazione #418) —
-  // il bump azzera i dati demo persistiti, come concordato.
-  const STATE_VERSION = 2;
-  const stateLoadedRef = React.useRef(false);
+  /* Bonifica prima di ogni idratazione. Dichiarato per primo di proposito:
+     gli effetti girano nell'ordine dei sorgenti, quindi qui le chiavi sono
+     già sparite quando gli effetti sotto provano a rileggerle. */
   React.useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const raw = localStorage.getItem(STATE_KEY);
-        if (raw) {
-          const data = JSON.parse(raw);
-          if (data?.version === STATE_VERSION) {
-            if (data.tasks) setTasks(data.tasks);
-            if (data.events) setEvents(data.events);
-            if (data.comments) setComments(data.comments);
-            if (data.notifications) {
-              // Bonifica one-shot dei doppioni storici del vecchio bug.
-              setNotifications(dedupeSystemNotifications(data.notifications));
-            }
-            if (data.taskLinks) setTaskLinks(data.taskLinks);
-            if (data.projectComments) setProjectComments(data.projectComments);
-            if (data.snoozes) setSnoozes(data.snoozes);
-            if (data.focusIds) setFocusIds(data.focusIds);
-            if (data.customStatuses) setCustomStatuses(data.customStatuses);
-            if (data.requests) setRequests(data.requests);
-            if (data.leaves) setLeaves(data.leaves);
-            if (data.closures) setClosures(data.closures);
-            // Marcatori di escalation: caricati, o dedotti alla prima
-            // apertura post-fix (campo assente nello stato salvato).
-            const now = Date.now();
-            const problems: string[] = Array.isArray(data.escalatedProblems)
-              ? data.escalatedProblems
-              : seedEscalatedProblems(data.tasks ?? [], now);
-            const staleReqs: string[] = Array.isArray(data.escalatedRequests)
-              ? data.escalatedRequests
-              : seedEscalatedRequests(data.requests ?? [], now);
-            const staleLeaves: string[] = Array.isArray(data.escalatedLeaves)
-              ? data.escalatedLeaves
-              : seedEscalatedLeaves(data.leaves ?? [], now, todayIso());
-            escalatedRef.current = new Set(problems);
-            requestsEscalatedRef.current = new Set(staleReqs);
-            leavesEscalatedRef.current = new Set(staleLeaves);
-            setEscalatedProblems(problems);
-            setEscalatedRequests(staleReqs);
-            setEscalatedLeaves(staleLeaves);
-          }
-        }
-      } catch {
-        /* storage illeggibile: si riparte dai seed */
+    try {
+      if (localStorage.getItem(STORAGE_GENERATION_KEY) === STORAGE_GENERATION) {
+        return;
       }
-      stateLoadedRef.current = true;
-    });
-  }, []);
-  React.useEffect(() => {
-    if (!stateLoadedRef.current) return;
-    const persist = () => {
-      try {
-        localStorage.setItem(
-          STATE_KEY,
-          JSON.stringify({
-            version: STATE_VERSION,
-            savedAt: new Date().toISOString(),
-            tasks,
-            events,
-            comments,
-            notifications,
-            taskLinks,
-            projectComments,
-            snoozes,
-            focusIds,
-            customStatuses,
-            requests,
-            leaves,
-            closures,
-            escalatedProblems,
-            escalatedRequests,
-            escalatedLeaves,
-          }),
-        );
-      } catch {
-        /* quota piena o storage assente: pazienza */
+      for (const chiave of WORKSPACE_STORAGE_KEYS) {
+        localStorage.removeItem(chiave);
       }
-    };
-    // Persiste al primo momento di quiete del browser (tetto 400ms):
-    // ogni mutazione annulla e riprogramma, così le raffiche producono
-    // una sola serializzazione e mai dentro un frame di interazione.
-    if (typeof requestIdleCallback === "undefined") {
-      const id = setTimeout(persist, 400);
-      return () => clearTimeout(id);
+      localStorage.setItem(STORAGE_GENERATION_KEY, STORAGE_GENERATION);
+    } catch {
+      /* storage non disponibile (navigazione privata, quota): pazienza,
+         non è un motivo per impedire l'avvio dell'app */
     }
-    const id = requestIdleCallback(persist, { timeout: 400 });
-    return () => cancelIdleCallback(id);
-  }, [
-    tasks,
+  }, []);
+
+  /* ------------------------------------------------------------------ */
+  /* Caricamento da Supabase (incremento 1: identità, profili, progetti). */
+  /* ------------------------------------------------------------------ */
+  const [loading, setLoading] = React.useState(isSupabaseConfigured);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [syncError, setSyncError] = React.useState<string | null>(null);
+
+  /* Scrittura in sottofondo con annullamento.
+
+     L'interfaccia si aggiorna subito — trascinare una scheda deve essere
+     istantaneo, non attendere la rete — e la scrittura parte dopo. Se il
+     database rifiuta (una policy, la connessione, un vincolo), si ripristina
+     lo stato precedente e si espone l'errore: senza il ripristino l'utente
+     resterebbe convinto di aver salvato qualcosa che non esiste.
+
+     La RLS è l'ultima parola: se una policy nega, qui si vede: l'app non
+     decide i permessi, li subisce. */
+  const scriviCon = React.useCallback(
+    (operazione: () => Promise<void>, ripristina: () => void) => {
+      if (!isSupabaseConfigured) return;
+      void operazione().catch((e: unknown) => {
+        ripristina();
+        setSyncError(
+          e instanceof Error ? e.message : "Salvataggio non riuscito.",
+        );
+      });
+    },
+    [],
+  );
+
+  React.useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let annullato = false;
+
+    (async () => {
+      try {
+        const supabase = createClient();
+        /* `getClaims()` legge il token già in cookie senza interrogare il
+           server: l'id utente è il claim `sub`. Il proxy ha appena rinnovato
+           la sessione, quindi qui è sempre fresca. */
+        const { data: claims } = await supabase.auth.getClaims();
+        const userId = claims?.claims?.sub as string | undefined;
+
+        const [
+          profileList,
+          projectList,
+          taskList,
+          customList,
+          checklists,
+          linkList,
+          eventList,
+          commentList,
+          projectCommentList,
+          notificationList,
+          requestList,
+          leaveList,
+          closureList,
+          templateList,
+          viewList,
+          statoPersonale,
+        ] = await Promise.all([
+          fetchProfiles(supabase),
+          fetchProjects(supabase),
+          fetchTasks(supabase),
+          fetchCustomStatuses(supabase),
+          fetchChecklists(supabase),
+          fetchTaskLinks(supabase),
+          fetchTaskEvents(supabase),
+          fetchTaskComments(supabase),
+          fetchProjectComments(supabase),
+          fetchNotifications(supabase),
+          fetchTaskRequests(supabase),
+          fetchLeaveRequests(supabase),
+          fetchClosures(supabase),
+          fetchTemplates(supabase),
+          fetchSavedViews(supabase),
+          fetchUserTaskState(supabase),
+        ]);
+
+        if (annullato) return;
+        setProfiles(profileList);
+        setProjects(projectList);
+        // Le voci di checklist stanno in tabella a parte ma il tipo `Task` le
+        // porta dentro di sé: si ricompongono qui, una volta sola.
+        setTasks(
+          taskList.map((t) =>
+            checklists[t.id] ? { ...t, checklist: checklists[t.id] } : t,
+          ),
+        );
+        setCustomStatuses(customList);
+        setTaskLinks(linkList);
+        setEvents(eventList);
+        setComments(commentList);
+        setProjectComments(projectCommentList);
+        setNotifications(notificationList);
+        setRequests(requestList);
+        setLeaves(leaveList);
+        setClosures(closureList);
+        setTemplates(templateList);
+        setSavedViews(viewList);
+        setFocusIds(statoPersonale.focusIds);
+        setSnoozes(statoPersonale.snoozes);
+        if (userId) setCurrentUserId(userId);
+      } catch (e) {
+        if (!annullato) {
+          setLoadError(
+            e instanceof Error ? e.message : "Caricamento dei dati non riuscito.",
+          );
+        }
+      } finally {
+        if (!annullato) setLoading(false);
+      }
+    })();
+
+    // Il provider può smontare mentre le query sono in volo (navigazione,
+    // logout): senza questa guardia si scriverebbe su un componente morto.
+    return () => {
+      annullato = true;
+    };
+  }, []);
+
+  /* --- Sincronizzazione delle collezioni append-only ------------------ */
+  const pronto = isSupabaseConfigured && !loading && Boolean(currentUserId);
+
+  useSincronizza(
     events,
+    pronto,
+    (nuovi) => insertTaskEvents(createClient(), nuovi),
+    // La cronologia è append-only: non ha policy di cancellazione, e un
+    // registro che si può correggere non è un registro.
+    async () => {},
+    setSyncError,
+  );
+
+  useSincronizza(
     comments,
-    notifications,
-    taskLinks,
+    pronto,
+    async (nuovi) => {
+      const supabase = createClient();
+      for (const c of nuovi) await insertTaskComment(supabase, c);
+    },
+    async () => {},
+    setSyncError,
+  );
+
+  useSincronizza(
     projectComments,
-    snoozes,
-    focusIds,
-    customStatuses,
+    pronto,
+    async (nuovi) => {
+      const supabase = createClient();
+      for (const c of nuovi) await insertProjectComment(supabase, c);
+    },
+    async () => {},
+    setSyncError,
+  );
+
+  useSincronizza(
+    taskLinks,
+    pronto,
+    async (nuovi) => {
+      const supabase = createClient();
+      for (const l of nuovi) await insertTaskLink(supabase, l, currentUserId);
+    },
+    async (ids) => {
+      const supabase = createClient();
+      for (const id of ids) await deleteTaskLink(supabase, id);
+    },
+    setSyncError,
+  );
+
+  /* Richieste, ferie e chiusure: creazione e ritiro passano dal confronto
+     per id, come le altre collezioni. Le DECISIONI invece sono modifiche a
+     righe esistenti e si scrivono dove avvengono, più sotto. */
+  useSincronizza(
     requests,
+    pronto,
+    async (nuove) => {
+      const supabase = createClient();
+      for (const r of nuove) await insertTaskRequest(supabase, r);
+    },
+    async (ids) => {
+      const supabase = createClient();
+      for (const id of ids) await deleteTaskRequest(supabase, id);
+    },
+    setSyncError,
+  );
+
+  useSincronizza(
     leaves,
+    pronto,
+    async (nuove) => {
+      const supabase = createClient();
+      for (const l of nuove) await insertLeaveRequest(supabase, l);
+    },
+    async (ids) => {
+      const supabase = createClient();
+      for (const id of ids) await deleteLeaveRequest(supabase, id);
+    },
+    setSyncError,
+  );
+
+  useSincronizza(
     closures,
-    escalatedProblems,
-    escalatedRequests,
-    escalatedLeaves,
-  ]);
+    pronto,
+    async (nuove) => {
+      const supabase = createClient();
+      for (const c of nuove) await insertClosure(supabase, c);
+    },
+    async (ids) => {
+      const supabase = createClient();
+      for (const id of ids) await deleteClosure(supabase, id);
+    },
+    setSyncError,
+  );
+
+  useSincronizza(
+    templates,
+    pronto,
+    async (nuovi) => {
+      const supabase = createClient();
+      for (const t of nuovi) await upsertTemplate(supabase, t, currentUserId);
+    },
+    async (ids) => {
+      const supabase = createClient();
+      for (const id of ids) await deleteTemplate(supabase, id);
+    },
+    setSyncError,
+  );
+
+  useSincronizza(
+    savedViews,
+    pronto,
+    async (nuove) => {
+      const supabase = createClient();
+      for (const v of nuove) await insertSavedView(supabase, currentUserId, v);
+    },
+    async (ids) => {
+      const supabase = createClient();
+      for (const id of ids) await deleteSavedView(supabase, id);
+    },
+    setSyncError,
+  );
+
+  useSincronizza(
+    notifications,
+    pronto,
+    async (nuovi) => {
+      /* Si scrivono solo gli avvisi che l'utente corrente sta mandando: la
+         policy pretende `from_user_id = auth.uid()`. Le escalation
+         automatiche li attribuiscono al richiedente, quindi verrebbero
+         rifiutate — e comunque non hanno senso generate dal browser di chi
+         ha per caso una scheda aperta. Restano locali finché richieste e
+         ferie non passano al database, dove quelle notifiche appartengono. */
+      const miei = nuovi.filter((n) => n.from_user_id === currentUserId);
+      if (miei.length > 0) await insertNotifications(createClient(), miei);
+    },
+    async () => {},
+    setSyncError,
+  );
+
+  /* ------------------------------------------------------------------ */
+  /* La persistenza in localStorage e sparita: ogni entita sta su         */
+  /* Supabase. Teneva una copia dell intero workspace in office-state e   */
+  /* la reidratava all avvio — con i dati veri sarebbe una seconda        */
+  /* sorgente di verita, destinata a divergere al primo accesso da un     */
+  /* altro computer.                                                      */
+  /* ------------------------------------------------------------------ */
 
   /* Auto-archivio: i Fatto completati da più di 14 giorni escono dalla
      board (restano in archivio e nei report). */
   React.useEffect(() => {
-    if (!stateLoadedRef.current) return;
+    // La guardia era sul caricamento da localStorage; ora è sul caricamento
+    // da Supabase. Senza, all'avvio la lista task è vuota e l'archiviazione
+    // girerebbe a vuoto — o peggio, su dati non ancora arrivati.
+    if (!pronto) return;
     const cutoff = Date.now() - 14 * 86_400_000;
     const stale = tasks.filter(
       (t) =>
@@ -538,78 +841,38 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         ...stale.map((t) => makeEvent(t.id, t.owner_id, "archived")),
       ]);
+      /* Gli eventi li scrive il confronto per id; l'archiviazione dei task è
+         una modifica e va scritta qui, altrimenti tornerebbero in board a
+         ogni ricarica. */
+      scriviCon(
+        async () => {
+          const supabase = createClient();
+          for (const t of stale) {
+            await updateTaskRow(supabase, t.id, { archived_at: nowIso });
+          }
+        },
+        () =>
+          setTasks((prev) =>
+            prev.map((t) => (ids.has(t.id) ? { ...t, archived_at: null } : t)),
+          ),
+      );
     });
-  }, [tasks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, pronto]);
 
-  /* Viste salvate e template: carica e persisti in localStorage. Il flag
-     "loaded" evita che il primo salvataggio (stato iniziale) sovrascriva
-     quanto memorizzato prima che la lettura sia avvenuta. */
-  const viewsLoadedRef = React.useRef(false);
-  React.useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const raw = localStorage.getItem("saved-views");
-        if (raw) setSavedViews(JSON.parse(raw));
-      } catch {
-        /* ignora */
-      }
-      viewsLoadedRef.current = true;
-    });
-  }, []);
-  React.useEffect(() => {
-    if (!viewsLoadedRef.current) return;
-    try {
-      localStorage.setItem("saved-views", JSON.stringify(savedViews));
-    } catch {
-      /* ignora */
-    }
-  }, [savedViews]);
+  /* Viste salvate, template e foto profilo non passano più dal browser:
+     stanno su Supabase e seguono la persona invece del computer. Le tre
+     coppie di effetti che li leggevano e riscrivevano in localStorage sono
+     sparite con la migrazione. */
 
-  const templatesLoadedRef = React.useRef(false);
-  React.useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const raw = localStorage.getItem("workspace-templates");
-        if (raw) setTemplates(JSON.parse(raw));
-      } catch {
-        /* ignora */
-      }
-      templatesLoadedRef.current = true;
-    });
-  }, []);
-  React.useEffect(() => {
-    if (!templatesLoadedRef.current) return;
-    try {
-      localStorage.setItem("workspace-templates", JSON.stringify(templates));
-    } catch {
-      /* ignora */
-    }
-  }, [templates]);
-
-  /* Foto profilo (id → data URL). Chiave separata da office-state: quel
-     payload si riserializza a ogni mutazione dei task e non deve portarsi
-     dietro le immagini; queste si riscrivono solo quando cambiano. */
-  const [avatars, setAvatars] = React.useState<Record<string, string>>({});
-  const avatarsLoadedRef = React.useRef(false);
-  React.useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const raw = localStorage.getItem("profile-avatars");
-        if (raw) setAvatars(JSON.parse(raw));
-      } catch {
-        /* ignora */
-      }
-      avatarsLoadedRef.current = true;
-    });
-  }, []);
-  React.useEffect(() => {
-    if (!avatarsLoadedRef.current) return;
-    try {
-      localStorage.setItem("profile-avatars", JSON.stringify(avatars));
-    } catch {
-      /* quota piena: la foto resta per la sessione, senza persistere */
-    }
-  }, [avatars]);
+  /* Le foto restano in una mappa a parte perché `profiles.avatar_url` è la
+     verità ma l'anteprima locale deve poter precedere il caricamento. Si
+     popola da `profiles`, non più da localStorage. */
+  const avatars = React.useMemo<Record<string, string>>(() => {
+    const out: Record<string, string> = {};
+    for (const p of profiles) if (p.avatar_url) out[p.id] = p.avatar_url;
+    return out;
+  }, [profiles]);
 
   /* Risveglio degli snooze scaduti: il task torna con un avviso */
   React.useEffect(() => {
@@ -626,8 +889,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         ...expired.map(([taskId]) => ({
           id: crypto.randomUUID(),
-          to_user_id: CURRENT_USER_ID,
-          from_user_id: CURRENT_USER_ID,
+          to_user_id: currentUserId,
+          from_user_id: currentUserId,
           message: `«${tasks.find((t) => t.id === taskId)?.title ?? "Task"}» è tornato dal posticipo.`,
           task_id: taskId,
           kind: "sistema" as const,
@@ -656,9 +919,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         (r) => !requestsEscalatedRef.current.has(r.id),
       );
       if (stale.length === 0) return;
+      // I profili possono non essere ancora arrivati da Supabase. Senza
+      // questa guardia la lista amministratori sarebbe vuota, nessuno
+      // riceverebbe l'avviso, ma il marcatore «gia segnalato» verrebbe
+      // scritto lo stesso: l'escalation si perderebbe per sempre.
+      if (profiles.length === 0) return;
       for (const r of stale) requestsEscalatedRef.current.add(r.id);
-      setEscalatedRequests((prev) => [...prev, ...stale.map((r) => r.id)]);
-      const admins = MOCK_PROFILES.filter(
+      const admins = profiles.filter(
         (p) => p.is_active && p.role === "admin",
       );
       setNotifications((prev) => [
@@ -695,16 +962,20 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       // idratazione, quindi i marcatori persistiti sono già caricati.
       const stale = due.filter((l) => !leavesEscalatedRef.current.has(l.id));
       if (stale.length === 0) return;
+      // I profili possono non essere ancora arrivati da Supabase. Senza
+      // questa guardia la lista amministratori sarebbe vuota, nessuno
+      // riceverebbe l'avviso, ma il marcatore «gia segnalato» verrebbe
+      // scritto lo stesso: l'escalation si perderebbe per sempre.
+      if (profiles.length === 0) return;
       for (const l of stale) leavesEscalatedRef.current.add(l.id);
-      setEscalatedLeaves((prev) => [...prev, ...stale.map((l) => l.id)]);
-      const admins = MOCK_PROFILES.filter(
+      const admins = profiles.filter(
         (p) => p.is_active && p.role === "admin",
       );
       setNotifications((prev) => [
         ...prev,
         ...stale.flatMap((leave) => {
           const who =
-            MOCK_PROFILES.find((p) => p.id === leave.requester_id)?.full_name.split(
+            profiles.find((p) => p.id === leave.requester_id)?.full_name.split(
               " ",
             )[0] ?? "collega";
           const label = leave.type === "ferie" ? "Ferie" : "Permesso";
@@ -749,12 +1020,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         (t) => !escalatedRef.current.has(problemEpisodeKey(t)),
       );
       if (stale.length === 0) return;
+      // I profili possono non essere ancora arrivati da Supabase. Senza
+      // questa guardia la lista amministratori sarebbe vuota, nessuno
+      // riceverebbe l'avviso, ma il marcatore «gia segnalato» verrebbe
+      // scritto lo stesso: l'escalation si perderebbe per sempre.
+      if (profiles.length === 0) return;
       for (const t of stale) escalatedRef.current.add(problemEpisodeKey(t));
-      setEscalatedProblems((prev) => [
-        ...prev,
-        ...stale.map(problemEpisodeKey),
-      ]);
-      const admins = MOCK_PROFILES.filter((p) => p.is_active && p.role === "admin");
+      const admins = profiles.filter((p) => p.is_active && p.role === "admin");
       setNotifications((prev) => [
         ...prev,
         ...stale.flatMap((task) => {
@@ -797,9 +1069,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const profilesResolved = profiles.map((p) =>
       avatars[p.id] ? { ...p, avatar_url: avatars[p.id] } : p,
     );
+    /* Sentinella per i momenti senza identità: primo render, caricamento in
+       corso, Supabase non configurato. Prima si ripiegava sul primo profilo
+       della lista — con i mock c'era sempre, ora la lista nasce vuota e
+       `currentUser.id` andrebbe in errore al primo render. */
     const currentUser =
       profilesResolved.find((p) => p.id === currentUserId) ??
-      profilesResolved[0];
+      PROFILO_IN_CARICAMENTO;
     const myNotifications = notifications
       .filter((n) => n.to_user_id === currentUser.id)
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -809,11 +1085,78 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     return {
     currentUser,
 
-    switchUser(profileId) {
-      setCurrentUserId(profileId);
+    loading,
+    loadError,
+    syncError,
+    clearSyncError: () => setSyncError(null),
+
+    /* Solo a caricamento concluso: durante l'attesa `currentUser` è la
+       sentinella, che ovviamente non ha `onboarded_at` — proporre la
+       procedura in quel momento la mostrerebbe a ogni ricarica, per un
+       istante, anche a chi l'ha già fatta. */
+    needsOnboarding:
+      isSupabaseConfigured &&
+      !loading &&
+      Boolean(currentUser.id) &&
+      !currentUser.onboarded_at,
+
+    async completeOnboarding({ full_name, title, avatarFile }) {
+      const supabase = createClient();
+      const nome = full_name.trim();
+      if (!nome) throw new Error("Il nome non può essere vuoto.");
+
+      let avatarUrl = currentUser.avatar_url ?? null;
+      if (avatarFile) {
+        const precedente = avatarUrl;
+        avatarUrl = await uploadAvatar(supabase, currentUser.id, avatarFile);
+        // La vecchia foto si toglie solo a nuova caricata: fallire prima
+        // lascerebbe il profilo senza immagine e senza rimedio.
+        void removeAvatarByUrl(supabase, precedente);
+      }
+
+      const onboardedAt = new Date().toISOString();
+      await updateProfileRow(supabase, currentUser.id, {
+        full_name: nome,
+        title: title?.trim() || null,
+        avatar_url: avatarUrl,
+        onboarded_at: onboardedAt,
+      });
+
+      setProfiles((prev) =>
+        prev.map((p) =>
+          p.id === currentUser.id
+            ? {
+                ...p,
+                full_name: nome,
+                title: title?.trim() || undefined,
+                avatar_url: avatarUrl,
+                onboarded_at: onboardedAt,
+              }
+            : p,
+        ),
+      );
     },
+
     profiles: profilesResolved,
     projects,
+
+    async createProject(input) {
+      const nome = input.name.trim();
+      if (!nome) throw new Error("Il nome del progetto non può essere vuoto.");
+      const supabase = createClient();
+      const progetto = await insertProject(supabase, {
+        name: nome,
+        description: input.description?.trim() || null,
+        createdBy: currentUser.id,
+      });
+      /* Niente aggiornamento ottimistico qui: l'id lo assegna il database e
+         la lista è ordinata per nome, quindi si aspetta la riga vera invece
+         di indovinarne una. Il progetto è un'operazione rara, non un drag. */
+      setProjects((prev) =>
+        [...prev, progetto].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      return progetto;
+    },
     tasks,
     comments,
 
@@ -839,6 +1182,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         makeEvent(task.id, currentUser.id, "created"),
       ]);
+      scriviCon(
+        () => insertTask(createClient(), task),
+        () => setTasks((prev) => prev.filter((t) => t.id !== task.id)),
+      );
       return task;
     },
 
@@ -874,6 +1221,24 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       ]);
       if (evs.length > 0) setEvents((prev) => [...prev, ...evs]);
 
+      /* `completed_at` e `problem_since` non si inviano: li impongono i
+         trigger del database. Si mandano solo i campi che l'utente ha
+         davvero cambiato — il resto lo calcola Postgres, una volta sola. */
+      scriviCon(
+        async () => {
+          const supabase = createClient();
+          await updateTaskRow(supabase, id, patch);
+          // La ricorrenza genera un task nuovo: va inserito, non aggiornato.
+          for (const s of spawned) await insertTask(supabase, s);
+        },
+        () =>
+          setTasks((prev) =>
+            prev
+              .filter((t) => !spawned.some((s) => s.id === t.id))
+              .map((t) => (t.id === id ? before : t)),
+          ),
+      );
+
       if (before.status === next.status) return null;
       const spawnedIds = new Set(spawned.map((s) => s.id));
       const evIds = new Set(evs.map((e) => e.id));
@@ -884,6 +1249,19 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             .map((t) => (t.id === id ? before : t)),
         );
         setEvents((prev) => prev.filter((e) => !evIds.has(e.id)));
+        /* L'annulla deve raggiungere anche il database: ripristinare la sola
+           interfaccia lascerebbe la modifica scritta, e alla ricarica
+           tornerebbe fuori quello che l'utente credeva di aver annullato. */
+        scriviCon(
+          async () => {
+            const supabase = createClient();
+            await updateTaskRow(supabase, id, before);
+            for (const spawnedId of spawnedIds) {
+              await deleteTaskRow(supabase, spawnedId);
+            }
+          },
+          () => setTasks((prev) => prev.map((t) => (t.id === id ? next : t))),
+        );
       };
     },
 
@@ -923,6 +1301,21 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       ]);
       if (evs.length > 0) setEvents((prev) => [...prev, ...evs]);
 
+      // Il trascinamento cambia fase e posizione: solo quelle due colonne.
+      scriviCon(
+        async () => {
+          const supabase = createClient();
+          await updateTaskRow(supabase, id, { status, position });
+          for (const s of spawned) await insertTask(supabase, s);
+        },
+        () =>
+          setTasks((prev) =>
+            prev
+              .filter((t) => !spawned.some((s) => s.id === t.id))
+              .map((t) => (t.id === id ? before : t)),
+          ),
+      );
+
       if (before.status === status) return null;
       const spawnedIds = new Set(spawned.map((s) => s.id));
       const evIds = new Set(evs.map((e) => e.id));
@@ -933,45 +1326,85 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             .map((t) => (t.id === id ? before : t)),
         );
         setEvents((prev) => prev.filter((e) => !evIds.has(e.id)));
+        /* L'annulla deve raggiungere anche il database: ripristinare la sola
+           interfaccia lascerebbe la modifica scritta, e alla ricarica
+           tornerebbe fuori quello che l'utente credeva di aver annullato. */
+        scriviCon(
+          async () => {
+            const supabase = createClient();
+            await updateTaskRow(supabase, id, before);
+            for (const spawnedId of spawnedIds) {
+              await deleteTaskRow(supabase, spawnedId);
+            }
+          },
+          () => setTasks((prev) => prev.map((t) => (t.id === id ? next : t))),
+        );
       };
     },
 
     events,
 
+    /* Le voci di checklist vivono dentro `Task` per l'app e in tabella per
+       il database: il confronto per id non le raggiunge, perché a cambiare è
+       il contenuto di un task. Si scrivono qui, una per una. */
+
     toggleChecklistItem(taskId, itemId) {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === taskId
-            ? {
-                ...t,
-                checklist: t.checklist?.map((item) =>
-                  item.id === itemId ? { ...item, done: !item.done } : item,
-                ),
-              }
-            : t,
-        ),
+      const voce = tasks
+        .find((t) => t.id === taskId)
+        ?.checklist?.find((i) => i.id === itemId);
+      if (!voce) return;
+      const applica = (done: boolean) =>
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId
+              ? {
+                  ...t,
+                  checklist: t.checklist?.map((item) =>
+                    item.id === itemId ? { ...item, done } : item,
+                  ),
+                }
+              : t,
+          ),
+        );
+      applica(!voce.done);
+      scriviCon(
+        () => setChecklistItemDone(createClient(), itemId, !voce.done),
+        () => applica(voce.done),
       );
     },
 
     addChecklistItem(taskId, text) {
       const trimmed = text.trim();
       if (!trimmed) return;
+      const voce = { id: crypto.randomUUID(), text: trimmed, done: false };
+      const posizione = Date.now();
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
-            ? {
-                ...t,
-                checklist: [
-                  ...(t.checklist ?? []),
-                  { id: crypto.randomUUID(), text: trimmed, done: false },
-                ],
-              }
+            ? { ...t, checklist: [...(t.checklist ?? []), voce] }
             : t,
         ),
+      );
+      scriviCon(
+        () => insertChecklistItem(createClient(), taskId, voce, posizione),
+        () =>
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === taskId
+                ? {
+                    ...t,
+                    checklist: t.checklist?.filter((i) => i.id !== voce.id),
+                  }
+                : t,
+            ),
+          ),
       );
     },
 
     removeChecklistItem(taskId, itemId) {
+      const voce = tasks
+        .find((t) => t.id === taskId)
+        ?.checklist?.find((i) => i.id === itemId);
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
@@ -981,6 +1414,18 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
               }
             : t,
         ),
+      );
+      if (!voce) return;
+      scriviCon(
+        () => deleteChecklistItem(createClient(), itemId),
+        () =>
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === taskId
+                ? { ...t, checklist: [...(t.checklist ?? []), voce] }
+                : t,
+            ),
+          ),
       );
     },
 
@@ -1039,17 +1484,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "_")
         .replace(/^_+|_+$/g, "");
-      const key = `custom_${base || "fase"}_${customStatuses.length + 1}`;
-      setCustomStatuses((prev) => [
-        ...prev,
-        {
-          key,
-          label: label.trim(),
-          color: preset.color,
-          soft: preset.soft,
-          text: preset.text,
-        },
-      ]);
+      /* La colonna `key` accetta al massimo 32 caratteri (vincolo
+         task_statuses_key_format): con un'etichetta lunga la chiave
+         sforerebbe e il database rifiuterebbe l'inserimento. Si tronca la
+         parte variabile lasciando intatti prefisso e suffisso, che sono
+         quelli che garantiscono l'unicità. */
+      const suffisso = `_${customStatuses.length + 1}`;
+      const spazio = 32 - "custom_".length - suffisso.length;
+      const key = `custom_${(base || "fase").slice(0, spazio)}${suffisso}`;
+
+      const nuova = {
+        key,
+        label: label.trim(),
+        color: preset.color,
+        soft: preset.soft,
+        text: preset.text,
+      };
+      setCustomStatuses((prev) => [...prev, nuova]);
+      scriviCon(
+        () => insertCustomStatus(createClient(), nuova, customStatuses.length),
+        () => setCustomStatuses((prev) => prev.filter((c) => c.key !== key)),
+      );
       return true;
     },
 
@@ -1063,6 +1518,24 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       setTasks((prev) =>
         prev.map((t) => (t.status === key ? { ...t, status: "todo" } : t)),
       );
+      /* Lato database lo spostamento dei task avviene da solo: la chiave
+         esterna è `on delete set default`, e il default è «todo». Qui si
+         cancella la fase e basta. */
+      scriviCon(
+        () => deleteCustomStatus(createClient(), key),
+        () => {
+          setCustomStatuses((prev) => {
+            const next = [...prev];
+            next.splice(Math.min(index, next.length), 0, removed);
+            return next;
+          });
+          setTasks((prev) =>
+            prev.map((t) =>
+              movedIds.includes(t.id) ? { ...t, status: key } : t,
+            ),
+          );
+        },
+      );
       return () => {
         setCustomStatuses((prev) => {
           const next = [...prev];
@@ -1073,6 +1546,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           prev.map((t) =>
             movedIds.includes(t.id) ? { ...t, status: key } : t,
           ),
+        );
+        /* Ricreare la fase non basta: i task erano stati riportati in «Da
+           fare» dalla chiave esterna, e vanno rimessi a mano dove stavano.
+           L'ordine conta — prima la fase, poi i task, altrimenti la chiave
+           esterna rifiuta. */
+        scriviCon(
+          async () => {
+            const supabase = createClient();
+            await insertCustomStatus(supabase, removed, index);
+            for (const taskId of movedIds) {
+              await updateTaskRow(supabase, taskId, { status: key });
+            }
+          },
+          () => {
+            setCustomStatuses((prev) => prev.filter((c) => c.key !== key));
+            setTasks((prev) =>
+              prev.map((t) =>
+                movedIds.includes(t.id) ? { ...t, status: "todo" } : t,
+              ),
+            );
+          },
         );
       };
     },
@@ -1128,6 +1622,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         });
       if (scope === "task") setComments((prev) => apply(prev));
       else setProjectComments((prev) => apply(prev));
+
+      /* Il confronto per id non vede questa modifica: la riga è la stessa,
+         cambia solo il contenuto. Va scritta esplicitamente. */
+      const elenco = scope === "task" ? comments : projectComments;
+      const prima = elenco.find((c) => c.id === commentId);
+      const attiva = !(prima?.reactions?.[emoji] ?? []).includes(currentUser.id);
+      scriviCon(
+        () =>
+          toggleReactionRow(
+            createClient(),
+            scope,
+            commentId,
+            currentUser.id,
+            emoji,
+            attiva,
+          ),
+        () => {
+          if (scope === "task") setComments((prev) => apply(prev));
+          else setProjectComments((prev) => apply(prev));
+        },
+      );
     },
 
     toggleDecision(scope, commentId) {
@@ -1139,20 +1654,60 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         );
       if (scope === "task") setComments((prev) => apply(prev));
       else setProjectComments((prev) => apply(prev));
+
+      const elenco = scope === "task" ? comments : projectComments;
+      const nuovo = !elenco.find((c) => c.id === commentId)?.is_decision;
+      scriviCon(
+        () => setDecision(createClient(), scope, commentId, nuovo),
+        () => {
+          if (scope === "task") setComments((prev) => apply(prev));
+          else setProjectComments((prev) => apply(prev));
+        },
+      );
     },
 
     snoozes,
 
+    /* Focus e posticipi non sono collezioni di righe con un id ma una lista
+       e una mappa: il confronto per id non li copre, e si scrivono qui. Una
+       riga per coppia utente-task, con upsert perché non interessa sapere se
+       esisteva già. */
+
     snoozeTask(taskId, untilIso) {
+      const prima = snoozes[taskId];
       setSnoozes((prev) => ({ ...prev, [taskId]: untilIso }));
+      scriviCon(
+        () =>
+          setUserTaskState(createClient(), currentUserId, taskId, {
+            snoozed_until: untilIso,
+          }),
+        () =>
+          setSnoozes((prev) => {
+            const next = { ...prev };
+            if (prima) next[taskId] = prima;
+            else delete next[taskId];
+            return next;
+          }),
+      );
     },
 
     unsnoozeTask(taskId) {
+      const prima = snoozes[taskId];
       setSnoozes((prev) => {
         const next = { ...prev };
         delete next[taskId];
         return next;
       });
+      scriviCon(
+        () =>
+          setUserTaskState(createClient(), currentUserId, taskId, {
+            snoozed_until: null,
+          }),
+        () =>
+          setSnoozes((prev) =>
+            prima ? { ...prev, [taskId]: prima } : prev,
+          ),
+      );
     },
 
     async reportProblem(taskId, reason) {
@@ -1234,8 +1789,15 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     updateTemplate(id, patch) {
-      setTemplates((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+      const prima = templates.find((t) => t.id === id);
+      if (!prima) return;
+      const dopo = { ...prima, ...patch };
+      setTemplates((prev) => prev.map((t) => (t.id === id ? dopo : t)));
+      /* Modifica a una riga esistente: il confronto per id non la vede.
+         `upsertTemplate` riscrive anche le voci del pacchetto. */
+      scriviCon(
+        () => upsertTemplate(createClient(), dopo, currentUserId),
+        () => setTemplates((prev) => prev.map((t) => (t.id === id ? prima : t))),
       );
     },
 
@@ -1355,11 +1917,23 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     focusIds,
 
     toggleFocus(taskId) {
-      setFocusIds((prev) => {
-        if (prev.includes(taskId)) return prev.filter((id) => id !== taskId);
-        if (prev.length >= 3) return prev;
-        return [...prev, taskId];
-      });
+      const era = focusIds.includes(taskId);
+      // Il tetto di tre è una regola di prodotto: se è pieno non succede
+      // nulla, e non deve nemmeno partire una scrittura.
+      if (!era && focusIds.length >= 3) return;
+      setFocusIds((prev) =>
+        era ? prev.filter((id) => id !== taskId) : [...prev, taskId],
+      );
+      scriviCon(
+        () =>
+          setUserTaskState(createClient(), currentUserId, taskId, {
+            is_focus: !era,
+          }),
+        () =>
+          setFocusIds((prev) =>
+            era ? [...prev, taskId] : prev.filter((id) => id !== taskId),
+          ),
+      );
     },
 
     async addComment(taskId, body) {
@@ -1419,13 +1993,30 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       );
     },
 
-    setAvatar(profileId, dataUrl) {
-      setAvatars((prev) => {
-        const next = { ...prev };
-        if (dataUrl) next[profileId] = dataUrl;
-        else delete next[profileId];
-        return next;
-      });
+    /* La firma resta invariata per i chiamanti, ma il significato è
+       cambiato: non si salva più una data URL nel browser, si scrive
+       `profiles.avatar_url`. Il caricamento del file su Storage avviene nel
+       componente che ha il File in mano — qui arriva già un URL. */
+    setAvatar(profileId, url) {
+      const prima = profiles.find((p) => p.id === profileId)?.avatar_url ?? null;
+      setProfiles((prev) =>
+        prev.map((p) => (p.id === profileId ? { ...p, avatar_url: url } : p)),
+      );
+      scriviCon(
+        async () => {
+          const supabase = createClient();
+          await updateProfileRow(supabase, profileId, { avatar_url: url });
+          // La precedente si rimuove solo dopo: fallire prima lascerebbe il
+          // profilo senza immagine e senza rimedio.
+          if (prima !== url) void removeAvatarByUrl(supabase, prima);
+        },
+        () =>
+          setProfiles((prev) =>
+            prev.map((p) =>
+              p.id === profileId ? { ...p, avatar_url: prima } : p,
+            ),
+          ),
+      );
     },
 
     notifications: myNotifications,
@@ -1447,33 +2038,64 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       ]);
     },
 
+    /* «Letto» è una modifica alla riga, non una riga nuova: il confronto per
+       id non la vede. Si scrive esplicitamente, in blocco — segnare venti
+       avvisi letti non deve costare venti richieste. */
+
     markTaskNotificationsRead(taskId) {
+      const ids = notifications
+        .filter(
+          (n) =>
+            n.to_user_id === currentUser.id && n.task_id === taskId && !n.read_at,
+        )
+        .map((n) => n.id);
+      if (ids.length === 0) return;
       setNotifications((prev) =>
         prev.map((n) =>
-          n.to_user_id === currentUser.id && n.task_id === taskId && !n.read_at
-            ? { ...n, read_at: new Date().toISOString() }
-            : n,
+          ids.includes(n.id) ? { ...n, read_at: new Date().toISOString() } : n,
         ),
+      );
+      scriviCon(
+        () => markNotificationsRead(createClient(), ids),
+        () =>
+          setNotifications((prev) =>
+            prev.map((n) => (ids.includes(n.id) ? { ...n, read_at: null } : n)),
+          ),
       );
     },
 
     markNotificationRead(id) {
+      if (notifications.find((n) => n.id === id)?.read_at) return;
       setNotifications((prev) =>
         prev.map((n) =>
-          n.id === id && !n.read_at
-            ? { ...n, read_at: new Date().toISOString() }
-            : n,
+          n.id === id ? { ...n, read_at: new Date().toISOString() } : n,
         ),
+      );
+      scriviCon(
+        () => markNotificationsRead(createClient(), [id]),
+        () =>
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === id ? { ...n, read_at: null } : n)),
+          ),
       );
     },
 
     markAllNotificationsRead() {
+      const ids = notifications
+        .filter((n) => n.to_user_id === currentUser.id && !n.read_at)
+        .map((n) => n.id);
+      if (ids.length === 0) return;
       setNotifications((prev) =>
         prev.map((n) =>
-          n.to_user_id === currentUser.id && !n.read_at
-            ? { ...n, read_at: new Date().toISOString() }
-            : n,
+          ids.includes(n.id) ? { ...n, read_at: new Date().toISOString() } : n,
         ),
+      );
+      scriviCon(
+        () => markNotificationsRead(createClient(), ids),
+        () =>
+          setNotifications((prev) =>
+            prev.map((n) => (ids.includes(n.id) ? { ...n, read_at: null } : n)),
+          ),
       );
     },
 
@@ -1558,6 +2180,28 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             : r,
         ),
       );
+      /* Il task nasce come riga nuova e il confronto per id lo prende da
+         solo; l'approvazione invece è una modifica alla richiesta e va
+         scritta qui. L'ordine conta: prima il task, perché `task_id` è una
+         chiave esterna e la richiesta non può puntare a ciò che non esiste. */
+      scriviCon(
+        async () => {
+          const supabase = createClient();
+          await insertTask(supabase, task);
+          await decideTaskRequest(supabase, id, {
+            status: "approved",
+            owner_id: task.owner_id,
+            due_date: task.due_date,
+            project_id: task.project_id,
+            task_id: task.id,
+          });
+        },
+        () => {
+          setTasks((prev) => prev.filter((t) => t.id !== task.id));
+          setRequests((prev) => prev.map((r) => (r.id === id ? req : r)));
+        },
+      );
+
       // Avvisi: al richiedente e all'assegnatario (senza doppioni né auto-avvisi)
       const ownerName =
         profiles.find((p) => p.id === task.owner_id)?.full_name.split(" ")[0] ??
@@ -1632,6 +2276,18 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
               }
             : r,
         ),
+      );
+      /* Il vincolo `request_rejection_needs_reason` esige una motivazione:
+         un rifiuto senza spiegazione verrebbe respinto dal database, ed è
+         giusto così. L'interfaccia la rende obbligatoria, questa è la rete
+         di sicurezza. */
+      scriviCon(
+        () =>
+          decideTaskRequest(createClient(), id, {
+            status: "rejected",
+            rejection_reason: trimmed,
+          }),
+        () => setRequests((prev) => prev.map((r) => (r.id === id ? req : r))),
       );
       if (req.requester_id !== currentUser.id) {
         setNotifications((prev) => [
@@ -1730,6 +2386,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
               }
             : l,
         ),
+      );
+      /* La guardia `leave_requests_guard` verifica anche che chi decide non
+         sia il richiedente: se qualcuno provasse ad approvarsi le ferie da
+         solo, il rifiuto arriva dal database e l'annulla riporta indietro. */
+      scriviCon(
+        () => decideLeaveRequest(createClient(), id, decision, trimmed),
+        () => setLeaves((prev) => prev.map((l) => (l.id === id ? leave : l))),
       );
       const isFerie = leave.type === "ferie";
       const label = isFerie ? "Ferie" : "Permesso";
@@ -1836,6 +2499,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }, [
     avatars,
     closures,
+    loading,
+    loadError,
+    syncError,
+    scriviCon,
     comments,
     currentUserId,
     customStatuses,

@@ -61,6 +61,15 @@ export const drawer: Variants = {
   exit: { x: "-100%", transition: transition.exit },
 };
 
+/** Foglio ancorato al bordo inferiore: sale dal bordo, come il drawer fa da
+ *  sinistra. Fuori dalla regola dei 24px per la stessa ragione del drawer —
+ *  l'elemento non «appare», entra dal bordo da cui è nato. */
+export const sheet: Variants = {
+  hidden: { y: "100%" },
+  visible: { y: 0, transition: transition.slow },
+  exit: { y: "100%", transition: transition.exit },
+};
+
 /** Velo dietro pannelli e dialoghi. */
 export const scrim: Variants = {
   hidden: { opacity: 0 },

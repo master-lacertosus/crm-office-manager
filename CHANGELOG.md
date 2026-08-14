@@ -11,6 +11,57 @@ versioni (fase pre-1.0).
 
 _(vuoto)_
 
+## Update 2026-08-13
+
+### Aggiunto
+- **Supabase collegato**: l'app esce dalla fase placeholder. Autenticazione
+  reale con email e password, sessione rinnovata a ogni richiesta, protezione
+  di tutte le rotte con ritorno alla pagina richiesta dopo l'accesso.
+- **Primo accesso guidato**: nome, cognome, qualifica, foto e preferenze
+  d'aspetto alla prima entrata. Senza, il nome resterebbe quello dedotto
+  dall'email (`francesco.s`). Marcato da `profiles.onboarded_at`.
+- **Foto profilo su Supabase Storage**: bucket dedicato, limite 2 MB, ognuno
+  scrive solo nella propria cartella. Al posto delle immagini nel browser.
+- **Chat interna** con canale «Generale» e un canale per progetto: messaggi
+  dal vivo, presenza di chi è collegato, menzioni con `@` che generano avvisi,
+  conteggio dei non letti per canale. Linguetta a semicerchio al centro del
+  bordo inferiore.
+- **Creazione progetti**: il pulsante «Nuovo progetto», disabilitato da
+  luglio, ora crea davvero.
+- **Inviti**: «Invita» crea l'utente e manda l'email per impostare la
+  password. Solo per i responsabili, verificato lato server.
+- **Preferenze portabili**: accento, densità e movimento seguono la persona
+  fra computer diversi invece di restare in un browser.
+
+### Cambiato
+- **I dati vivono su Supabase**, non più in `localStorage`: task, progetti,
+  fasi, commenti, cronologia, checklist, allegati, richieste, ferie,
+  chiusure, avvisi, template, viste salvate, focus e posticipi. Ogni modifica
+  è ottimistica e si annulla da sola se il database rifiuta.
+- **Le fasi sono dati, non vincoli**: `tasks.status` è una chiave esterna
+  verso la nuova tabella `task_statuses`. Le fasi personalizzate si
+  aggiungono senza toccare lo schema, e i task di una fase eliminata tornano
+  in «Da fare» da soli.
+- **Il workspace parte vuoto**: eliminati `lib/mock-data.ts` e i dati demo.
+- **`middleware.ts` è diventato `proxy.ts`**, come impone Next 16.
+- Rimosso «Vedi come…» dalla sidebar: su sessioni vere sarebbe impersonare un
+  collega, e la RLS non lo consentirebbe comunque.
+
+### Corretto
+- **Claudio P. e la chat non si sovrappongono più**: la chat è passata al
+  centro del bordo inferiore, lasciando libero l'angolo del Cavaliere.
+- **Caricamento della chat**: una richiesta invece di una per progetto.
+- **Migrazione M4**: l'attivazione di Realtime è isolata in un blocco con
+  gestione dell'eccezione. Senza, un permesso mancante sulla pubblicazione
+  annullava l'intera migrazione — tabelle comprese — senza alcun segnale.
+
+### Note per chi aggiorna
+- Servono le migrazioni **M2, M3 e M4** e un `.env.local` compilato. (#16)
+- Le notifiche di escalation (problemi fermi, richieste e ferie in attesa)
+  restano vive solo nella sessione: sono generate dal browser e la policy non
+  ne consente la scrittura a nome altrui. Vanno spostate su una funzione
+  pianificata lato server. (#16)
+
 ## Update 2026-08-05
 
 ### Aggiunto
