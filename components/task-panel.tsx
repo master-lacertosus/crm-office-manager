@@ -42,6 +42,7 @@ import { useAppStore } from "@/lib/store";
 import { REPEAT_META } from "@/lib/types";
 import type { Task, TaskRepeat } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
+import { CollaboratorsSection } from "@/components/collaborators-section";
 import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { PriorityBadge } from "@/components/priority-badge";
@@ -920,6 +921,8 @@ function TaskMeta({ task }: { task: Task }) {
           </p>
         )
       ) : null}
+
+      <CollaboratorsSection task={task} />
 
       {task.batch_id ? <PackSiblings task={task} /> : null}
 

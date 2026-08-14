@@ -10,6 +10,11 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Collaboratori sui task**: un task puo coinvolgere piu persone senza
+  perdere il responsabile unico. I collaboratori compaiono sulla scheda e
+  ricevono gli avvisi, ma **non contano nel carico di lavoro** — quello resta
+  su chi risponde del risultato, altrimenti lo stesso lavoro comparirebbe
+  contato piu volte. Serve la migrazione **M6**. (#25)
 - **Eliminazione di un task**, dal pannello di dettaglio. Mancava del tutto:
   un task creato per sbaglio non si poteva togliere in nessun modo. Con
   conferma esplicita e senza annulla, perche spariscono anche commenti,
