@@ -14,8 +14,26 @@
  * creare utenti chiamando l'azione direttamente.
  */
 
+import { headers } from "next/headers";
+
 import { createAdminClient } from "./admin";
 import { createClient } from "./server";
+
+/**
+ * L'indirizzo pubblico di questa installazione, dedotto dalla richiesta.
+ *
+ * Non da una variabile d'ambiente: su Vercel `VERCEL_URL` è l'indirizzo del
+ * singolo deploy, non il dominio di produzione, e ricordarsi di impostarne
+ * una terza sarebbe l'ennesima cosa da configurare a mano.
+ */
+async function origineDelSito(): Promise<string> {
+  const h = await headers();
+  const host = h.get("host");
+  // Dietro il proxy di Vercel lo schema vero sta in x-forwarded-proto: `host`
+  // da solo non dice se si è in https.
+  const schema = h.get("x-forwarded-proto") ?? "https";
+  return `${schema}://${host}`;
+}
 
 export interface InviteState {
   error: string | null;
@@ -68,9 +86,19 @@ export async function inviteMember(
      manda il link per impostare la password; i metadati finiscono in
      `raw_user_meta_data`, da cui il trigger `handle_new_user` pesca nome e
      qualifica per il profilo. */
+  /* `redirectTo` è la riga che fa funzionare l'invito.
+     Senza, Supabase riporta la persona al Site URL — la radice del sito — da
+     cui il proxy la manda al login: e lì non c'è modo di impostare una
+     password, perché il token viaggia nel frammento dell'URL e nessuno lo
+     legge. Puntando a `/auth/confirm` il token viene consumato dove deve, e
+     `next` porta alla pagina della password.
+     L'indirizzo deve comparire fra i Redirect URLs di Supabase, dove il
+     carattere jolly `/**` lo copre. */
+  const origine = await origineDelSito();
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName, title: title || null },
+    redirectTo: `${origine}/auth/confirm?next=/auth/imposta-password`,
   });
 
   if (error) {
