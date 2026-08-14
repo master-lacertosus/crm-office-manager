@@ -561,9 +561,11 @@ function OfficeCalendar() {
 /* ------------------------------------------------------------------ */
 
 function PendingLeaveCard({ leave }: { leave: LeaveRequest }) {
-  const { profiles, closures, leaves, decideLeave } = useAppStore();
+  const { profiles, closures, leaves, decideLeave, currentUser } =
+    useAppStore();
   const toast = useToast();
   const requester = profiles.find((p) => p.id === leave.requester_id);
+  const propria = leave.requester_id === currentUser.id;
   const [deciding, setDeciding] = React.useState<"approve" | "reject" | null>(
     null,
   );
@@ -702,6 +704,14 @@ function PendingLeaveCard({ leave }: { leave: LeaveRequest }) {
             <X />
           </Button>
         </div>
+      ) : propria ? (
+        /* La richiesta resta visibile — è in coda e va saputo — ma senza
+           pulsanti: la guardia del database rifiuta chi decide sulla propria
+           assenza, e offrire un'azione destinata a fallire è peggio che non
+           offrirla. */
+        <p className="border-t border-border-soft pt-3 text-[13px] text-ink-muted">
+          È la tua richiesta: deve approvarla un altro responsabile.
+        </p>
       ) : (
         <div className="flex items-center gap-1.5 border-t border-border-soft pt-3">
           <Button size="sm" onClick={() => setDeciding("approve")}>

@@ -5,6 +5,7 @@ import * as React from "react";
 import { ChatPanel } from "@/components/chat-panel";
 import { OnboardingProfile } from "@/components/onboarding-profile";
 import { MobileDrawer, Sidebar } from "@/components/shell/sidebar";
+import { SyncErrorBanner } from "@/components/sync-error-banner";
 
 interface ShellContextValue {
   openDrawer: () => void;
@@ -39,6 +40,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Comunicazione rapida: raggiungibile da ogni pagina, perché serve
             mentre si sta facendo altro. */}
         <ChatPanel />
+        {/* Quando il database rifiuta una scrittura lo store annulla da solo:
+            senza questo, l'annullamento sarebbe invisibile. */}
+        <SyncErrorBanner />
       </div>
     </ShellContext.Provider>
   );
