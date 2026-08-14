@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { BellPlus, LoaderCircle, Send } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
+import { MemberActions } from "@/components/member-actions";
 import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { useToast } from "@/components/toaster";
@@ -152,6 +153,7 @@ export function TeamContent() {
                     Invia avviso
                   </Button>
                 ) : null}
+                <MemberActions profile={profile} />
               </div>
               <AnimatePresence>
                 {alertFor === profile.id ? (
@@ -167,8 +169,8 @@ export function TeamContent() {
         })}
       </div>
       <p className="mt-3 text-[13px] text-ink-muted">
-        Gli avvisi arrivano nella campanella del destinatario. Inviti e ruoli
-        si attiveranno con il collegamento a Supabase (M2).
+        Gli avvisi arrivano nella campanella del destinatario. Un membro non si
+        cancella: si disattiva, e i suoi task aperti vanno riassegnati prima.
       </p>
     </div>
   );

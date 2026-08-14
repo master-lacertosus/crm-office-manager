@@ -13,6 +13,12 @@ _(vuoto)_
 
 ## Update 2026-08-14
 
+### Aggiunto
+- **Ruoli e disattivazione** dalla pagina Team: promozione e retrocessione
+  fra Member e Admin, disattivazione di chi lascia. Le regole le impone il
+  database — non si resta senza amministratori attivi e non si disattiva chi
+  ha ancora task aperti — e il suo rifiuto viene mostrato cosi com'e. (#18)
+
 ### Corretto
 - **I promemoria automatici funzionano davvero**. Problemi fermi da oltre 48
   ore, richieste e ferie in attesa: erano generati dal browser di chi aveva

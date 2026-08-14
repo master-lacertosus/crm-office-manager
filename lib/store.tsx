@@ -59,6 +59,7 @@ import {
   setDecision,
   setUserTaskState,
   toggleReactionRow,
+  updateProfileAccess,
   updateProfileRow,
   updateTaskRow,
   uploadAvatar,
@@ -75,6 +76,7 @@ import type {
   Profile,
   Project,
   ProjectComment,
+  Role,
   StatusMeta,
   Task,
   TaskComment,
@@ -304,8 +306,14 @@ interface AppStore {
     id: string,
     patch: { full_name?: string; title?: string | null },
   ) => Promise<void>;
-  /** Imposta o rimuove (null) la foto del profilo (data URL ridotta). */
+  /** Imposta o rimuove (null) la foto del profilo. */
   setAvatar: (profileId: string, dataUrl: string | null) => void;
+  /** Promuove o retrocede un collega. Lancia con il messaggio del database
+   *  se la mossa è vietata — per esempio togliere l'ultimo amministratore. */
+  setProfileRole: (profileId: string, role: Role) => Promise<void>;
+  /** Disattiva o riattiva un collega. Lancia se ha ancora task aperti:
+   *  l'invariante sta nel database, non in un controllo dell'interfaccia. */
+  setProfileActive: (profileId: string, isActive: boolean) => Promise<void>;
   notifications: AppNotification[];
   unreadCount: number;
   sendNotification: (
@@ -1843,6 +1851,28 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
        cambiato: non si salva più una data URL nel browser, si scrive
        `profiles.avatar_url`. Il caricamento del file su Storage avviene nel
        componente che ha il File in mano — qui arriva già un URL. */
+    /* Ruolo e stato attivo non usano la scrittura ottimistica come il resto.
+       Qui il database può rifiutare per ragioni che l'utente deve leggere —
+       «è l'ultimo admin attivo», «ha task aperti da riassegnare» — e un
+       ripristino silenzioso farebbe sparire la modifica senza spiegare
+       perché. Si attende l'esito e si lascia salire l'errore. */
+
+    async setProfileRole(profileId, role) {
+      const supabase = createClient();
+      await updateProfileAccess(supabase, profileId, { role });
+      setProfiles((prev) =>
+        prev.map((p) => (p.id === profileId ? { ...p, role } : p)),
+      );
+    },
+
+    async setProfileActive(profileId, isActive) {
+      const supabase = createClient();
+      await updateProfileAccess(supabase, profileId, { is_active: isActive });
+      setProfiles((prev) =>
+        prev.map((p) => (p.id === profileId ? { ...p, is_active: isActive } : p)),
+      );
+    },
+
     setAvatar(profileId, url) {
       const prima = profiles.find((p) => p.id === profileId)?.avatar_url ?? null;
       setProfiles((prev) =>
