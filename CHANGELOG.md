@@ -11,6 +11,31 @@ versioni (fase pre-1.0).
 
 _(vuoto)_
 
+## Update 2026-08-14
+
+### Corretto
+- **I promemoria automatici funzionano davvero**. Problemi fermi da oltre 48
+  ore, richieste e ferie in attesa: erano generati dal browser di chi aveva
+  per caso una scheda aperta, e per tre ragioni non arrivavano a destinazione
+  — nessun avviso se nessuno teneva l'app aperta, il database li rifiutava
+  perché attribuiti al richiedente invece che a chi scriveva, e due schede
+  aperte producevano due avvisi per lo stesso fatto. Ora sono una funzione
+  pianificata che gira ogni ora lato server. (#17)
+
+### Cambiato
+- **Gli avvisi possono non avere un mittente**: dove il promemoria è
+  automatico compare «Sistema» invece del nome di una persona che non ha
+  scritto nulla. (#17)
+- La deduplicazione non usa più marcatori da tenere allineati: ogni avviso
+  automatico porta una chiave e un indice unico impedisce i doppioni, quindi
+  la funzione è idempotente. Gli avvisi scritti dalle persone restano
+  ripetibili, perché un sollecito si manda anche due volte. (#17)
+
+### Note per chi aggiorna
+- Serve la migrazione **M5** e l'estensione `pg_cron` attiva. Verifica con
+  `select jobname, schedule, active from cron.job;` — deve comparire
+  `escalations-orarie`. (#17)
+
 ## Update 2026-08-13
 
 ### Aggiunto
