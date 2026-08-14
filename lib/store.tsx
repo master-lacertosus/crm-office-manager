@@ -2060,23 +2060,24 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
          solo; l'approvazione invece è una modifica alla richiesta e va
          scritta qui. L'ordine conta: prima il task, perché `task_id` è una
          chiave esterna e la richiesta non può puntare a ciò che non esiste. */
-      scriviCon(
-        async () => {
-          const supabase = createClient();
-          await insertTask(supabase, task);
-          await decideTaskRequest(supabase, id, {
-            status: "approved",
-            owner_id: task.owner_id,
-            due_date: task.due_date,
-            project_id: task.project_id,
-            task_id: task.id,
-          });
-        },
-        () => {
-          setTasks((prev) => prev.filter((t) => t.id !== task.id));
-          setRequests((prev) => prev.map((r) => (r.id === id ? req : r)));
-        },
-      );
+      try {
+        const supabase = createClient();
+        await insertTask(supabase, task);
+        await decideTaskRequest(supabase, id, {
+          status: "approved",
+          owner_id: task.owner_id,
+          due_date: task.due_date,
+          project_id: task.project_id,
+          task_id: task.id,
+        });
+      } catch (e) {
+        setTasks((prev) => prev.filter((t) => t.id !== task.id));
+        setRequests((prev) => prev.map((r) => (r.id === id ? req : r)));
+        setSyncError(
+          e instanceof Error ? e.message : "Approvazione non registrata.",
+        );
+        return null;
+      }
 
       // Avvisi: al richiedente e all'assegnatario (senza doppioni né auto-avvisi)
       const ownerName =
@@ -2153,18 +2154,23 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             : r,
         ),
       );
-      /* Il vincolo `request_rejection_needs_reason` esige una motivazione:
-         un rifiuto senza spiegazione verrebbe respinto dal database, ed è
-         giusto così. L'interfaccia la rende obbligatoria, questa è la rete
-         di sicurezza. */
-      scriviCon(
-        () =>
-          decideTaskRequest(createClient(), id, {
-            status: "rejected",
-            rejection_reason: trimmed,
-          }),
-        () => setRequests((prev) => prev.map((r) => (r.id === id ? req : r))),
-      );
+      /* Come per le ferie: si aspetta l'esito prima di annunciarlo.
+         Il vincolo `request_rejection_needs_reason` esige una motivazione, e
+         un rifiuto senza spiegazione viene respinto: in quel caso l'avviso
+         «richiesta rifiutata» non deve partire. */
+      try {
+        await decideTaskRequest(createClient(), id, {
+          status: "rejected",
+          rejection_reason: trimmed,
+        });
+      } catch (e) {
+        setRequests((prev) => prev.map((r) => (r.id === id ? req : r)));
+        setSyncError(
+          e instanceof Error ? e.message : "Rifiuto non registrato.",
+        );
+        return;
+      }
+
       if (req.requester_id !== currentUser.id) {
         setNotifications((prev) => [
           ...prev,
@@ -2263,13 +2269,22 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             : l,
         ),
       );
-      /* La guardia `leave_requests_guard` verifica anche che chi decide non
-         sia il richiedente: se qualcuno provasse ad approvarsi le ferie da
-         solo, il rifiuto arriva dal database e l'annulla riporta indietro. */
-      scriviCon(
-        () => decideLeaveRequest(createClient(), id, decision, trimmed),
-        () => setLeaves((prev) => prev.map((l) => (l.id === id ? leave : l))),
-      );
+      /* Si ASPETTA l'esito, invece di procedere e sperare.
+         La guardia `leave_requests_guard` verifica anche che chi decide non
+         sia il richiedente. Quando rifiuta, la decisione non è avvenuta — e
+         gli avvisi che la annunciano non devono partire. Prima uscivano lo
+         stesso: i colleghi ricevevano «X ha approvato» per un'approvazione
+         mai accaduta, e quegli avvisi restavano anche dopo l'annullamento. */
+      try {
+        await decideLeaveRequest(createClient(), id, decision, trimmed);
+      } catch (e) {
+        setLeaves((prev) => prev.map((l) => (l.id === id ? leave : l)));
+        setSyncError(
+          e instanceof Error ? e.message : "Decisione non registrata.",
+        );
+        return;
+      }
+
       const isFerie = leave.type === "ferie";
       const label = isFerie ? "Ferie" : "Permesso";
       const range = formatRange(leave.start_date, leave.end_date);

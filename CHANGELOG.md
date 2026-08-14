@@ -10,6 +10,11 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Corretto
+- **Niente piu avvisi per decisioni mai avvenute.** Approvazioni, rifiuti e
+  decisioni sulle ferie annunciavano l'esito prima di sapere se il database
+  lo avesse accettato: quando lo rifiutava, la modifica tornava indietro ma
+  gli avvisi erano gia partiti e restavano. I colleghi leggevano «X ha
+  approvato» per approvazioni mai accadute. Ora si aspetta l'esito. (#23)
 - **Le scritture rifiutate dal database ora si vedono.** Lo store annullava
   da solo le modifiche non salvate, ma in silenzio: si vedeva la propria
   modifica sparire senza sapere perche. Il difetto peggiore possibile, perche
