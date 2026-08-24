@@ -22,6 +22,15 @@ versioni (fase pre-1.0).
   conservandone la storia resta l'archivio. (#24)
 
 ### Corretto
+- **Gli inviti arrivavano già scaduti.** Chi veniva invitato apriva
+  l'email e leggeva che il link era scaduto: per entrare doveva passare da
+  «Password dimenticata». I link valgono una volta sola e i filtri antivirus
+  delle caselle aziendali li aprono da soli per controllarli, consumandoli
+  prima della persona. Ora il link porta a una pagina con un pulsante e il
+  token si spende solo premendolo; se è comunque bruciato, si torna
+  all'accesso con il recupero già aperto e il motivo spiegato — prima quel
+  messaggio veniva costruito e poi buttato via, e si vedeva un login muto.
+  La configurazione del dashboard sta in `docs/AUTH_SETUP.md`. (#30)
 - **Niente piu avvisi per decisioni mai avvenute.** Approvazioni, rifiuti e
   decisioni sulle ferie annunciavano l'esito prima di sapere se il database
   lo avesse accettato: quando lo rifiutava, la modifica tornava indietro ma
