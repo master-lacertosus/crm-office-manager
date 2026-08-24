@@ -92,7 +92,7 @@ export function TaskPanelHost() {
   }, []);
 
   const close = React.useCallback(() => {
-    updateSearch({ task: null });
+    updateSearch({ task: null, due: null });
   }, []);
 
   React.useEffect(() => {
@@ -318,6 +318,16 @@ function PanelBody({
 /* Form del task (creazione e modifica)                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Ponte tra creazione e dettaglio: appena creato, il pannello si rimonta
+ * sull'id nuovo (`key={taskParam}`) e con lui sparirebbe ogni stato di
+ * conferma. L'id viaggia qui fuori per un istante, così il dettaglio nasce
+ * già con la spunta «Creato».
+ */
+let justCreatedId: string | null = null;
+
+type SaveKind = "created" | "saved" | null;
+
 function TaskForm({
   task,
   expanded,
@@ -364,12 +374,19 @@ function TaskForm({
   const [repeat, setRepeat] = React.useState<TaskRepeat>(task?.repeat ?? "none");
 
   const [saving, setSaving] = React.useState(false);
-  const [saved, setSaved] = React.useState(false);
+  const [saved, setSaved] = React.useState<SaveKind>(() =>
+    task && justCreatedId === task.id ? "created" : null,
+  );
   const [error, setError] = React.useState<string | null>(null);
+
+  // Il ponte vale per un solo mount: consumato, si azzera.
+  React.useEffect(() => {
+    justCreatedId = null;
+  }, []);
 
   React.useEffect(() => {
     if (!saved) return;
-    const id = setTimeout(() => setSaved(false), 2500);
+    const id = setTimeout(() => setSaved(null), 2500);
     return () => clearTimeout(id);
   }, [saved]);
 
@@ -394,7 +411,7 @@ function TaskForm({
     if (task) {
       const revert = await updateTask(task.id, patch);
       setSaving(false);
-      setSaved(true);
+      setSaved("saved");
       if (revert) {
         const label = statuses.find((s) => s.key === status)?.label ?? status;
         toast(`Task spostato in «${label}»`, {
@@ -404,7 +421,11 @@ function TaskForm({
     } else {
       const created = await createTask(patch);
       setSaving(false);
-      updateSearch({ task: created.id }, { replace: true });
+      toast(`«${created.title}» creato`);
+      justCreatedId = created.id;
+      // Il pannello resta aperto sul task appena nato: da qui si aggiungono
+      // checklist, allegati e commenti, che in creazione non esistono ancora.
+      updateSearch({ task: created.id, due: null }, { replace: true });
     }
   };
 
@@ -485,7 +506,7 @@ function TaskForm({
           className="inline-flex items-center gap-1.5 rounded-lg bg-success-soft px-2.5 py-1 text-[13px] font-medium text-success-text"
         >
           <span className="size-1.5 rounded-full bg-success" />
-          Salvato
+          {saved === "created" ? "Creato" : "Salvato"}
         </span>
       ) : null}
     </div>
