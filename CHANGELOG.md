@@ -22,6 +22,17 @@ versioni (fase pre-1.0).
   conservandone la storia resta l'archivio. (#24)
 
 ### Corretto
+- **Creare un task non diceva se fosse andata bene.** Il task nasceva
+  davvero, ma niente lo confermava: nessun messaggio, nessuna spunta, e il
+  pannello restava identico a prima — cambiava solo l'etichetta del
+  pulsante. Sembrava che il salvataggio fosse fallito. Ora compare il
+  messaggio «*Titolo* creato» e il dettaglio nasce con la spunta «Creato»,
+  mentre il pannello resta aperto sul task appena nato, dove si aggiungono
+  checklist, allegati e commenti. (#27)
+- **La scadenza scelta dal calendario non resta appesa all'URL.** Creando
+  un task dal «+» di un giorno, il parametro `?due=` sopravviveva alla
+  creazione e alla chiusura del pannello, e poteva ricomparire
+  precompilato in un task creato dopo. (#27)
 - **Niente piu avvisi per decisioni mai avvenute.** Approvazioni, rifiuti e
   decisioni sulle ferie annunciavano l'esito prima di sapere se il database
   lo avesse accettato: quando lo rifiutava, la modifica tornava indietro ma
