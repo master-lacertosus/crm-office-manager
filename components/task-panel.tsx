@@ -14,7 +14,6 @@ import {
   LoaderCircle,
   Maximize2,
   Minimize2,
-  Package,
   Plus,
   Quote,
   Trash2,
@@ -46,8 +45,8 @@ import { CollaboratorsSection } from "@/components/collaborators-section";
 import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { PriorityBadge } from "@/components/priority-badge";
-import { SearchLink } from "@/components/search-link";
-import { StatusLabel, StatusPip } from "@/components/status-pip";
+import { AvanzamentoProcesso } from "@/components/processo-avanzamento";
+import { StatusLabel } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -610,7 +609,9 @@ function TaskForm({
             {descriptionField}
           </form>
           <div className="[&>section]:!px-0">
-            {task ? <ChecklistSection task={task} /> : null}
+            {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
+            {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
+      {task ? <ChecklistSection task={task} /> : null}
             {children}
           </div>
         </div>
@@ -924,8 +925,6 @@ function TaskMeta({ task }: { task: Task }) {
 
       <CollaboratorsSection task={task} />
 
-      {task.batch_id ? <PackSiblings task={task} /> : null}
-
       <p className="font-mono text-xs text-ink-muted">
         Creato da {creator?.full_name ?? "—"}
       </p>
@@ -1054,44 +1053,6 @@ function DeleteTask({ task }: { task: Task }) {
   );
 }
 
-/** Task fratelli dello stesso pacchetto (template multi-task). */
-function PackSiblings({ task }: { task: Task }) {
-  const { tasks } = useAppStore();
-  const siblings = tasks
-    .filter((t) => t.batch_id === task.batch_id && t.id !== task.id)
-    .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""));
-  if (siblings.length === 0) return null;
-
-  return (
-    <div className="space-y-1 rounded-xl border border-border-soft bg-white p-2.5">
-      <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.05em] text-ink-secondary uppercase">
-        <Package className="size-3.5" />
-        Pacchetto · altri {siblings.length} task
-      </p>
-      <ul className="space-y-0.5">
-        {siblings.map((s) => (
-          <li key={s.id}>
-            <SearchLink
-              params={{ task: s.id }}
-              className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[13px] text-ink outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <StatusPip status={s.status} className="size-3" />
-              <span className="min-w-0 flex-1 truncate">{s.title}</span>
-              {s.due_date ? (
-                <span className="shrink-0 font-mono text-[11px] text-ink-muted">
-                  {formatDue(s.due_date)}
-                </span>
-              ) : null}
-            </SearchLink>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Allegati-link (fase senza Supabase Storage: si allegano URL)        */
 /* ------------------------------------------------------------------ */
 
 const IMAGE_RE = /\.(png|jpe?g|gif|webp|avif)(\?|$)/i;
