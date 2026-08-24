@@ -1,3 +1,4 @@
+import { AggiornamentiLive } from "@/components/shell/aggiornamenti-live";
 import { AppShell } from "@/components/shell/app-shell";
 import { LazyOverlays } from "@/components/shell/lazy-overlays";
 import { ToastProvider } from "@/components/toaster";
@@ -20,6 +21,7 @@ export default function AppLayout({
         <ToastProvider>
           <AppShell>
             {children}
+            <AggiornamentiLive />
             <LazyOverlays />
           </AppShell>
         </ToastProvider>
