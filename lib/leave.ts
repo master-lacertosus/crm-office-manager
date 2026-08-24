@@ -1,4 +1,9 @@
-import { diffIsoDays, formatDue, shiftIsoDays } from "@/lib/format";
+import {
+  diffIsoDays,
+  formatDue,
+  isWeekendIso,
+  shiftIsoDays,
+} from "@/lib/format";
 import type { CompanyClosure, LeaveRequest } from "@/lib/types";
 
 /** Logica condivisa di ferie/permessi e chiusure (pura, senza React). */
@@ -30,12 +35,6 @@ export function formatRange(start: string, end: string): string {
     : `${formatDue(start)} – ${endLabel}`;
 }
 
-function isWeekend(iso: string): boolean {
-  const [y, m, d] = iso.split("-").map(Number);
-  const dow = new Date(y, m - 1, d).getDay();
-  return dow === 0 || dow === 6;
-}
-
 /**
  * Giorni LAVORATIVI dell'intervallo: esclude weekend e chiusure aziendali
  * (un giorno di chiusura non consuma ferie). È il numero mostrato ovunque.
@@ -50,7 +49,7 @@ export function workingDaysCount(
   const span = Math.min(diffIsoDays(start, end), 366);
   for (let i = 0; i <= span; i++) {
     const day = shiftIsoDays(start, i);
-    if (isWeekend(day)) continue;
+    if (isWeekendIso(day)) continue;
     if (closures.some((c) => rangeCovers(c.start_date, c.end_date, day)))
       continue;
     count++;

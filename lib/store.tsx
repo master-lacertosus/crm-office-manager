@@ -2,13 +2,9 @@
 
 import * as React from "react";
 
-import {
-  nextMonthlyIso,
-  shiftIsoDays,
-  shiftIsoMonths,
-  todayIso,
-} from "@/lib/format";
+import { nextMonthlyIso, shiftIsoDays, todayIso } from "@/lib/format";
 import { extractMentionIds } from "@/lib/mentions";
+import { prossimaScadenza } from "@/lib/repeat";
 import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -143,10 +139,7 @@ function nextOccurrence(task: Task): Task | null {
     ...task,
     id: crypto.randomUUID(),
     status: "todo",
-    due_date:
-      task.repeat === "monthly"
-        ? shiftIsoMonths(task.due_date, 1)
-        : shiftIsoDays(task.due_date, task.repeat === "weekly" ? 7 : 14),
+    due_date: prossimaScadenza(task.due_date, task.repeat),
     position: Date.now(),
     checklist: task.checklist?.map((item) => ({ ...item, done: false })),
     problem_reason: null,
