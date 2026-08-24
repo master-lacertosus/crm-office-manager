@@ -10,6 +10,16 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Ricorrenze: da tre cadenze a otto.** Si potevano ripetere i task solo
+  ogni settimana, ogni 2 settimane o ogni mese: tutto ciò che in ufficio
+  si ripete ogni giorno andava ricreato a mano ogni mattina. Ora ci sono
+  anche **ogni giorno**, **ogni giorno feriale** (sabato e domenica
+  saltati), **a giorni alterni**, **ogni 3 mesi** e **ogni anno**. In più,
+  il giro successivo non nasce mai nel passato: completando in ritardo un
+  ricorrente la nuova scadenza saltava già scaduta, e con le cadenze fitte
+  l'arretrato si sarebbe accumulato a ogni giro. Serve la migrazione **M7**
+  (allarga i vincoli su `tasks.repeat` e `workspace_templates.repeat`;
+  nessun dato da convertire). (#28)
 - **Collaboratori sui task**: un task puo coinvolgere piu persone senza
   perdere il responsabile unico. I collaboratori compaiono sulla scheda e
   ricevono gli avvisi, ma **non contano nel carico di lavoro** — quello resta
