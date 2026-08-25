@@ -23,7 +23,14 @@ const STATO_INIZIALE: AuthState = { error: null };
  * non puo essere reinvitato — l'account esiste gia — e senza questa via
  * resterebbe fuori senza rimedio.
  */
-function RecuperoPassword({ onIndietro }: { onIndietro: () => void }) {
+function RecuperoPassword({
+  onIndietro,
+  avviso,
+}: {
+  onIndietro: () => void;
+  /** Perche si e finiti qui: arriva dai link di invito ormai bruciati. */
+  avviso?: string | null;
+}) {
   const [state, formAction, pending] = React.useActionState(
     requestPasswordReset,
     STATO_INIZIALE,
@@ -46,6 +53,16 @@ function RecuperoPassword({ onIndietro }: { onIndietro: () => void }) {
           Ti mandiamo un link per impostare una password nuova.
         </p>
       </div>
+
+      {avviso ? (
+        <p
+          role="alert"
+          className="flex items-start gap-2 rounded-xl bg-warning-soft px-3 py-2 text-[13px] text-warning-text"
+        >
+          <TriangleAlert className="mt-px size-4 shrink-0" aria-hidden />
+          {avviso}
+        </p>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="reset-email">Email</Label>
@@ -108,12 +125,21 @@ export function LoginForm({ configurato }: { configurato: boolean }) {
   );
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "";
-  const [recupero, setRecupero] = React.useState(false);
+  /* Chi arriva da un link ormai bruciato porta con se il motivo: va
+     mostrato, altrimenti si vede una pagina di accesso muta e non si capisce
+     cosa sia andato storto. */
+  const avviso = searchParams.get("errore");
+  const [recupero, setRecupero] = React.useState(
+    searchParams.get("recupero") === "1",
+  );
 
   if (recupero) {
     return (
       <TiltCard>
-        <RecuperoPassword onIndietro={() => setRecupero(false)} />
+        <RecuperoPassword
+          onIndietro={() => setRecupero(false)}
+          avviso={avviso}
+        />
       </TiltCard>
     );
   }
@@ -157,13 +183,13 @@ export function LoginForm({ configurato }: { configurato: boolean }) {
           />
         </div>
 
-        {state.error ? (
+        {state.error ?? avviso ? (
           <p
             role="alert"
             className="flex items-start gap-2 rounded-xl bg-danger-soft px-3 py-2 text-[13px] text-danger-text"
           >
             <TriangleAlert className="mt-px size-4 shrink-0" aria-hidden />
-            {state.error}
+            {state.error ?? avviso}
           </p>
         ) : null}
 

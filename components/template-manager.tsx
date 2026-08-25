@@ -1,7 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Link2, Package, Pencil, Plus, Repeat, Trash2, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Link2,
+  Package,
+  Pencil,
+  Plus,
+  Repeat,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
 import { REPEAT_META } from "@/lib/types";
@@ -176,7 +186,7 @@ function TemplateForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="tpl-checklist">
-          Checklist (una voce per riga, diventa spunte sul task)
+          Checklist del singolo task (una voce per riga)
         </Label>
         <Textarea
           id="tpl-checklist"
@@ -206,8 +216,15 @@ function TemplateForm({
   );
 }
 
-/** Editor del pacchetto: il template crea più task collegati, con
- *  scadenze relative alla data àncora (giorni prima/dopo). */
+/**
+ * Editor delle fasi.
+ *
+ * Un processo d'ufficio raramente è di una persona sola: «Creazione
+ * prodotto» sono testi, foto, caricamento, controllo — mani diverse, in
+ * ordine. Ogni fase diventa un task con il SUO responsabile, così compare
+ * nella board di chi la esegue invece di restare una riga in una lista che
+ * nessuno sente propria.
+ */
 function PackEditor({
   items,
   onChange,
@@ -220,24 +237,39 @@ function PackEditor({
   const setItem = (i: number, patch: Partial<TemplatePackItem>) =>
     onChange(items.map((item, j) => (j === i ? { ...item, ...patch } : item)));
 
+  /* Quante persone tocca il processo: è il dato che dice se vale la pena
+     spezzarlo in fasi o se tanto lo fa una persona sola. */
+  const responsabiliDistinti = new Set(
+    items.map((item) => item.owner_id ?? "chi-crea"),
+  ).size;
+
   return (
     <div className="space-y-2 rounded-xl border border-border bg-white p-3">
-      <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.05em] text-ink-secondary uppercase">
-        <Package className="size-3.5" />
-        Pacchetto multi-task
-        <span className="font-normal normal-case tracking-normal text-ink-muted">
-          {items.length === 0
-            ? "— vuoto: il template crea un task solo"
-            : `· ${items.length} task collegati`}
-        </span>
-      </p>
+      <div>
+        <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.05em] text-ink-secondary uppercase">
+          <Package className="size-3.5" />
+          Fasi del processo
+          <span className="font-normal normal-case tracking-normal text-ink-muted">
+            {items.length === 0
+              ? "— nessuna: il template crea un task solo"
+              : `· ${items.length} fasi, ${responsabiliDistinti} responsabili`}
+          </span>
+        </p>
+        <p className="mt-1 text-[12px] text-ink-muted">
+          Ogni fase diventa un task con il suo responsabile. Chi apre una fase
+          vede l&rsquo;avanzamento di tutte le altre.
+        </p>
+      </div>
       {items.map((item, i) => (
         <div key={i} className="flex flex-wrap items-center gap-2">
+          <span className="w-5 shrink-0 text-right font-mono text-xs text-ink-faint">
+            {i + 1}.
+          </span>
           <Input
             value={item.title}
             onChange={(e) => setItem(i, { title: e.target.value })}
-            placeholder="Titolo del task"
-            aria-label={`Titolo task ${i + 1} del pacchetto`}
+            placeholder="Es. Scrittura testi"
+            aria-label={`Titolo della fase ${i + 1}`}
             className="h-9 min-w-40 flex-1"
           />
           <NativeSelect
@@ -245,7 +277,7 @@ function PackEditor({
             onChange={(e) =>
               setItem(i, { owner_id: e.target.value || null })
             }
-            aria-label={`Responsabile task ${i + 1}`}
+            aria-label={`Responsabile della fase ${i + 1}`}
             className="h-9 w-40 shrink-0"
           >
             <option value="">Chi crea</option>
@@ -264,20 +296,44 @@ function PackEditor({
               onChange={(e) =>
                 setItem(i, { offset_days: Number(e.target.value) || 0 })
               }
-              aria-label={`Giorni rispetto alla data àncora, task ${i + 1}`}
+              aria-label={`Giorni dalla data di partenza, fase ${i + 1}`}
               className="h-9 w-20"
             />
-            <span className="text-xs text-ink-muted">gg dall&rsquo;àncora</span>
+            <span className="text-xs text-ink-muted">
+              gg dalla partenza
+            </span>
           </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Rimuovi il task ${i + 1} dal pacchetto`}
-            onClick={() => onChange(items.filter((_, j) => j !== i))}
-          >
-            <Trash2 />
-          </Button>
+          <span className="flex shrink-0 items-center">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Sposta la fase ${i + 1} più in alto`}
+              disabled={i === 0}
+              onClick={() => onChange(scambia(items, i, i - 1))}
+            >
+              <ChevronUp />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Sposta la fase ${i + 1} più in basso`}
+              disabled={i === items.length - 1}
+              onClick={() => onChange(scambia(items, i, i + 1))}
+            >
+              <ChevronDown />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Togli la fase ${i + 1}`}
+              onClick={() => onChange(items.filter((_, j) => j !== i))}
+            >
+              <Trash2 />
+            </Button>
+          </span>
         </div>
       ))}
       <Button
@@ -289,16 +345,25 @@ function PackEditor({
         }
       >
         <Plus data-icon="inline-start" />
-        Aggiungi task al pacchetto
+        Aggiungi una fase
       </Button>
       {items.length > 0 ? (
         <p className="text-[12px] text-ink-muted">
-          Offset negativi = giorni prima della data àncora (es. −7). La
-          checklist singola è disattivata quando il pacchetto è attivo.
+          I giorni sono relativi alla data scelta quando si lancia il processo:
+          negativi per le fasi che vengono prima (es. −7). Con le fasi attive la
+          checklist singola non serve — l&rsquo;avanzamento lo raccontano loro.
         </p>
       ) : null}
     </div>
   );
+}
+
+
+/** Scambia due fasi: il riordino cambia l'ordine del processo. */
+function scambia<T>(lista: T[], da: number, a: number): T[] {
+  const copia = [...lista];
+  [copia[da], copia[a]] = [copia[a], copia[da]];
+  return copia;
 }
 
 /**
@@ -392,7 +457,7 @@ export function TemplateManager() {
                   {tpl.pack && tpl.pack.length > 0 ? (
                     <span className="inline-flex items-center gap-1">
                       <Package className="size-3" strokeWidth={2} />
-                      Pacchetto · {tpl.pack.length} task
+                      Processo · {tpl.pack.length} fasi
                     </span>
                   ) : tpl.repeat !== "none" ? (
                     <span className="inline-flex items-center gap-1">

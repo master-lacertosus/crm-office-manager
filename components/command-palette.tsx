@@ -14,7 +14,6 @@ import {
   Repeat,
   Search,
   Settings,
-  Shield,
   TreePalm,
   TriangleAlert,
   User,
@@ -91,17 +90,6 @@ export function CommandPalette() {
         label: "Richiedi ferie o permesso",
         icon: TreePalm,
         run: () => go("/leave?request=1"),
-      },
-      {
-        id: "capo",
-        group: "Azioni",
-        label: "Evoca il Capo",
-        hint: "a tuo rischio",
-        icon: Shield,
-        run: () => {
-          setOpen(false);
-          window.dispatchEvent(new Event("capo:summon"));
-        },
       },
       { id: "d", group: "Vai a", label: "Dashboard", icon: LayoutDashboard, run: () => go("/dashboard") },
       { id: "t", group: "Vai a", label: "Task", icon: ListTodo, run: () => go("/tasks") },
