@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { LoaderCircle, X } from "lucide-react";
 
 import { pop, scrim } from "@/lib/motion";
+import { puoGestireProgetti } from "@/lib/permessi";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/components/toaster";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,10 @@ import { Textarea } from "@/components/ui/textarea";
  */
 export function NewProjectButton() {
   const { createProject, currentUser, loading } = useAppStore();
+  /* I progetti sono struttura del workspace: li creano i responsabili. Chi
+     ha bisogno di un contenitore nuovo lo chiede — è una conversazione, non
+     un pulsante. */
+  const puoCreare = puoGestireProgetti(currentUser);
   const router = useRouter();
   const toast = useToast();
 
@@ -67,6 +72,8 @@ export function NewProjectButton() {
       setSaving(false);
     }
   };
+
+  if (!puoCreare) return null;
 
   return (
     <>

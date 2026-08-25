@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Compass, KeyRound, MailPlus, UserX } from "lucide-react";
 
+import { richiediResponsabile } from "@/lib/supabase/guardie";
 import { ConfigBackup } from "@/components/config-backup";
 import { PhaseManager } from "@/components/phase-manager";
 import { TemplateManager } from "@/components/template-manager";
@@ -29,7 +30,10 @@ const GESTIONE_PERSONE = [
   },
 ];
 
-export default function WorkspaceSettingsPage() {
+export default async function WorkspaceSettingsPage() {
+  // Libreria dei template e fasi del flusso: sezione da responsabili.
+  await richiediResponsabile();
+
   return (
     <div className="space-y-4">
       <div className="card-soft p-4">

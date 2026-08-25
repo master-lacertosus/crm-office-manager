@@ -5,6 +5,7 @@ import * as React from "react";
 import { nextMonthlyIso, shiftIsoDays, todayIso } from "@/lib/format";
 import { messaggioErrore } from "@/lib/errori";
 import { extractMentionIds } from "@/lib/mentions";
+import { puoModificareTask } from "@/lib/permessi";
 import { prossimaScadenza } from "@/lib/repeat";
 import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
@@ -1021,13 +1022,21 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     // da Supabase. Senza, all'avvio la lista task è vuota e l'archiviazione
     // girerebbe a vuoto — o peggio, su dati non ancora arrivati.
     if (!pronto) return;
+    const io = {
+      id: currentUserId,
+      role: profiles.find((p) => p.id === currentUserId)?.role ?? 'member',
+    };
     const cutoff = Date.now() - 14 * 86_400_000;
     const stale = tasks.filter(
       (t) =>
         t.status === "done" &&
         !t.archived_at &&
         t.completed_at &&
-        new Date(t.completed_at).getTime() < cutoff,
+        new Date(t.completed_at).getTime() < cutoff &&
+        // Solo ciò che questa persona può davvero scrivere: archiviare il
+        // task di un altro verrebbe respinto dal database, e l'unico effetto
+        // sarebbe un avviso di errore a ogni avvio.
+        puoModificareTask(t, io),
     );
     if (stale.length === 0) return;
     queueMicrotask(() => {
@@ -1038,7 +1047,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       );
       setEvents((prev) => [
         ...prev,
-        ...stale.map((t) => makeEvent(t.id, t.owner_id, "archived")),
+        ...stale.map((t) => makeEvent(t.id, currentUserId, "archived")),
       ]);
       /* Gli eventi li scrive il confronto per id; l'archiviazione dei task è
          una modifica e va scritta qui, altrimenti tornerebbero in board a

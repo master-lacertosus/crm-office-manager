@@ -113,6 +113,26 @@ versioni (fase pre-1.0).
   processi compresi — restavano in memoria, sparivano al ricaricamento e i
   colleghi non le vedevano. Con la checklist del template si perdevano anche
   le spunte. (#31)
+- **Responsabili e dipendenti.** Il workspace aveva un modello di piena
+  trasparenza: ogni membro attivo poteva modificare qualunque cosa. Ora i
+  responsabili governano (approvano, assegnano, creano progetti, lanciano
+  template) e i dipendenti lavorano ciò di cui rispondono: task propri,
+  creati da loro o dove collaborano. Le pagine Team e Impostazioni ›
+  Workspace non si aprono più digitando l'indirizzo. Il confine sta nel
+  database (migrazione **M9**), non nei pulsanti nascosti. (#33)
+
+### Corretto
+- **Permessi: otto strade che non dovevano esistere.** Un dipendente poteva
+  cancellare il task di chiunque in due mosse (riassegnarlo a sé, poi
+  eliminarlo), modificare una propria ferie **già approvata** — date e firma
+  di chi aveva approvato — e altrettanto su una richiesta approvata,
+  zittire le escalation verso i responsabili indovinando la chiave di
+  deduplicazione degli avvisi, inventare voci nel registro append-only con
+  data a piacere, marcare come «decisione» i messaggi altrui e spostarli di
+  progetto, togliere qualunque collaboratore da qualunque task, cambiare la
+  propria email desincronizzandola dall'accesso. Un responsabile poteva
+  approvare la propria richiesta di task (sulle ferie il divieto c'era
+  già). Tutto chiuso in M9. (#33)
 - **Niente piu avvisi per decisioni mai avvenute.** Approvazioni, rifiuti e
   decisioni sulle ferie annunciavano l'esito prima di sapere se il database
   lo avesse accettato: quando lo rifiutava, la modifica tornava indietro ma

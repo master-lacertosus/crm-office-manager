@@ -3,23 +3,27 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { eResponsabile } from "@/lib/permessi";
+import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: "/settings/profile", label: "Profilo" },
   { href: "/settings/appearance", label: "Aspetto" },
-  { href: "/settings/workspace", label: "Workspace" },
+  { href: "/settings/workspace", label: "Workspace", soloResponsabili: true },
   { href: "/settings/about", label: "Info" },
 ];
 
 export function SettingsTabs() {
   const pathname = usePathname();
+  const { currentUser } = useAppStore();
+  const responsabile = eResponsabile(currentUser);
   return (
     <nav
       aria-label="Sezioni impostazioni"
       className="flex gap-1 overflow-x-auto border-b border-border-soft px-4 sm:px-6"
     >
-      {TABS.map((tab) => {
+      {TABS.filter((tab) => responsabile || !tab.soloResponsabili).map((tab) => {
         const active = pathname === tab.href;
         return (
           <Link
