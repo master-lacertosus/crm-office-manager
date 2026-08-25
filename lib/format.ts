@@ -27,6 +27,20 @@ export function shiftIsoDays(iso: string, days: number): string {
   return toIso(d);
 }
 
+/** Sabato o domenica? */
+export function isWeekendIso(iso: string): boolean {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dow = new Date(y, m - 1, d).getDay();
+  return dow === 0 || dow === 6;
+}
+
+/** Primo giorno feriale dopo `iso` (sabato e domenica saltati). */
+export function nextWeekdayIso(iso: string): string {
+  let next = shiftIsoDays(iso, 1);
+  while (isWeekendIso(next)) next = shiftIsoDays(next, 1);
+  return next;
+}
+
 /** Sposta una data ISO di n mesi (stesso giorno del mese, clampato). */
 export function shiftIsoMonths(iso: string, months: number): string {
   const [y, m, dd] = iso.split("-").map(Number);

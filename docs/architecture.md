@@ -122,6 +122,20 @@ trappole di complessità.
 > funzione `proxy`, e in questa versione gira di default su runtime Node.
 > Le Server Action non sono coperte dal suo matcher: l'autorizzazione va
 > verificata dentro ciascuna.
+>
+> **Ottavo emendamento (24/08/2026, ricorrenze):** le cadenze passano da tre
+> a otto. Si aggiungono **ogni giorno**, **ogni giorno feriale** (weekend
+> saltato), **a giorni alterni**, **ogni 3 mesi** e **ogni anno**; restano
+> settimanale, ogni 2 settimane e mensile. Il lavoro quotidiano d'ufficio —
+> controllo ordini, pubblicazioni, presidio delle campagne — non va più
+> ricreato a mano ogni mattina.
+>
+> Il calcolo vive in `lib/repeat.ts`, unica regola condivisa: il giro
+> successivo **non nasce mai nel passato**, i giri già trascorsi vengono
+> saltati (con le cadenze fitte un completamento in ritardo avrebbe generato
+> arretrato a ogni giro). Con Supabase: migrazione additiva **M7** che
+> allarga i CHECK su `tasks.repeat` e `workspace_templates.repeat` —
+> nessun dato da convertire, i valori esistenti restano validi.
 
 ---
 
