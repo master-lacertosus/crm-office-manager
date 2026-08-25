@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { nextMonthlyIso, shiftIsoDays, todayIso } from "@/lib/format";
+import { messaggioErrore } from "@/lib/errori";
 import { extractMentionIds } from "@/lib/mentions";
 import { prossimaScadenza } from "@/lib/repeat";
 import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
@@ -473,20 +474,43 @@ function useSincronizza<T extends { id: string }>(
        inserita due volte. */
     noteRef.current = attuali;
 
-    void (async () => {
+    void inCoda(async () => {
       try {
         if (nuove.length > 0) await inserisci(nuove);
         if (rimosse.length > 0) await elimina(rimosse);
       } catch (e) {
-        segnalaErrore(
-          e instanceof Error ? e.message : "Salvataggio non riuscito.",
-        );
+        segnalaErrore(messaggioErrore(e, "Salvataggio non riuscito."));
       }
-    })();
+    });
     // `inserisci` ed `elimina` sono ricreate a ogni render dai chiamanti:
     // includerle farebbe girare l'effetto in continuo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [righe, pronto]);
+}
+
+/* ------------------------------------------------------------------ */
+/* Coda delle scritture                                                */
+/*                                                                     */
+/* Le righe dell'app si riferiscono l'una all'altra: la cronologia     */
+/* punta al task, il commento al task, la voce di checklist al task.   */
+/* Partendo tutte insieme, l'ordine di arrivo al database non è        */
+/* garantito — e una riga che arriva prima di quella a cui punta viene */
+/* respinta dalla chiave esterna. Succedeva creando un task: l'evento  */
+/* «creato» poteva battere sul tempo il task stesso, e l'utente si     */
+/* vedeva dire che il salvataggio non era riuscito mentre il task, in  */
+/* realtà, veniva salvato.                                             */
+/*                                                                     */
+/* Una coda sola per scheda: ogni scrittura aspetta quella prima di    */
+/* sé. Sono operazioni piccole e a ritmo umano, il costo non si vede;  */
+/* un errore non blocca la coda, che prosegue con la successiva.       */
+/* ------------------------------------------------------------------ */
+let codaScritture: Promise<unknown> = Promise.resolve();
+
+function inCoda<T>(operazione: () => Promise<T>): Promise<T> {
+  const risultato = codaScritture.then(operazione, operazione);
+  // La coda non deve morire su un errore: si annota e si va avanti.
+  codaScritture = risultato.catch(() => undefined);
+  return risultato;
 }
 
 const StoreContext = React.createContext<AppStore | null>(null);
@@ -570,11 +594,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const scriviCon = React.useCallback(
     (operazione: () => Promise<void>, ripristina: () => void) => {
       if (!isSupabaseConfigured) return;
-      void operazione().catch((e: unknown) => {
+      void inCoda(operazione).catch((e: unknown) => {
         ripristina();
-        setSyncError(
-          e instanceof Error ? e.message : "Salvataggio non riuscito.",
-        );
+        setSyncError(messaggioErrore(e, "Salvataggio non riuscito."));
       });
     },
     [],
@@ -662,7 +684,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         if (!annullato) {
           setLoadError(
-            e instanceof Error ? e.message : "Caricamento dei dati non riuscito.",
+            messaggioErrore(e, "Caricamento dei dati non riuscito."),
           );
         }
       } finally {
@@ -2192,7 +2214,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         setTasks((prev) => prev.filter((t) => t.id !== task.id));
         setRequests((prev) => prev.map((r) => (r.id === id ? req : r)));
         setSyncError(
-          e instanceof Error ? e.message : "Approvazione non registrata.",
+          messaggioErrore(e, "Approvazione non registrata."),
         );
         return null;
       }
@@ -2284,7 +2306,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         setRequests((prev) => prev.map((r) => (r.id === id ? req : r)));
         setSyncError(
-          e instanceof Error ? e.message : "Rifiuto non registrato.",
+          messaggioErrore(e, "Rifiuto non registrato."),
         );
         return;
       }
@@ -2397,9 +2419,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         await decideLeaveRequest(createClient(), id, decision, trimmed);
       } catch (e) {
         setLeaves((prev) => prev.map((l) => (l.id === id ? leave : l)));
-        setSyncError(
-          e instanceof Error ? e.message : "Decisione non registrata.",
-        );
+        setSyncError(messaggioErrore(e, "Decisione non registrata."));
         return;
       }
 
