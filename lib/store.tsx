@@ -2,17 +2,15 @@
 
 import * as React from "react";
 
-import {
-  nextMonthlyIso,
-  shiftIsoDays,
-  shiftIsoMonths,
-  todayIso,
-} from "@/lib/format";
+import { nextMonthlyIso, shiftIsoDays, todayIso } from "@/lib/format";
+import { messaggioErrore } from "@/lib/errori";
 import { extractMentionIds } from "@/lib/mentions";
 import { puoModificareTask } from "@/lib/permessi";
+import { prossimaScadenza } from "@/lib/repeat";
 import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { subscribeToWorkspace } from "@/lib/supabase/realtime";
 import {
   deleteChecklistItem,
   deleteCollaborator,
@@ -144,10 +142,7 @@ function nextOccurrence(task: Task): Task | null {
     ...task,
     id: crypto.randomUUID(),
     status: "todo",
-    due_date:
-      task.repeat === "monthly"
-        ? shiftIsoMonths(task.due_date, 1)
-        : shiftIsoDays(task.due_date, task.repeat === "weekly" ? 7 : 14),
+    due_date: prossimaScadenza(task.due_date, task.repeat),
     position: Date.now(),
     checklist: task.checklist?.map((item) => ({ ...item, done: false })),
     problem_reason: null,
@@ -210,6 +205,9 @@ interface AppStore {
   syncError: string | null;
   /** Nasconde l'avviso di scrittura fallita dopo che l'utente l'ha letto. */
   clearSyncError: () => void;
+  /** Ultima novità arrivata dal team mentre la pagina era aperta (nuovi
+   *  task altrui): la mostra <AggiornamentiLive />. */
+  aggiornamentoRemoto: { id: number; testo: string } | null;
   /** Vero quando il profilo non è mai stato configurato dal suo proprietario
    *  (`onboarded_at` nullo) e i dati sono già stati caricati. */
   needsOnboarding: boolean;
@@ -459,14 +457,21 @@ function useSincronizza<T extends { id: string }>(
   inserisci: (nuove: T[]) => Promise<void>,
   elimina: (ids: string[]) => Promise<void>,
   segnalaErrore: (messaggio: string) => void,
+  /** Cambia a ogni lettura dal server (avvio e aggiornamenti dal vivo). Le
+   *  righe appena scaricate sono già sul database: senza questo segnale il
+   *  confronto le scambierebbe per novità locali e le reinserirebbe. */
+  ribase: number,
 ) {
   const noteRef = React.useRef<Set<string> | null>(null);
+  const ribaseRef = React.useRef(ribase);
 
   React.useEffect(() => {
     if (!pronto) return;
 
-    // Prima passata: quello che c'è arriva dal server, non va reinserito.
-    if (noteRef.current === null) {
+    // Prima passata, o dati appena riletti: quello che c'è arriva dal
+    // server, non va reinserito.
+    if (noteRef.current === null || ribaseRef.current !== ribase) {
+      ribaseRef.current = ribase;
       noteRef.current = new Set(righe.map((r) => r.id));
       return;
     }
@@ -481,20 +486,43 @@ function useSincronizza<T extends { id: string }>(
        inserita due volte. */
     noteRef.current = attuali;
 
-    void (async () => {
+    void inCoda(async () => {
       try {
         if (nuove.length > 0) await inserisci(nuove);
         if (rimosse.length > 0) await elimina(rimosse);
       } catch (e) {
-        segnalaErrore(
-          e instanceof Error ? e.message : "Salvataggio non riuscito.",
-        );
+        segnalaErrore(messaggioErrore(e, "Salvataggio non riuscito."));
       }
-    })();
+    });
     // `inserisci` ed `elimina` sono ricreate a ogni render dai chiamanti:
     // includerle farebbe girare l'effetto in continuo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [righe, pronto]);
+  }, [righe, pronto, ribase]);
+}
+
+/* ------------------------------------------------------------------ */
+/* Coda delle scritture                                                */
+/*                                                                     */
+/* Le righe dell'app si riferiscono l'una all'altra: la cronologia     */
+/* punta al task, il commento al task, la voce di checklist al task.   */
+/* Partendo tutte insieme, l'ordine di arrivo al database non è        */
+/* garantito — e una riga che arriva prima di quella a cui punta viene */
+/* respinta dalla chiave esterna. Succedeva creando un task: l'evento  */
+/* «creato» poteva battere sul tempo il task stesso, e l'utente si     */
+/* vedeva dire che il salvataggio non era riuscito mentre il task, in  */
+/* realtà, veniva salvato.                                             */
+/*                                                                     */
+/* Una coda sola per scheda: ogni scrittura aspetta quella prima di    */
+/* sé. Sono operazioni piccole e a ritmo umano, il costo non si vede;  */
+/* un errore non blocca la coda, che prosegue con la successiva.       */
+/* ------------------------------------------------------------------ */
+let codaScritture: Promise<unknown> = Promise.resolve();
+
+function inCoda<T>(operazione: () => Promise<T>): Promise<T> {
+  const risultato = codaScritture.then(operazione, operazione);
+  // La coda non deve morire su un errore: si annota e si va avanti.
+  codaScritture = risultato.catch(() => undefined);
+  return risultato;
 }
 
 const StoreContext = React.createContext<AppStore | null>(null);
@@ -561,9 +589,36 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   /* ------------------------------------------------------------------ */
   /* Caricamento da Supabase (incremento 1: identità, profili, progetti). */
   /* ------------------------------------------------------------------ */
+
+  /* Il provider può smontare mentre le query sono in volo (navigazione,
+     logout): senza questa guardia si scriverebbe su un componente morto. */
+  const smontatoRef = React.useRef(false);
+  /* Scritture partite e non ancora concluse: una rilettura che cadesse in
+     mezzo riporterebbe indietro ciò che si è appena fatto. */
+  const scrittureInVoloRef = React.useRef(0);
+  /* Ultimi dati noti, per capire cosa è arrivato di nuovo dagli altri senza
+     rendere l'effetto dipendente dallo stato. */
+  const tasksRef = React.useRef<Task[]>([]);
+  const currentUserIdRef = React.useRef("");
+  /* Sale a ogni lettura: dice ai sincronizzatori che le righe appena
+     comparse vengono dal database, non dall'utente. */
+  const [ribaseSync, setRibaseSync] = React.useState(0);
+  /* Ultima novità arrivata dal team, mostrata da <AggiornamentiLive />. */
+  const [aggiornamentoRemoto, setAggiornamentoRemoto] = React.useState<{
+    id: number;
+    testo: string;
+  } | null>(null);
+
   const [loading, setLoading] = React.useState(isSupabaseConfigured);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [syncError, setSyncError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
+  React.useEffect(() => {
+    currentUserIdRef.current = currentUserId;
+  }, [currentUserId]);
 
   /* Scrittura in sottofondo con annullamento.
 
@@ -578,21 +633,30 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const scriviCon = React.useCallback(
     (operazione: () => Promise<void>, ripristina: () => void) => {
       if (!isSupabaseConfigured) return;
-      void operazione().catch((e: unknown) => {
-        ripristina();
-        setSyncError(
-          e instanceof Error ? e.message : "Salvataggio non riuscito.",
-        );
-      });
+      // Il contatore sale prima della coda, non prima dell'invio: finche' la
+      // scrittura e' in attesa del suo turno il dato locale e' comunque piu'
+      // avanti del server, e un aggiornamento dal vivo che arrivasse adesso
+      // riporterebbe indietro quello che l'utente ha appena fatto.
+      scrittureInVoloRef.current += 1;
+      void inCoda(operazione)
+        .catch((e: unknown) => {
+          ripristina();
+          setSyncError(messaggioErrore(e, "Salvataggio non riuscito."));
+        })
+        .finally(() => {
+          scrittureInVoloRef.current -= 1;
+        });
     },
     [],
   );
 
-  React.useEffect(() => {
-    if (!isSupabaseConfigured) return;
-    let annullato = false;
-
-    (async () => {
+  /**
+   * Lettura completa del workspace. All'avvio riempie la pagina; dal vivo
+   * (`silenzioso`) riallinea i dati senza spinner né errori a schermo.
+   */
+  const caricaWorkspace = React.useCallback(
+    async ({ silenzioso = false }: { silenzioso?: boolean } = {}) => {
+      if (!isSupabaseConfigured) return;
       try {
         const supabase = createClient();
         /* `getClaims()` legge il token già in cookie senza interrogare il
@@ -639,7 +703,33 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           fetchCollaborators(supabase),
         ]);
 
-        if (annullato) return;
+        if (smontatoRef.current) return;
+
+        /* Novità degli altri: si confronta PRIMA di applicare i dati nuovi,
+           altrimenti il confronto sarebbe con sé stesso. I task creati da
+           noi non si annunciano: li abbiamo appena visti comparire. */
+        if (silenzioso) {
+          const noti = new Set(tasksRef.current.map((t) => t.id));
+          const nuovi = taskList.filter(
+            (t) => !noti.has(t.id) && t.created_by !== currentUserIdRef.current,
+          );
+          if (nuovi.length > 0) {
+            const autori = [
+              ...new Set(nuovi.map((t) => t.created_by)),
+            ].map((id) =>
+              profileList.find((p) => p.id === id)?.full_name.split(" ")[0],
+            );
+            const da = autori.length === 1 && autori[0] ? ` da ${autori[0]}` : "";
+            setAggiornamentoRemoto({
+              id: Date.now(),
+              testo:
+                nuovi.length === 1
+                  ? `Nuovo task${da}: «${nuovi[0].title}»`
+                  : `${nuovi.length} nuovi task sulla board${da}`,
+            });
+          }
+        }
+
         setProfiles(profileList);
         setProjects(projectList);
         // Le voci di checklist stanno in tabella a parte ma il tipo `Task` le
@@ -667,23 +757,106 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         setFocusIds(statoPersonale.focusIds);
         setSnoozes(statoPersonale.snoozes);
         if (userId) setCurrentUserId(userId);
+        // Ultimo, nello stesso aggiornamento: i sincronizzatori devono
+        // vedere righe nuove e ribase insieme.
+        setRibaseSync((n) => n + 1);
       } catch (e) {
-        if (!annullato) {
+        /* Su un aggiornamento in sottofondo un intoppo di rete non deve
+           invadere l'interfaccia: restano i dati di prima e si ritenta al
+           giro successivo. */
+        if (!smontatoRef.current && !silenzioso) {
           setLoadError(
-            e instanceof Error ? e.message : "Caricamento dei dati non riuscito.",
+            messaggioErrore(e, "Caricamento dei dati non riuscito."),
           );
         }
       } finally {
-        if (!annullato) setLoading(false);
+        if (!smontatoRef.current && !silenzioso) setLoading(false);
       }
-    })();
+    },
+    [],
+  );
 
-    // Il provider può smontare mentre le query sono in volo (navigazione,
-    // logout): senza questa guardia si scriverebbe su un componente morto.
+  React.useEffect(() => {
+    smontatoRef.current = false;
+    void caricaWorkspace();
     return () => {
-      annullato = true;
+      smontatoRef.current = true;
     };
-  }, []);
+  }, [caricaWorkspace]);
+
+  /* ------------------------------------------------------------------ */
+  /* Aggiornamenti del team, senza premere F5.                           */
+  /*                                                                     */
+  /* Il lavoro degli altri non si vedeva fino alla ricarica successiva:   */
+  /* su una board condivisa significa assegnare due volte lo stesso task  */
+  /* o discutere di una scheda che nel frattempo è cambiata. Realtime     */
+  /* annuncia il cambiamento, la rilettura porta i dati: si preferisce    */
+  /* rileggere tutto invece di applicare la singola riga perché il        */
+  /* risultato è sempre lo stesso di un avvio pulito, senza venti         */
+  /* fusioni diverse da mantenere.                                       */
+  /* ------------------------------------------------------------------ */
+  React.useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    let attesa: ReturnType<typeof setTimeout> | undefined;
+    let realtimeAttivo = false;
+    let sospeso = false;
+
+    const programma = (ritardo = 1200) => {
+      clearTimeout(attesa);
+      attesa = setTimeout(() => {
+        /* A scheda nascosta non si consuma rete: al ritorno si recupera. */
+        if (document.hidden) {
+          sospeso = true;
+          return;
+        }
+        /* Mai in mezzo a una scrittura: si riproverebbe a mostrare lo stato
+           precedente a quello appena salvato. */
+        if (scrittureInVoloRef.current > 0) {
+          programma(600);
+          return;
+        }
+        void caricaWorkspace({ silenzioso: true });
+      }, ritardo);
+    };
+
+    const supabase = createClient();
+    const canale = subscribeToWorkspace(supabase, {
+      onCambio: () => programma(),
+      onStato: (attivo) => {
+        realtimeAttivo = attivo;
+      },
+    });
+
+    const alRitorno = () => {
+      if (document.hidden) return;
+      if (sospeso) {
+        sospeso = false;
+        programma(200);
+      } else {
+        /* Anche senza annunci pendenti: mentre si era altrove il canale può
+           essersi interrotto. */
+        programma(400);
+      }
+    };
+    document.addEventListener("visibilitychange", alRitorno);
+    window.addEventListener("focus", alRitorno);
+
+    /* Rete di sicurezza: se Realtime non è attivo (publication mancante,
+       websocket bloccato da una rete d'ufficio) i dati arrivano comunque,
+       solo più lentamente. */
+    const battito = setInterval(() => {
+      if (!document.hidden && !realtimeAttivo) programma(0);
+    }, 60_000);
+
+    return () => {
+      clearTimeout(attesa);
+      clearInterval(battito);
+      document.removeEventListener("visibilitychange", alRitorno);
+      window.removeEventListener("focus", alRitorno);
+      void supabase.removeChannel(canale);
+    };
+  }, [caricaWorkspace]);
 
   /* --- Sincronizzazione delle collezioni append-only ------------------ */
   const pronto = isSupabaseConfigured && !loading && Boolean(currentUserId);
@@ -696,6 +869,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     // registro che si può correggere non è un registro.
     async () => {},
     setSyncError,
+    ribaseSync,
   );
 
   useSincronizza(
@@ -707,6 +881,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
     async () => {},
     setSyncError,
+    ribaseSync,
   );
 
   useSincronizza(
@@ -718,6 +893,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
     async () => {},
     setSyncError,
+    ribaseSync,
   );
 
   useSincronizza(
@@ -732,6 +908,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       for (const id of ids) await deleteTaskLink(supabase, id);
     },
     setSyncError,
+    ribaseSync,
   );
 
   /* Richieste, ferie e chiusure: creazione e ritiro passano dal confronto
@@ -749,6 +926,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       for (const id of ids) await deleteTaskRequest(supabase, id);
     },
     setSyncError,
+    ribaseSync,
   );
 
   useSincronizza(
@@ -763,6 +941,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       for (const id of ids) await deleteLeaveRequest(supabase, id);
     },
     setSyncError,
+    ribaseSync,
   );
 
   useSincronizza(
@@ -777,6 +956,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       for (const id of ids) await deleteClosure(supabase, id);
     },
     setSyncError,
+    ribaseSync,
   );
 
   useSincronizza(
@@ -791,6 +971,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       for (const id of ids) await deleteTemplate(supabase, id);
     },
     setSyncError,
+    ribaseSync,
   );
 
   useSincronizza(
@@ -805,6 +986,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       for (const id of ids) await deleteSavedView(supabase, id);
     },
     setSyncError,
+    ribaseSync,
   );
 
   useSincronizza(
@@ -822,6 +1004,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
     async () => {},
     setSyncError,
+    ribaseSync,
   );
 
   /* ------------------------------------------------------------------ */
@@ -982,6 +1165,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     loadError,
     syncError,
     clearSyncError: () => setSyncError(null),
+    aggiornamentoRemoto,
 
     /* Solo a caricamento concluso: durante l'attesa `currentUser` è la
        sentinella, che ovviamente non ha `onboarded_at` — proporre la
@@ -2208,7 +2392,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         setTasks((prev) => prev.filter((t) => t.id !== task.id));
         setRequests((prev) => prev.map((r) => (r.id === id ? req : r)));
         setSyncError(
-          e instanceof Error ? e.message : "Approvazione non registrata.",
+          messaggioErrore(e, "Approvazione non registrata."),
         );
         return null;
       }
@@ -2300,7 +2484,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         setRequests((prev) => prev.map((r) => (r.id === id ? req : r)));
         setSyncError(
-          e instanceof Error ? e.message : "Rifiuto non registrato.",
+          messaggioErrore(e, "Rifiuto non registrato."),
         );
         return;
       }
@@ -2413,9 +2597,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         await decideLeaveRequest(createClient(), id, decision, trimmed);
       } catch (e) {
         setLeaves((prev) => prev.map((l) => (l.id === id ? leave : l)));
-        setSyncError(
-          e instanceof Error ? e.message : "Decisione non registrata.",
-        );
+        setSyncError(messaggioErrore(e, "Decisione non registrata."));
         return;
       }
 
@@ -2522,6 +2704,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     },
     };
   }, [
+    aggiornamentoRemoto,
     avatars,
     closures,
     loading,

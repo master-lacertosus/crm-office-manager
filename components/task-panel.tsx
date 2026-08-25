@@ -636,7 +636,9 @@ function TaskForm({
             )}
           >
             Al completamento si ricrea da solo con la scadenza spostata di{" "}
-            {REPEAT_META[repeat].phrase} (serve una scadenza).
+            {REPEAT_META[repeat].phrase} (serve una scadenza). I giri già
+            passati vengono saltati: la nuova scadenza non nasce mai in
+            ritardo.
           </p>
         ) : null}
     </div>
