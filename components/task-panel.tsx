@@ -50,7 +50,7 @@ import { CollaboratorsSection } from "@/components/collaborators-section";
 import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { PriorityBadge } from "@/components/priority-badge";
-import { AvanzamentoProcesso } from "@/components/processo-avanzamento";
+import { AvanzamentoProcesso } from "@/components/processo-avanzamento";
 import { SottoTask } from "@/components/sotto-task";
 import { StatusLabel } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
@@ -665,8 +665,8 @@ function TaskForm({
           </form>
           <div className="[&>section]:!px-0">
             {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
-            {task ? <SottoTask task={task} /> : null}
-            {task ? <SottoTask task={task} /> : null}
+            {task ? <SottoTask task={task} /> : null}
+            {task ? <SottoTask task={task} /> : null}
       {task ? <ChecklistSection task={task} /> : null}
             {children}
           </div>

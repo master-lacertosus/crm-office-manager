@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 import { updateSearch } from "@/lib/shallow-nav";
-import { puoModificareTask } from "@/lib/permessi";
+import { puoModificareTask } from "@/lib/permessi";
 import { MAX_CUSTOM_STATUSES, useAppStore } from "@/lib/store";
 import {
   CUSTOM_STATUS_PRESETS,
