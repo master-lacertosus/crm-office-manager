@@ -3,6 +3,7 @@
 import * as React from "react";
 import { LoaderCircle, Plus, UserRoundPlus, X } from "lucide-react";
 
+import { messaggioErrore } from "@/lib/errori";
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
@@ -45,7 +46,7 @@ export function CollaboratorsSection({ task }: { task: Task }) {
       );
       setApri(false);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Operazione non riuscita");
+      toast(messaggioErrore(e, "Operazione non riuscita"));
     } finally {
       setInCorso(null);
     }

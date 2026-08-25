@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { LoaderCircle, X } from "lucide-react";
 
+import { messaggioErrore } from "@/lib/errori";
 import { pop, scrim } from "@/lib/motion";
 import { puoGestireProgetti } from "@/lib/permessi";
 import { useAppStore } from "@/lib/store";
@@ -66,7 +67,7 @@ export function NewProjectButton() {
       /* Qui finisce anche il rifiuto della RLS. Non si chiude il dialog: il
          testo scritto resta dov'è, così non va perso insieme all'errore. */
       setError(
-        err instanceof Error ? err.message : "Creazione non riuscita.",
+        messaggioErrore(err, "Creazione non riuscita."),
       );
     } finally {
       setSaving(false);

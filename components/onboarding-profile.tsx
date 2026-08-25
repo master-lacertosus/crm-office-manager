@@ -9,6 +9,7 @@ import {
   DENSITIES,
   usePreferences,
 } from "@/lib/preferences";
+import { messaggioErrore } from "@/lib/errori";
 import { useAppStore } from "@/lib/store";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { Button } from "@/components/ui/button";
@@ -83,7 +84,7 @@ export function OnboardingProfile() {
       });
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Salvataggio non riuscito.",
+        messaggioErrore(err, "Salvataggio non riuscito."),
       );
     } finally {
       setSaving(false);

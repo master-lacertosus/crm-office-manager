@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { MessageSquare, Send, X } from "lucide-react";
 
+import { messaggioErrore } from "@/lib/errori";
 import { extractMentionIds, splitMentions } from "@/lib/mentions";
 import { sheet } from "@/lib/motion";
 import { useAppStore } from "@/lib/store";
@@ -94,7 +95,7 @@ export function ChatPanel() {
       } catch (e) {
         if (!annullato) {
           setErrore(
-            e instanceof Error ? e.message : "Chat non raggiungibile.",
+            messaggioErrore(e, "Chat non raggiungibile."),
           );
         }
       }
@@ -224,7 +225,7 @@ export function ChatPanel() {
     } catch (err) {
       setMessaggi((prev) => prev.filter((m) => m.id !== messaggio.id));
       setBozza(testo);
-      setErrore(err instanceof Error ? err.message : "Invio non riuscito.");
+      setErrore(messaggioErrore(err, "Invio non riuscito."));
     } finally {
       setInviando(false);
     }

@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle, TriangleAlert } from "lucide-react";
 
+import { messaggioErrore } from "@/lib/errori";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { TiltCard } from "@/components/tilt-card";
@@ -88,7 +89,7 @@ export function SetPasswordForm() {
       router.push("/dashboard");
     } catch (err) {
       setErrore(
-        err instanceof Error ? err.message : "Impostazione non riuscita.",
+        messaggioErrore(err, "Impostazione non riuscita."),
       );
       setSalvando(false);
     }
