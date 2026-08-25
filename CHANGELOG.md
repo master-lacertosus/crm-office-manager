@@ -28,6 +28,18 @@ versioni (fase pre-1.0).
   cima al componente la riporta in scena quando si vuole. (#32)
 
 ### Corretto
+- **«Modifica non salvata» mentre il task veniva salvato.** Creando un task,
+  la sua voce di cronologia partiva insieme al task invece che dopo: quando
+  arrivava per prima, il database la respingeva perche punta a una riga che
+  ancora non esisteva. Il task finiva salvato lo stesso — il pannello passava
+  al dettaglio con checklist e allegati — ma intanto compariva un avviso che
+  diceva il contrario. Ora le scritture escono in coda, nell ordine in cui
+  nascono. (#36)
+- **Gli errori dicono finalmente cosa e successo.** Il motivo del database
+  veniva sostituito da un generico «salvataggio non riuscito» ogni volta che
+  non arrivava nella forma attesa. Ora si legge la ragione vera, con il suo
+  codice: «chiave esterna» e «policy che nega» sono problemi opposti e vanno
+  distinti. (#36)
 - **Creare un task non diceva se fosse andata bene.** Il task nasceva
   davvero, ma niente lo confermava: nessun messaggio, nessuna spunta, e il
   pannello restava identico a prima — cambiava solo l'etichetta del
