@@ -88,6 +88,14 @@ versioni (fase pre-1.0).
   cima al componente la riporta in scena quando si vuole. (#32)
 
 ### Corretto
+- **«Link incompleto» su link perfettamente validi.** La pagina di conferma
+  conosceva una sola delle tre forme che Supabase può mandare: `token_hash`
+  nella query. Con i template predefiniti arriva invece un `code` (PKCE) o
+  un frammento `#access_token`, che il server non vede nemmeno — e la
+  pagina dava per rotto un link buono. Ora le riconosce tutte e tre: il
+  `code` va alla rotta che lo scambia, il frammento viene portato alla
+  pagina della password che sa già leggerlo. L’errore resta solo quando
+  davvero non c’è niente. Nuovo controllo `npm run verify:link`. (#48)
 - **«Salva modifiche» smetteva di rispondere.** Il pulsante è disabilitato
   mentre salva, e il gestore lo riabilitava alla fine — ma senza `finally`.
   Bastava un errore per non arrivarci mai: il pulsante restava spento per

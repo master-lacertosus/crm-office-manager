@@ -1,11 +1,39 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { MailCheck, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Conferma l'accesso" };
+
+/**
+ * Il token nel frammento, portato a mano alla pagina che sa leggerlo.
+ *
+ * Con i template predefiniti di Supabase il link non porta `token_hash` nella
+ * query: porta un frammento `#access_token=…`. Il frammento non viaggia fino
+ * al server — resta nel browser — quindi qui arriva un indirizzo che sembra
+ * vuoto, e la pagina rispondeva «Link incompleto» a un link perfettamente
+ * valido.
+ *
+ * Questo script sta nel documento e gira prima che si dipinga qualcosa: se
+ * trova il frammento porta tutto alla pagina della password, che il client
+ * Supabase sa gia' gestire. Se non lo trova non fa niente, e resta il
+ * messaggio d'errore — che a quel punto e' vero.
+ *
+ * La destinazione e' gia' stata ridotta a un percorso interno prima di
+ * arrivare qui, e passa da JSON.stringify: nel documento finisce una
+ * stringa, non un pezzo di indirizzo da fidarsi.
+ */
+function saltaAlFrammento(destinazione: string): string {
+  return `try{
+var f=location.hash;
+if(/(?:^|[#&])(access_token|refresh_token|error|error_description)=/.test(f)){
+location.replace(${JSON.stringify(destinazione)}+f);
+}
+}catch(_){}`;
+}
 
 /**
  * Ultimo passo dei link mandati per email: un pulsante, e niente di più.
@@ -27,11 +55,12 @@ export default async function ConfermaPage({
   searchParams: Promise<{
     token_hash?: string;
     type?: string;
+    code?: string;
     next?: string;
     redirect_to?: string;
   }>;
 }) {
-  const { token_hash, type, next, redirect_to } = await searchParams;
+  const { token_hash, type, code, next, redirect_to } = await searchParams;
 
   /* Solo percorsi interni: `redirect_to` arriva dal template dell'email come
      indirizzo assoluto, ma quello che serve è la parte finale. */
@@ -40,6 +69,18 @@ export default async function ConfermaPage({
     grezzo && grezzo.startsWith("/") && !grezzo.startsWith("//")
       ? grezzo
       : "/auth/imposta-password";
+
+  /* Flusso PKCE: il link porta `code` invece di `token_hash`. Non e' un
+     link rotto, e' un'altra forma — la rotta /auth/confirm sa scambiarlo
+     con una sessione. Qui non serve il pulsante contro gli scanner: un
+     `code` che venisse consumato da uno scanner darebbe un errore chiaro,
+     mentre lasciare la persona davanti a «Link incompleto» non aiuta
+     nessuno. */
+  if (code) {
+    redirect(
+      `/auth/confirm?code=${encodeURIComponent(code)}&next=${encodeURIComponent(destinazione)}`,
+    );
+  }
 
   const valido = Boolean(token_hash && type);
 
@@ -85,6 +126,14 @@ export default async function ConfermaPage({
           </form>
         ) : (
           <div className="glass-strong space-y-3 rounded-2xl p-5">
+            {/* Prima di dare per rotto il link: il codice potrebbe essere nel
+                frammento, che il server non vede. Lo script gira subito e, se
+                lo trova, porta tutto alla pagina della password. */}
+            <script
+              dangerouslySetInnerHTML={{
+                __html: saltaAlFrammento(destinazione),
+              }}
+            />
             <h1 className="flex items-center gap-2 text-[17px]/6 font-semibold tracking-[-0.008em] text-ink">
               <TriangleAlert aria-hidden className="size-4 text-danger-text" />
               Link incompleto
