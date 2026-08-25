@@ -14,9 +14,14 @@
    usata in un unico punto previsto: la Server Action di invito
    (`auth.admin.inviteUserByEmail`, milestone M2). Tutte le altre mutazioni
    usano il client server-side con chiave anon + sessione utente + RLS.
-3. **Trasparenza interna** (decisione D5): ogni membro attivo vede tutto;
-   la ownership è responsabilità, non un lucchetto. Il lavoro sensibile
-   resta fuori dallo strumento.
+3. **Trasparenza in lettura, responsabilità in scrittura** (D5 rivista il
+   25/08/2026, migrazione M9): ogni membro attivo VEDE tutto — il lavoro
+   sensibile resta fuori dallo strumento — ma SCRIVE solo dove ha titolo.
+   Il workspace ha due responsabili (`role = 'admin'`) che governano tutto;
+   gli altri lavorano i task di cui rispondono: propri, creati da loro o
+   dove collaborano. Assegnare lavoro ad altri, creare progetti e lanciare
+   template sono atti di governo: per proporli c'è il flusso delle
+   Richieste, che passa da un'approvazione.
 4. **Utente disattivato = accesso morto**, anche con una sessione ancora
    valida: ogni policy richiede `is_active`.
 

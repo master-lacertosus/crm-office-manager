@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { updateSearch } from "@/lib/shallow-nav";
+import { puoModificareTask } from "@/lib/permessi";
 import { MAX_CUSTOM_STATUSES, useAppStore } from "@/lib/store";
 import {
   CUSTOM_STATUS_PRESETS,
@@ -197,6 +198,9 @@ export function Board({ projectId }: { projectId?: string }) {
 
   const onCardPointerDown = (e: React.PointerEvent, task: Task) => {
     if (e.button !== 0 || e.pointerType === "touch") return;
+    // Le schede altrui non si trascinano: lo spostamento sarebbe respinto
+    // dal database, e la card tornerebbe indietro da sola.
+    if (!puoModificareTask(task, currentUser)) return;
     const wrapper = e.currentTarget as HTMLElement;
     const rect = wrapper.getBoundingClientRect();
     const start = { x: e.clientX, y: e.clientY };
@@ -404,6 +408,8 @@ export function Board({ projectId }: { projectId?: string }) {
       // Shift+←/→: sposta il task nella fase adiacente (con Annulla)
       if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
         if (!task) return;
+        // Stessa regola del trascinamento: le schede altrui non si spostano.
+        if (!puoModificareTask(task, currentUser)) return;
         const dir = e.key === "ArrowLeft" ? -1 : 1;
         let targetLane = pos.lane + dir;
         while (
@@ -458,7 +464,7 @@ export function Board({ projectId }: { projectId?: string }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedId, moveTask, toast]);
+  }, [selectedId, moveTask, toast, currentUser]);
 
   /* La card selezionata resta in vista */
   React.useEffect(() => {

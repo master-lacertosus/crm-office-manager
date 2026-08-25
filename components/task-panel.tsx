@@ -37,6 +37,11 @@ import {
   DecisionBadge,
 } from "@/components/comment-bits";
 import { panel, scrim } from "@/lib/motion";
+import {
+  puoAssegnareAdAltri,
+  puoLanciareTemplate,
+  puoModificareTask,
+} from "@/lib/permessi";
 import { updateSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
 import { REPEAT_META } from "@/lib/types";
@@ -363,6 +368,12 @@ function TaskForm({
   );
   const [repeat, setRepeat] = React.useState<TaskRepeat>(task?.repeat ?? "none");
 
+  /* Un task lo lavora chi ne risponde. Sugli altri si legge e si commenta:
+     mostrare campi che il database rifiuterebbe sarebbe una promessa falsa.
+     In creazione il task è di chi lo sta scrivendo, quindi sempre sì. */
+  const modificabile = task ? puoModificareTask(task, currentUser) : true;
+  const puoRiassegnare = puoAssegnareAdAltri(currentUser);
+
   const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -409,7 +420,7 @@ function TaskForm({
   };
 
   const templatePicker =
-    !task && templates.length > 0 ? (
+    !task && templates.length > 0 && puoLanciareTemplate(currentUser) ? (
       <div className="space-y-2">
         <Label>Parti da un template</Label>
         <div className="flex flex-wrap gap-1.5">
@@ -467,7 +478,17 @@ function TaskForm({
     </div>
   );
 
-  const saveRow = (
+  const saveRow = !modificabile ? (
+    <p className="rounded-xl bg-muted px-3 py-2 text-[13px] text-ink-secondary">
+      Questo task è di{" "}
+      <span className="font-medium text-ink">
+        {profiles.find((p) => p.id === task?.owner_id)?.full_name.split(" ")[0] ??
+          "un collega"}
+      </span>
+      : puoi seguirlo e commentarlo. Per modificarlo chiedi a chi ne risponde
+      o a un responsabile.
+    </p>
+  ) : (
     <div className="flex items-center gap-3">
       <Button
         type="submit"
@@ -527,6 +548,12 @@ function TaskForm({
             id="task-owner"
             value={ownerId}
             onChange={(e) => setOwnerId(e.target.value)}
+            disabled={!puoRiassegnare}
+            title={
+              puoRiassegnare
+                ? undefined
+                : "Assegnare il lavoro spetta ai responsabili: proponilo dalle Richieste."
+            }
           >
             {profiles
               .filter((p) => p.is_active)
