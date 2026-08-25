@@ -658,8 +658,7 @@ function TaskForm({
           </form>
           <div className="[&>section]:!px-0">
             {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
-            {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
-      {task ? <ChecklistSection task={task} /> : null}
+            {task ? <ChecklistSection task={task} /> : null}
             {children}
           </div>
         </div>
@@ -689,6 +688,7 @@ function TaskForm({
         {saveRow}
         {task ? <TaskMeta task={task} /> : null}
       </form>
+      {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
       {task ? <ChecklistSection task={task} /> : null}
       {children}
     </>
