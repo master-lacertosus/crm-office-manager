@@ -10,6 +10,10 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **`supabase/perche-non-salva.sql`**: diagnosi da incollare nel SQL Editor
+  quando un salvataggio viene rifiutato. Controlla le colonne che l’app
+  invia, chi può creare task, le regole e i trigger in vigore, e prova un
+  inserimento vero cancellandolo subito. (#40)
 - **Un file solo per aggiornare il database.** `supabase/AGGIORNA-DATABASE.sql`
   raccoglie M7, M8, M9 e M10 nell’ordine giusto: si apre il SQL Editor di
   Supabase, si incolla, si preme Run. Niente da scommentare, niente da
@@ -61,6 +65,13 @@ versioni (fase pre-1.0).
   cima al componente la riporta in scena quando si vuole. (#32)
 
 ### Corretto
+- **L’errore sul salvataggio mostrava il sintomo, non la causa.** Quando il
+  database rifiuta un task, la sua voce di cronologia partiva lo stesso e
+  veniva respinta a sua volta perché puntava a una riga inesistente. Quel
+  secondo errore arrivava dopo e copriva il primo: si leggeva «chiave
+  esterna» senza sapere il motivo vero per cui il task non era nato. Ora le
+  righe figlie di un task rifiutato non partono nemmeno, e a schermo resta
+  il messaggio che spiega davvero cosa è successo. (#40)
 - **Le fini riga ora le decide il repository.** Due file stavano in
   archivio con le righe terminate CRLF mentre il resto stava a LF: per git
   ogni riga risultava diversa da quella corrispondente sull’altro ramo, e

@@ -508,10 +508,7 @@ function useSincronizza<T extends { id: string }>(
 /* punta al task, il commento al task, la voce di checklist al task.   */
 /* Partendo tutte insieme, l'ordine di arrivo al database non è        */
 /* garantito — e una riga che arriva prima di quella a cui punta viene */
-/* respinta dalla chiave esterna. Succedeva creando un task: l'evento  */
-/* «creato» poteva battere sul tempo il task stesso, e l'utente si     */
-/* vedeva dire che il salvataggio non era riuscito mentre il task, in  */
-/* realtà, veniva salvato.                                             */
+/* respinta dalla chiave esterna.                                      */
 /*                                                                     */
 /* Una coda sola per scheda: ogni scrittura aspetta quella prima di    */
 /* sé. Sono operazioni piccole e a ritmo umano, il costo non si vede;  */
@@ -524,6 +521,42 @@ function inCoda<T>(operazione: () => Promise<T>): Promise<T> {
   // La coda non deve morire su un errore: si annota e si va avanti.
   codaScritture = risultato.catch(() => undefined);
   return risultato;
+}
+
+/* ------------------------------------------------------------------ */
+/* I task che il database ha rifiutato                                 */
+/*                                                                     */
+/* La coda garantisce l'ordine, non l'esito. Se il database respinge   */
+/* il task — una policy, un vincolo, una colonna — la sua voce di      */
+/* cronologia resta comunque in coda, parte, e viene respinta a sua    */
+/* volta perché punta a una riga che non esiste.                       */
+/*                                                                     */
+/* Quel secondo errore è un'eco, ma arriva DOPO e sovrascrive il       */
+/* messaggio del primo: l'utente leggeva «chiave esterna» e non ha mai */
+/* saputo il vero motivo per cui il task non era stato creato. Il      */
+/* sintomo copriva la causa.                                           */
+/*                                                                     */
+/* Qui si annota quali task non sono nati, e le loro righe figlie non  */
+/* partono nemmeno: un lavoro che non esiste non ha una storia da      */
+/* raccontare. Resta a schermo il messaggio che spiega davvero cosa è  */
+/* successo.                                                           */
+/* ------------------------------------------------------------------ */
+const taskMaiNati = new Set<string>();
+
+function segnaTaskMaiNato(id: string) {
+  taskMaiNati.add(id);
+  // Senza limite l'insieme cresce per tutta la sessione. Un rifiuto è raro
+  // e la sua eco arriva subito dopo: tenerne un centinaio è già generoso.
+  if (taskMaiNati.size > 100) {
+    taskMaiNati.delete(taskMaiNati.values().next().value!);
+  }
+}
+
+/** Toglie dalle scritture in partenza le righe di un task mai nato. */
+function senzaOrfani<T extends { task_id: string }>(righe: T[]): T[] {
+  return taskMaiNati.size === 0
+    ? righe
+    : righe.filter((r) => !taskMaiNati.has(r.task_id));
 }
 
 const StoreContext = React.createContext<AppStore | null>(null);
@@ -865,7 +898,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   useSincronizza(
     events,
     pronto,
-    (nuovi) => insertTaskEvents(createClient(), nuovi),
+    (nuovi) => insertTaskEvents(createClient(), senzaOrfani(nuovi)),
     // La cronologia è append-only: non ha policy di cancellazione, e un
     // registro che si può correggere non è un registro.
     async () => {},
@@ -878,7 +911,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     pronto,
     async (nuovi) => {
       const supabase = createClient();
-      for (const c of nuovi) await insertTaskComment(supabase, c);
+      for (const c of senzaOrfani(nuovi)) await insertTaskComment(supabase, c);
     },
     async () => {},
     setSyncError,
@@ -902,7 +935,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     pronto,
     async (nuovi) => {
       const supabase = createClient();
-      for (const l of nuovi) await insertTaskLink(supabase, l, currentUserId);
+      for (const l of senzaOrfani(nuovi)) {
+        await insertTaskLink(supabase, l, currentUserId);
+      }
     },
     async (ids) => {
       const supabase = createClient();
@@ -1267,7 +1302,14 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       ]);
       scriviCon(
         () => insertTask(createClient(), task),
-        () => setTasks((prev) => prev.filter((t) => t.id !== task.id)),
+        () => {
+          /* Il task non è nato: se ne va anche la sua cronologia, che
+             altrimenti resterebbe a schermo sotto un lavoro inesistente e
+             partirebbe verso il database per farsi respingere. */
+          segnaTaskMaiNato(task.id);
+          setTasks((prev) => prev.filter((t) => t.id !== task.id));
+          setEvents((prev) => prev.filter((e) => e.task_id !== task.id));
+        },
       );
       return task;
     },
@@ -1314,12 +1356,21 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           // La ricorrenza genera un task nuovo: va inserito, non aggiornato.
           for (const s of spawned) await insertTask(supabase, s);
         },
-        () =>
+        () => {
+          // I giri nuovi di un ricorrente non sono nati: via loro e la loro
+          // cronologia, mentre il task di partenza torna com'era.
+          for (const s of spawned) segnaTaskMaiNato(s.id);
           setTasks((prev) =>
             prev
               .filter((t) => !spawned.some((s) => s.id === t.id))
               .map((t) => (t.id === id ? before : t)),
-          ),
+          );
+          if (spawned.length > 0) {
+            setEvents((prev) =>
+              prev.filter((e) => !spawned.some((s) => s.id === e.task_id)),
+            );
+          }
+        },
       );
 
       if (before.status === next.status) return null;
@@ -1391,12 +1442,21 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           await updateTaskRow(supabase, id, { status, position });
           for (const s of spawned) await insertTask(supabase, s);
         },
-        () =>
+        () => {
+          // I giri nuovi di un ricorrente non sono nati: via loro e la loro
+          // cronologia, mentre il task di partenza torna com'era.
+          for (const s of spawned) segnaTaskMaiNato(s.id);
           setTasks((prev) =>
             prev
               .filter((t) => !spawned.some((s) => s.id === t.id))
               .map((t) => (t.id === id ? before : t)),
-          ),
+          );
+          if (spawned.length > 0) {
+            setEvents((prev) =>
+              prev.filter((e) => !spawned.some((s) => s.id === e.task_id)),
+            );
+          }
+        },
       );
 
       if (before.status === status) return null;
@@ -2016,7 +2076,11 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             const supabase = createClient();
             for (const t of created) await insertTask(supabase, t);
           },
-          () => setTasks((prev) => prev.filter((t) => !nati.has(t.id))),
+          () => {
+            for (const id of nati) segnaTaskMaiNato(id);
+            setTasks((prev) => prev.filter((t) => !nati.has(t.id)));
+            setEvents((prev) => prev.filter((e) => !nati.has(e.task_id)));
+          },
         );
         return created;
       }
@@ -2057,7 +2121,11 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             await insertChecklistItem(supabase, task.id, voci[i], i);
           }
         },
-        () => setTasks((prev) => prev.filter((t) => t.id !== task.id)),
+        () => {
+          segnaTaskMaiNato(task.id);
+          setTasks((prev) => prev.filter((t) => t.id !== task.id));
+          setEvents((prev) => prev.filter((e) => e.task_id !== task.id));
+        },
       );
       if (tpl.links.length > 0) {
         setTaskLinks((prev) => [
