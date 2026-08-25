@@ -1,6 +1,6 @@
 "use client";
 
-import { ListChecks, Repeat } from "lucide-react";
+import { ListChecks, Repeat, Split } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
@@ -60,6 +60,7 @@ export function CardVisual({
       <div className="mt-2 flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1.5">
           <DueChip iso={task.due_date} status={task.status} />
+          <LavoroPadreChip task={task} />
           <ChecklistChip task={task} />
           {task.repeat !== "none" ? (
             <Repeat
@@ -82,6 +83,24 @@ export function CardVisual({
 }
 
 /** Avanzamento checklist («2/4»), verde quando completa. */
+/** Etichetta del lavoro padre: un pezzo sulla board deve dire di cosa fa
+ *  parte, altrimenti «Montaggio» da solo non significa niente. */
+function LavoroPadreChip({ task }: { task: Task }) {
+  const { tasks } = useAppStore();
+  if (!task.parent_id) return null;
+  const padre = tasks.find((t) => t.id === task.parent_id);
+  if (!padre) return null;
+  return (
+    <span
+      title={`Pezzo di «${padre.title}»`}
+      className="inline-flex min-w-0 max-w-[9rem] items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-ink-muted"
+    >
+      <Split aria-hidden className="size-2.5 shrink-0" />
+      <span className="truncate">{padre.title}</span>
+    </span>
+  );
+}
+
 export function ChecklistChip({ task }: { task: Task }) {
   const items = task.checklist ?? [];
   if (items.length === 0) return null;

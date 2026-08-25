@@ -76,8 +76,16 @@ export function buildAnalytics(
   const to = range?.to ?? today;
   const rangeDays = Math.max(1, diffIsoDays(from, to) + 1);
 
+  /* Un lavoro diviso in pezzi è coordinamento, non esecuzione: contarlo
+     insieme ai suoi pezzi raddoppierebbe il carico di chi lo guida e
+     gonfierebbe i completamenti. Restano i pezzi, che sono il lavoro vero. */
+  const contenitori = new Set(
+    tasks.filter((t) => t.parent_id).map((t) => t.parent_id),
+  );
+  const rilevanti = tasks.filter((t) => !contenitori.has(t.id));
+
   /* Snapshot operativo: gli archiviati restano fuori (sono storia). */
-  const operational = tasks.filter((t) => !t.archived_at);
+  const operational = rilevanti.filter((t) => !t.archived_at);
   const open = operational.filter((t) => t.status !== "done");
   const overdue = open.filter((t) => t.due_date && t.due_date < today);
   const inReview = open.filter((t) => t.status === "in_review");
@@ -86,7 +94,7 @@ export function buildAnalytics(
   const completedDay = (t: Task) =>
     t.status === "done" && t.completed_at ? t.completed_at.slice(0, 10) : null;
   const doneBetween = (a: string, b: string) =>
-    tasks.filter((t) => {
+    rilevanti.filter((t) => {
       const d = completedDay(t);
       return d !== null && d >= a && d <= b;
     });
@@ -97,7 +105,7 @@ export function buildAnalytics(
   const prevTo = shiftIsoDays(from, -1);
   const doneInRangeDelta = doneInRange - doneBetween(prevFrom, prevTo).length;
 
-  const createdInRange = tasks.filter((t) => {
+  const createdInRange = rilevanti.filter((t) => {
     const d = t.created_at.slice(0, 10);
     return d >= from && d <= to;
   }).length;
@@ -112,7 +120,7 @@ export function buildAnalytics(
 
   /* Trend: un punto per giorno del periodo (tetto di sicurezza a 366). */
   const byDay = new Map<string, number>();
-  for (const t of tasks) {
+  for (const t of rilevanti) {
     const d = completedDay(t);
     if (d) byDay.set(d, (byDay.get(d) ?? 0) + 1);
   }

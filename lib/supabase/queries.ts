@@ -1066,6 +1066,7 @@ interface TaskRow {
   repeat: string;
   template_id: string | null;
   batch_id: string | null;
+  parent_id: string | null;
   problem_reason: string | null;
   problem_since: string | null;
   archived_at: string | null;
@@ -1075,7 +1076,7 @@ interface TaskRow {
 
 const TASK_COLUMNS =
   "id, title, description, status, priority, owner_id, created_by, project_id, " +
-  "due_date, position, repeat, template_id, batch_id, problem_reason, " +
+  "due_date, position, repeat, template_id, batch_id, parent_id, problem_reason, " +
   "problem_since, archived_at, completed_at, created_at";
 
 function toTask(row: TaskRow): Task {
@@ -1093,6 +1094,7 @@ function toTask(row: TaskRow): Task {
     repeat: row.repeat as Task["repeat"],
     template_id: row.template_id,
     batch_id: row.batch_id,
+    parent_id: row.parent_id,
     problem_reason: row.problem_reason,
     problem_since: row.problem_since,
     archived_at: row.archived_at,
@@ -1132,6 +1134,7 @@ export async function insertTask(
     repeat: task.repeat,
     template_id: task.template_id,
     batch_id: task.batch_id,
+    parent_id: task.parent_id ?? null,
   });
   if (error) throw error;
 }

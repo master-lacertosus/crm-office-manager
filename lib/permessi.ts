@@ -19,6 +19,8 @@ export interface TaskMinimo {
   owner_id: string;
   created_by: string;
   collaborators?: string[];
+  /** Lavoro padre: chi lo guida governa anche i suoi pezzi. */
+  parent_id?: string | null;
 }
 
 /** I responsabili del workspace: approvano, decidono, governano. */
@@ -28,19 +30,36 @@ export function eResponsabile(utente: UtenteMinimo): boolean {
 
 /**
  * Un task lo lavora chi ne risponde: il responsabile, chi l'ha creato, i
- * collaboratori. Gli altri leggono e commentano.
- * Specchio di `public.puo_modificare_task()` in M9.
+ * collaboratori — e il referente del lavoro padre, perché chi guida un
+ * lavoro deve poterne organizzare i pezzi.
+ * Specchio di `public.puo_modificare_task()` (M9, esteso da M10).
  */
 export function puoModificareTask(
   task: TaskMinimo,
   utente: UtenteMinimo,
+  /** Il lavoro padre, quando il task è un pezzo. */
+  padre?: TaskMinimo | null,
 ): boolean {
   if (eResponsabile(utente)) return true;
   return (
     task.owner_id === utente.id ||
     task.created_by === utente.id ||
-    (task.collaborators ?? []).includes(utente.id)
+    (task.collaborators ?? []).includes(utente.id) ||
+    padre?.owner_id === utente.id
   );
+}
+
+/**
+ * Chi può aggiungere un pezzo a un lavoro e affidarlo a un collega: i
+ * responsabili sempre, il referente del lavoro dentro il proprio perimetro.
+ * Assegnare lavoro fuori da qui resta un atto di governo, e per proporlo
+ * ci sono le Richieste.
+ */
+export function puoAggiungereSottoTask(
+  padre: TaskMinimo,
+  utente: UtenteMinimo,
+): boolean {
+  return eResponsabile(utente) || padre.owner_id === utente.id;
 }
 
 /** Assegnare lavoro ad altri è dei responsabili: per proporlo ci sono le

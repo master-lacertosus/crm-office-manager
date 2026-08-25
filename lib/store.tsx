@@ -133,6 +133,7 @@ type NewTask = Pick<Task, "title" | "owner_id"> &
       | "due_date"
       | "repeat"
       | "template_id"
+      | "parent_id"
     >
   >;
 
@@ -853,7 +854,11 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         // Solo ciò che questa persona può davvero scrivere: archiviare il
         // task di un altro verrebbe respinto dal database, e l'unico effetto
         // sarebbe un avviso di errore a ogni avvio.
-        puoModificareTask(t, io),
+        puoModificareTask(
+          t,
+          io,
+          t.parent_id ? (tasks.find((p) => p.id === t.parent_id) ?? null) : null,
+        ),
     );
     if (stale.length === 0) return;
     queueMicrotask(() => {
@@ -1067,6 +1072,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         position: Date.now(),
         repeat: input.repeat ?? "none",
         template_id: input.template_id ?? null,
+        parent_id: input.parent_id ?? null,
         completed_at: null,
         created_at: new Date().toISOString(),
       };
