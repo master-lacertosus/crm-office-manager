@@ -1823,6 +1823,17 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           ...prev,
           ...created.map((t) => makeEvent(t.id, currentUser.id, "created")),
         ]);
+        /* Senza questa scrittura le fasi restavano solo in memoria: sparivano
+           al ricaricamento e gli altri non le vedevano mai. Tutte le altre
+           creazioni passavano di qui, questa no. */
+        const nati = new Set(created.map((t) => t.id));
+        scriviCon(
+          async () => {
+            const supabase = createClient();
+            for (const t of created) await insertTask(supabase, t);
+          },
+          () => setTasks((prev) => prev.filter((t) => !nati.has(t.id))),
+        );
         return created;
       }
 
@@ -1852,6 +1863,18 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         makeEvent(task.id, currentUser.id, "created"),
       ]);
+      scriviCon(
+        async () => {
+          const supabase = createClient();
+          await insertTask(supabase, task);
+          // Le spunte stanno in tabella a parte: vanno scritte una per una.
+          const voci = task.checklist ?? [];
+          for (let i = 0; i < voci.length; i++) {
+            await insertChecklistItem(supabase, task.id, voci[i], i);
+          }
+        },
+        () => setTasks((prev) => prev.filter((t) => t.id !== task.id)),
+      );
       if (tpl.links.length > 0) {
         setTaskLinks((prev) => [
           ...prev,

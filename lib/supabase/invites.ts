@@ -89,7 +89,7 @@ export async function resendPasswordLink(
   const supabase = await createClient();
   const origine = await origineDelSito();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origine}/auth/confirm?next=/auth/imposta-password`,
+    redirectTo: `${origine}/auth/conferma?next=/auth/imposta-password`,
   });
 
   if (error) {
@@ -147,7 +147,7 @@ export async function inviteMember(
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { full_name: fullName, title: title || null },
-    redirectTo: `${origine}/auth/confirm?next=/auth/imposta-password`,
+    redirectTo: `${origine}/auth/conferma?next=/auth/imposta-password`,
   });
 
   if (error) {

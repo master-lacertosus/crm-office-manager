@@ -32,6 +32,48 @@ versioni (fase pre-1.0).
   conservandone la storia resta l'archivio. (#24)
 
 ### Modificato
+- **Il Capo esce di scena.** L'apparizione del Cavaliere è sospesa su
+  richiesta: per ora non compare a nessuno, non risponde all'evocazione e
+  non viene più annunciata dal tour. Non è cancellata — un interruttore in
+  cima al componente la riporta in scena quando si vuole. (#32)
+
+### Corretto
+- **Creare un task non diceva se fosse andata bene.** Il task nasceva
+  davvero, ma niente lo confermava: nessun messaggio, nessuna spunta, e il
+  pannello restava identico a prima — cambiava solo l'etichetta del
+  pulsante. Sembrava che il salvataggio fosse fallito. Ora compare il
+  messaggio «*Titolo* creato» e il dettaglio nasce con la spunta «Creato»,
+  mentre il pannello resta aperto sul task appena nato, dove si aggiungono
+  checklist, allegati e commenti. (#27)
+- **La scadenza scelta dal calendario non resta appesa all'URL.** Creando
+  un task dal «+» di un giorno, il parametro `?due=` sopravviveva alla
+  creazione e alla chiusura del pannello, e poteva ricomparire
+  precompilato in un task creato dopo. (#27)
+- **Gli inviti arrivavano già scaduti.** Chi veniva invitato apriva
+  l'email e leggeva che il link era scaduto: per entrare doveva passare da
+  «Password dimenticata». I link valgono una volta sola e i filtri antivirus
+  delle caselle aziendali li aprono da soli per controllarli, consumandoli
+  prima della persona. Ora il link porta a una pagina con un pulsante e il
+  token si spende solo premendolo; se è comunque bruciato, si torna
+  all'accesso con il recupero già aperto e il motivo spiegato — prima quel
+  messaggio veniva costruito e poi buttato via, e si vedeva un login muto.
+  La configurazione del dashboard sta in `docs/AUTH_SETUP.md`. (#30)
+- **Template a più mani: fasi con responsabili diversi e avanzamento.** Un
+  processo come «Creazione prodotto» sono testi, foto, caricamento,
+  controllo: mani diverse, in ordine. Il template poteva già creare più task
+  collegati, ma la cosa era sepolta sotto «pacchetto multi-task» e, una volta
+  lanciata, il processo spariva. Ora l'editor parla di **fasi** numerate e
+  riordinabili, ognuna col suo responsabile, e la scheda mostra il quadro
+  d'insieme: tutte le fasi con stato e responsabile, la propria in evidenza,
+  barra di avanzamento, blocchi segnalati e «adesso tocca a…». Ogni fase
+  resta un task con un solo responsabile, così compare nella sua board e nel
+  suo carico. Nessuna migrazione. (#31)
+### Corretto
+- **I task creati da un template non arrivavano mai al database.** Era
+  l'unica creazione che non scriveva: le attività lanciate da un template —
+  processi compresi — restavano in memoria, sparivano al ricaricamento e i
+  colleghi non le vedevano. Con la checklist del template si perdevano anche
+  le spunte. (#31)
 - **Responsabili e dipendenti.** Il workspace aveva un modello di piena
   trasparenza: ogni membro attivo poteva modificare qualunque cosa. Ora i
   responsabili governano (approvano, assegnano, creano progetti, lanciano
