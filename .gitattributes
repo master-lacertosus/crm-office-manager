@@ -1,0 +1,30 @@
+# Le fini riga le decide il repository, non il sistema operativo di chi
+# scrive.
+#
+# Perche' e' scritto qui, e non lasciato al caso: due file — board.tsx e
+# task-panel.tsx — erano finiti nel repository con le righe terminate CRLF
+# mentre tutto il resto stava a LF. Per git ogni singola riga risultava
+# diversa dalla corrispondente sull'altro ramo, quindi la fusione non
+# trovava un solo punto in comune: invece di fondere, ha prodotto un file
+# che conteneva tutte e due le versioni una dopo l'altra — 2944 righe al
+# posto di 1474, con il pannello dei task disegnato due volte.
+#
+# Il guaio e' che quel file era codice sintatticamente valido: build, lint
+# e typecheck passavano tutti. Se ne e' accorto solo chi contava quante
+# volte comparivano i componenti.
+#
+# text=auto  git riconosce da solo cosa e' testo e cosa no.
+# eol=lf     nel repository si scrive LF, sempre. Sul disco di Windows la
+#            copia di lavoro puo' restare CRLF se core.autocrlf lo vuole:
+#            e' la copia archiviata che deve essere una sola.
+* text=auto eol=lf
+
+# I binari non si toccano: una conversione di fine riga li corromperebbe.
+*.png binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
