@@ -65,6 +65,14 @@ versioni (fase pre-1.0).
   cima al componente la riporta in scena quando si vuole. (#32)
 
 ### Corretto
+- **Lo zoom-dezoom a ogni ricaricamento.** La densità scelta in Impostazioni
+  rimappa `--spacing`, che in Tailwind è l’unità da cui discende ogni misura:
+  cambiarla riscala l’interfaccia intera, del 9% fra «compatto» e «comodo».
+  Veniva applicata da un effetto React, cioè dopo che il browser aveva già
+  dipinto tutto alla misura predefinita. Ora un piccolo script nel `<head>`
+  la applica prima del primo disegno: il primo fotogramma è già quello
+  giusto, e non c’è più nessun salto da smorzare. Lo stesso vale per
+  l’accento, che per un istante restava arancione. (#41)
 - **L’errore sul salvataggio mostrava il sintomo, non la causa.** Quando il
   database rifiuta un task, la sua voce di cronologia partiva lo stesso e
   veniva respinta a sua volta perché puntava a una riga inesistente. Quel

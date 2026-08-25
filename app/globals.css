@@ -213,6 +213,85 @@
 }
 
 /*
+ * Accento interfaccia (Impostazioni > Aspetto).
+ *
+ * Sta qui, e non in JavaScript, perche' l'accento va applicato prima del
+ * primo disegno: lo script inline nel <head> scrive solo l'attributo, e i
+ * colori li trova gia' pronti. Prima venivano scritti a mano sul documento
+ * dopo l'idratazione, e per un istante si vedeva l'arancio predefinito.
+ *
+ * Generato da scripts/genera-accenti-css.mjs: le tavolozze restano in
+ * lib/preferences.tsx, che e' l'unica fonte.
+ *
+ * L'arancio non compare: e' il predefinito e vince :root, senza attributo.
+ */
+[data-accent="blue"] {
+  --brand-50: #eff6ff;
+  --brand-100: #dbeafe;
+  --brand-200: #bfdbfe;
+  --brand-300: #93c5fd;
+  --brand-400: #60a5fa;
+  --brand-500: #3b82f6;
+  --brand-550: #3178f0;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+  --brand-800: #1e40af;
+  --brand-900: #1e3a8a;
+}
+[data-accent="indigo"] {
+  --brand-50: #eef2ff;
+  --brand-100: #e0e7ff;
+  --brand-200: #c7d2fe;
+  --brand-300: #a5b4fc;
+  --brand-400: #818cf8;
+  --brand-500: #6366f1;
+  --brand-550: #5457ee;
+  --brand-600: #4f46e5;
+  --brand-700: #4338ca;
+  --brand-800: #3730a3;
+  --brand-900: #312e81;
+}
+[data-accent="emerald"] {
+  --brand-50: #ecfdf5;
+  --brand-100: #d1fae5;
+  --brand-200: #a7f3d0;
+  --brand-300: #6ee7b7;
+  --brand-400: #34d399;
+  --brand-500: #10b981;
+  --brand-550: #0ca678;
+  --brand-600: #059669;
+  --brand-700: #047857;
+  --brand-800: #065f46;
+  --brand-900: #064e3b;
+}
+[data-accent="rose"] {
+  --brand-50: #fff1f2;
+  --brand-100: #ffe4e6;
+  --brand-200: #fecdd3;
+  --brand-300: #fda4af;
+  --brand-400: #fb7185;
+  --brand-500: #f43f5e;
+  --brand-550: #ea3457;
+  --brand-600: #e11d48;
+  --brand-700: #be123c;
+  --brand-800: #9f1239;
+  --brand-900: #881337;
+}
+[data-accent="slate"] {
+  --brand-50: #f8fafc;
+  --brand-100: #f1f5f9;
+  --brand-200: #e2e8f0;
+  --brand-300: #cbd5e1;
+  --brand-400: #94a3b8;
+  --brand-500: #64748b;
+  --brand-550: #566072;
+  --brand-600: #475569;
+  --brand-700: #334155;
+  --brand-800: #1e293b;
+  --brand-900: #0f172a;
+}
+
+/*
  * Densità interfaccia (Impostazioni › Aspetto). Tailwind v4 deriva ogni
  * spaziatura da --spacing: rimappandolo si riscala l'intera UI in modo
  * coerente. «Comodo» è il default (0.25rem) e non porta attributo.
