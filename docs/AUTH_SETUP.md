@@ -67,30 +67,39 @@ Expiration**.
 
 ## 3. Indirizzi di ritorno
 
-> **Prima di compilare, prendi l'indirizzo vero.** Vercel → il progetto →
-> **Domains**: quello marcato *Production* è il valore da usare, copiato
-> esattamente com'è. Non inventarlo e non dedurlo dal nome dell'azienda:
-> qui sotto `TUO-DOMINIO` è un segnaposto, non un esempio da ricopiare.
->
-> Sbagliare questo campo non dà nessun errore visibile: le email partono,
-> arrivano, e il link dentro punta a un indirizzo che non esiste. Chi ci
-> clicca vede una pagina che non si apre — indistinguibile da un invito
-> scaduto. È il motivo per cui vale la pena copiare invece di scrivere.
+**Il dominio di produzione, oggi, è `https://lct-ufficio.vercel.app`.**
+Verificato: risponde l'app, `/auth/conferma` è raggiungibile e non c'è
+Deployment Protection di mezzo.
+
+Se un giorno passa a un dominio proprio, il valore da usare è quello che
+Vercel → il progetto → **Domains** marca *Production*, copiato com'è. Non
+dedurlo dal nome dell'azienda: sbagliare questo campo non dà nessun errore
+visibile — le email partono, arrivano, e il link dentro punta a un
+indirizzo che non esiste. Chi ci clicca vede una pagina che non si apre,
+indistinguibile da un invito scaduto.
 
 Dashboard → **Authentication › URL Configuration**:
 
-- **Site URL**: l'indirizzo di produzione, `https://TUO-DOMINIO`.
+- **Site URL**: `https://lct-ufficio.vercel.app`
   È la base di `{{ .SiteURL }}` nei template: tutti i link delle email
   nascono da qui.
-- **Redirect URLs**: lo stesso dominio con il jolly,
-  `https://TUO-DOMINIO/**` e, se si prova dalle anteprime Vercel,
-  `https://*.vercel.app/**`.
+- **Redirect URLs**: `https://lct-ufficio.vercel.app/**` e, per provare
+  dalle anteprime, `https://*.vercel.app/**`.
 
-Controprova in dieci secondi: apri `https://TUO-DOMINIO/auth/conferma` in
-una scheda. Deve rispondere la pagina dell'app — se compare un login di
-Vercel, quel dominio ha la **Deployment Protection** attiva e nessun
+Il secondo non è un di più: se l'indirizzo di ritorno non è nella lista,
+Supabase lo scarta in silenzio e rimanda alla Site URL. Il link funziona
+lo stesso, ma porta alla pagina sbagliata.
+
+Controprova in dieci secondi: apri `https://lct-ufficio.vercel.app/auth/conferma`
+in una scheda. Deve rispondere la pagina dell'app — se compare un login di
+**Vercel**, quel dominio ha la Deployment Protection attiva e nessun
 invitato riuscirà a passare; va tolta per la produzione (Vercel → Settings
 › Deployment Protection).
+
+Nota su come l'app costruisce il link: l'indirizzo di ritorno lo ricava
+dalla richiesta in corso (`host`), non da una variabile d'ambiente. Quindi
+un invito mandato mentre si naviga su un'anteprima punta all'anteprima —
+per il team, gli inviti si mandano dal dominio di produzione.
 
 ## 4. Se si usa un SMTP proprio
 

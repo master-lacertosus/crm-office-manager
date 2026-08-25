@@ -59,6 +59,10 @@ versioni (fase pre-1.0).
   tabelle del workspace). (#29)
 
 ### Modificato
+- **`docs/AUTH_SETUP.md` ora dice il dominio vero**: `lct-ufficio.vercel.app`,
+  verificato — risponde l’app, `/auth/conferma` è raggiungibile, nessuna
+  Deployment Protection di mezzo. Con i due valori esatti da incollare in
+  Supabase e il motivo per cui servono entrambi. (#46)
 - **`docs/AUTH_SETUP.md`: via il dominio d’esempio.** Il documento usava
   `crm.lacertosus.com` come esempio di **Site URL**, ma quel dominio non
   esiste: copiato alla lettera manda ogni invito verso il vuoto, e a chi lo
