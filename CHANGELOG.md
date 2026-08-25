@@ -34,6 +34,15 @@ versioni (fase pre-1.0).
   conferma esplicita e senza annulla, perche spariscono anche commenti,
   cronologia, checklist e allegati. Per togliere un task dalla board
   conservandone la storia resta l'archivio. (#24)
+- **La board si aggiorna da sola quando lavora qualcun altro.** I task
+  inseriti o spostati dai colleghi comparivano solo ricaricando la pagina:
+  chi non ricaricava guardava una fotografia vecchia senza saperlo, e
+  finiva per assegnare due volte lo stesso lavoro. Ora un canale in tempo
+  reale annuncia il cambiamento, i dati si rileggono da soli e un avviso
+  dice perché la board si è mossa («Nuovo task da Marco»). Mai durante una
+  scrittura in corso, mai a scheda nascosta; se il canale non si apre resta
+  un controllo periodico. Serve la migrazione **M8** (attiva Realtime sulle
+  tabelle del workspace). (#29)
 
 ### Modificato
 - **Il Capo esce di scena.** L'apparizione del Cavaliere è sospesa su
