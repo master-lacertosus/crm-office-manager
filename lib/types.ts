@@ -36,16 +36,73 @@ export type TaskPriority = "low" | "normal" | "high";
 
 /** Ricorrenza "furba": al completamento il task si ricrea con la scadenza
  *  spostata avanti. Niente motore di ricorrenza completo (per scelta). */
-export type TaskRepeat = "none" | "weekly" | "biweekly" | "monthly";
+export type TaskRepeat =
+  | "none"
+  | "daily"
+  | "weekdays"
+  | "every_other_day"
+  | "weekly"
+  | "biweekly"
+  | "monthly"
+  | "quarterly"
+  | "yearly";
 
-/** Etichette e salto di scadenza per ogni ricorrenza. */
+/**
+ * Salto della scadenza a ogni giro. «weekday» non ha un passo fisso: cade
+ * sempre sul primo giorno feriale successivo, così un impegno quotidiano
+ * d'ufficio non si ripresenta di sabato.
+ */
+export type RepeatStep =
+  | { unit: "day"; every: number }
+  | { unit: "weekday" }
+  | { unit: "month"; every: number };
+
+/** Etichette e salto di scadenza, nell'ordine del menu: dalla cadenza più
+ *  fitta alla più rara. */
 export const REPEAT_META: Record<
   Exclude<TaskRepeat, "none">,
-  { label: string; phrase: string; days: number | "month" }
+  { label: string; phrase: string; step: RepeatStep }
 > = {
-  weekly: { label: "Settimanale", phrase: "una settimana", days: 7 },
-  biweekly: { label: "Ogni 2 settimane", phrase: "due settimane", days: 14 },
-  monthly: { label: "Mensile", phrase: "un mese", days: "month" },
+  daily: {
+    label: "Ogni giorno",
+    phrase: "un giorno",
+    step: { unit: "day", every: 1 },
+  },
+  weekdays: {
+    label: "Ogni giorno feriale",
+    phrase: "un giorno feriale",
+    step: { unit: "weekday" },
+  },
+  every_other_day: {
+    label: "A giorni alterni",
+    phrase: "due giorni",
+    step: { unit: "day", every: 2 },
+  },
+  weekly: {
+    label: "Ogni settimana",
+    phrase: "una settimana",
+    step: { unit: "day", every: 7 },
+  },
+  biweekly: {
+    label: "Ogni 2 settimane",
+    phrase: "due settimane",
+    step: { unit: "day", every: 14 },
+  },
+  monthly: {
+    label: "Ogni mese",
+    phrase: "un mese",
+    step: { unit: "month", every: 1 },
+  },
+  quarterly: {
+    label: "Ogni 3 mesi",
+    phrase: "tre mesi",
+    step: { unit: "month", every: 3 },
+  },
+  yearly: {
+    label: "Ogni anno",
+    phrase: "un anno",
+    step: { unit: "month", every: 12 },
+  },
 };
 
 export type Role = "admin" | "member";

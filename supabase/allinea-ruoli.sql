@@ -1,23 +1,27 @@
 -- =============================================================================
--- ALLINEA I RUOLI — promuove i responsabili e riporta gli altri a dipendenti.
+-- ALLINEA I RUOLI -- promuove i responsabili e riporta gli altri a dipendenti.
 --
--- Da eseguire quando `supabase/audit-ruoli.sql` mostra qualcuno di troppo (o
+-- Da eseguire quando supabase/audit-ruoli.sql mostra qualcuno di troppo (o
 -- qualcuno che manca) fra i responsabili.
 --
 -- COME SI USA:
---   1. sostituire le due email qui sotto, alla riga marcata «← QUI»;
---   2. incollare tutto nel dashboard Supabase › SQL Editor ed eseguire.
--- Non c'è nient'altro da toccare: niente righe da scommentare.
+--   1. controlla le due email qui sotto, alla riga marcata QUI;
+--   2. incolla tutto nel dashboard Supabase > SQL Editor ed esegui.
+-- Non c'e' nient'altro da toccare: niente righe da scommentare.
 --
 -- Sicurezza: se una delle email non corrisponde a nessun profilo, il file si
 -- ferma PRIMA di cambiare qualsiasi cosa e lo dice. Le invarianti del
 -- database restano attive anche da qui: non si resta mai senza responsabili.
+--
+-- NOTA: questo file e' scritto in ASCII puro, senza accenti ne' simboli.
+-- Non e' pigrizia: passa da un copia-e-incolla dentro un browser, e i
+-- caratteri fuori dall'ASCII sono la prima cosa che si rovina per strada.
 -- =============================================================================
 
 do $$
 declare
-  -- ↓ ← QUI: le email dei responsabili. Si prendono dalla colonna «email»
-  --          di audit-ruoli.sql, così non si sbaglia a scriverle.
+  -- QUI: le email dei responsabili. Si prendono dalla colonna "email" di
+  --      audit-ruoli.sql, cosi' non si sbaglia a scriverle.
   responsabili text[] := array[
     'francesco@lacertosus.com',
     'sara@lacertosus.com'
@@ -41,7 +45,7 @@ begin
       array_to_string(mancanti, ', ');
   end if;
 
-  -- 2. Prima si promuove: se si partisse dal declassamento, a metà strada il
+  -- 2. Prima si promuove: se si partisse dal declassamento, a meta' strada il
   --    workspace potrebbe restare senza responsabili e il database
   --    rifiuterebbe l'operazione.
   update public.profiles
@@ -54,7 +58,7 @@ begin
   update public.profiles
   set role = 'member'
   where role = 'admin'
-    -- coalesce: un amministratore senza email non e fra i due previsti,
+    -- coalesce: un amministratore senza email non e' fra i due previsti,
     -- e senza questo il confronto darebbe NULL e lo lascerebbe amministratore.
     and coalesce(lower(email), '') not in (
       select lower(x) from unnest(responsabili) as x

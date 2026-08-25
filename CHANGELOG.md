@@ -10,6 +10,20 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Un file solo per aggiornare il database.** `supabase/AGGIORNA-DATABASE.sql`
+  raccoglie M7, M8, M9 e M10 nell’ordine giusto: si apre il SQL Editor di
+  Supabase, si incolla, si preme Run. Niente da scommentare, niente da
+  modificare, e si può ridare due volte senza danno. (#37)
+- **Ricorrenze: da tre cadenze a otto.** Si potevano ripetere i task solo
+  ogni settimana, ogni 2 settimane o ogni mese: tutto ciò che in ufficio
+  si ripete ogni giorno andava ricreato a mano ogni mattina. Ora ci sono
+  anche **ogni giorno**, **ogni giorno feriale** (sabato e domenica
+  saltati), **a giorni alterni**, **ogni 3 mesi** e **ogni anno**. In più,
+  il giro successivo non nasce mai nel passato: completando in ritardo un
+  ricorrente la nuova scadenza saltava già scaduta, e con le cadenze fitte
+  l'arretrato si sarebbe accumulato a ogni giro. Serve la migrazione **M7**
+  (allarga i vincoli su `tasks.repeat` e `workspace_templates.repeat`;
+  nessun dato da convertire). (#28)
 - **Collaboratori sui task**: un task puo coinvolgere piu persone senza
   perdere il responsabile unico. I collaboratori compaiono sulla scheda e
   ricevono gli avvisi, ma **non contano nel carico di lavoro** — quello resta
@@ -37,6 +51,32 @@ versioni (fase pre-1.0).
   cima al componente la riporta in scena quando si vuole. (#32)
 
 ### Corretto
+- **I file SQL da incollare ora sono in ASCII puro.** `audit-ruoli.sql` si
+  fermava con un errore di sintassi: il file su disco è valido, ma stelle,
+  virgolette basse e accenti sono la prima cosa che si rovina passando per
+  gli appunti e un campo di testo dentro il browser. Tolti da `audit-ruoli.sql`,
+  `allinea-ruoli.sql` e dai commenti di `AGGIORNA-DATABASE.sql`; le migrazioni
+  sorgenti restano in italiano vero. `npm run verify:sql` ora lo pretende, e
+  distingue: dentro una stringa un carattere rovinato fa un glifo storto,
+  fuori ferma il database a metà lavoro. (#38)
+- **Una migrazione non sarebbe partita.** Due funzioni di M9 avevano il
+  delimitatore monco (`as $` invece di `as $$`): PostgreSQL si sarebbe
+  fermato a metà applicazione, lasciando il database mezzo cambiato. Né la
+  build né il typecheck guardano dentro i file .sql, quindi nessuno se ne
+  era accorto. Ora ogni .sql passa dal parser vero di PostgreSQL
+  (`npm run verify:sql`). (#37)
+- **«Modifica non salvata» mentre il task veniva salvato.** Creando un task,
+  la sua voce di cronologia partiva insieme al task invece che dopo: quando
+  arrivava per prima, il database la respingeva perche punta a una riga che
+  ancora non esisteva. Il task finiva salvato lo stesso — il pannello passava
+  al dettaglio con checklist e allegati — ma intanto compariva un avviso che
+  diceva il contrario. Ora le scritture escono in coda, nell ordine in cui
+  nascono. (#36)
+- **Gli errori dicono finalmente cosa e successo.** Il motivo del database
+  veniva sostituito da un generico «salvataggio non riuscito» ogni volta che
+  non arrivava nella forma attesa. Ora si legge la ragione vera, con il suo
+  codice: «chiave esterna» e «policy che nega» sono problemi opposti e vanno
+  distinti. (#36)
 - **Creare un task non diceva se fosse andata bene.** Il task nasceva
   davvero, ma niente lo confermava: nessun messaggio, nessuna spunta, e il
   pannello restava identico a prima — cambiava solo l'etichetta del
