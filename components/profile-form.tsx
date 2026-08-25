@@ -9,6 +9,7 @@ import {
   User,
 } from "lucide-react";
 
+import { messaggioErrore } from "@/lib/errori";
 import { AvatarError, fileToAvatarDataUrl } from "@/lib/avatar";
 import { useAppStore } from "@/lib/store";
 import { AvatarInitials } from "@/components/avatar-initials";
@@ -65,9 +66,16 @@ export function ProfileForm() {
     }
     setError(null);
     setSaving(true);
-    await updateProfile(currentUser.id, { full_name: name, title });
-    setSaving(false);
-    setSaved(true);
+    // Stesso motivo del pannello dei task: il pulsante è `disabled={saving}`,
+    // e senza il `finally` un errore lo lascerebbe spento per sempre.
+    try {
+      await updateProfile(currentUser.id, { full_name: name, title });
+      setSaved(true);
+    } catch (e) {
+      setError(messaggioErrore(e, "Salvataggio non riuscito."));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

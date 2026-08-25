@@ -79,6 +79,16 @@ versioni (fase pre-1.0).
   cima al componente la riporta in scena quando si vuole. (#32)
 
 ### Corretto
+- **«Salva modifiche» smetteva di rispondere.** Il pulsante è disabilitato
+  mentre salva, e il gestore lo riabilitava alla fine — ma senza `finally`.
+  Bastava un errore per non arrivarci mai: il pulsante restava spento per
+  sempre e ogni clic successivo non faceva niente, nemmeno un messaggio.
+  Sembrava che l’app ignorasse. Ora la riabilitazione avviene comunque, e
+  il motivo compare a schermo. Stessa correzione sul profilo. (#45)
+- **Gli errori nei componenti tornano leggibili.** Sette punti scartavano
+  il motivo vero perché controllavano `instanceof Error`, e gli errori di
+  Supabase non sono istanze di `Error`: finivano tutti nel ripiego. Erano
+  già stati corretti nello store, non nei componenti. (#45)
 - **Nessun task si poteva più creare: la policy si mordeva la coda.** Per
   permettere a un dipendente di appendere un pezzo a un lavoro di cui è
   referente, la policy di inserimento (M10) leggeva `tasks` con un `select`

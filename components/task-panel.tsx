@@ -35,6 +35,7 @@ import {
   CommentBody,
   DecisionBadge,
 } from "@/components/comment-bits";
+import { messaggioErrore } from "@/lib/errori";
 import { panel, scrim } from "@/lib/motion";
 import {
   puoAssegnareAdAltri,
@@ -425,24 +426,33 @@ function TaskForm({
       due_date: dueDate ? dueDate : null,
       repeat,
     };
-    if (task) {
-      const revert = await updateTask(task.id, patch);
-      setSaving(false);
-      setSaved("saved");
-      if (revert) {
-        const label = statuses.find((s) => s.key === status)?.label ?? status;
-        toast(`Task spostato in «${label}»`, {
-          action: { label: "Annulla", onClick: revert },
-        });
+    /* Il `finally` non è pignoleria: il pulsante è `disabled={saving}`, e
+       se un errore saltasse fuori qui in mezzo `saving` resterebbe acceso
+       per sempre. Il pulsante non tornerebbe più cliccabile e non direbbe
+       niente — si preme e non succede nulla, senza nemmeno un motivo da
+       leggere. È il modo peggiore di fallire: sembra che l'app ignori. */
+    try {
+      if (task) {
+        const revert = await updateTask(task.id, patch);
+        setSaved("saved");
+        if (revert) {
+          const label = statuses.find((s) => s.key === status)?.label ?? status;
+          toast(`Task spostato in «${label}»`, {
+            action: { label: "Annulla", onClick: revert },
+          });
+        }
+      } else {
+        const created = await createTask(patch);
+        toast(`«${created.title}» creato`);
+        justCreatedId = created.id;
+        // Il pannello resta aperto sul task appena nato: da qui si aggiungono
+        // checklist, allegati e commenti, che in creazione non esistono ancora.
+        updateSearch({ task: created.id, due: null }, { replace: true });
       }
-    } else {
-      const created = await createTask(patch);
+    } catch (e) {
+      setError(messaggioErrore(e, "Salvataggio non riuscito."));
+    } finally {
       setSaving(false);
-      toast(`«${created.title}» creato`);
-      justCreatedId = created.id;
-      // Il pannello resta aperto sul task appena nato: da qui si aggiungono
-      // checklist, allegati e commenti, che in creazione non esistono ancora.
-      updateSearch({ task: created.id, due: null }, { replace: true });
     }
   };
 
@@ -1054,11 +1064,7 @@ function DeleteTask({ task }: { task: Task }) {
       // Il pannello si chiude da solo: il task non esiste più e il suo
       // parametro nell'URL non trova nulla.
     } catch (e) {
-      toast(
-        e instanceof Error
-          ? `Non eliminato: ${e.message}`
-          : "Eliminazione non riuscita",
-      );
+      toast(`Non eliminato: ${messaggioErrore(e, "motivo non riportato")}`);
       setBusy(false);
       setConferma(false);
     }

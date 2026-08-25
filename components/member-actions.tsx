@@ -11,6 +11,7 @@ import {
   UserX,
 } from "lucide-react";
 
+import { messaggioErrore } from "@/lib/errori";
 import { useAppStore } from "@/lib/store";
 import {
   resendPasswordLink,
@@ -62,7 +63,7 @@ export function MemberActions({ profile }: { profile: Profile }) {
          «L'utente è responsabile di task aperti: riassegnarli prima di
          disattivarlo». Mostrarlo così com'è è meglio di qualunque
          riformulazione generica. */
-      setErrore(e instanceof Error ? e.message : "Operazione non riuscita.");
+      setErrore(messaggioErrore(e, "Operazione non riuscita."));
     } finally {
       setInCorso(null);
     }
