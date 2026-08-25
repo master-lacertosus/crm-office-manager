@@ -24,6 +24,16 @@ versioni (fase pre-1.0).
   l'arretrato si sarebbe accumulato a ogni giro. Serve la migrazione **M7**
   (allarga i vincoli su `tasks.repeat` e `workspace_templates.repeat`;
   nessun dato da convertire). (#28)
+- **Sotto-task: un lavoro, più mani, un nome su ogni pezzo.** «Video
+  prodotto X» non è un blocco solo: sono riprese, montaggio, testi,
+  caricamento. Ora un task può contenere pezzi, e ogni pezzo è un task vero
+  — con il suo responsabile, la sua scadenza, il suo stato — che compare
+  nella board e nel carico di chi lo esegue. Il padre resta il quadro
+  d'insieme, con un referente che risponde del risultato e una barra che
+  dice a che punto è. I pezzi li affida chi guida il lavoro, oltre ai
+  responsabili; sulla board portano l'etichetta del lavoro padre. Un lavoro
+  diviso non si conta più insieme ai suoi pezzi: il carico di chi coordina
+  sarebbe risultato doppio. Serve la migrazione **M10** (dopo M9). (#34)
 - **Collaboratori sui task**: un task puo coinvolgere piu persone senza
   perdere il responsabile unico. I collaboratori compaiono sulla scheda e
   ricevono gli avvisi, ma **non contano nel carico di lavoro** — quello resta

@@ -11,6 +11,7 @@
 
 import {
   eResponsabile,
+  puoAggiungereSottoTask,
   puoAssegnareAdAltri,
   puoGestireProgetti,
   puoLanciareTemplate,
@@ -92,6 +93,41 @@ check(
 check(
   "Nessun collaboratore: la lista assente non rompe la regola",
   !puoModificareTask({ owner_id: "a", created_by: "b" }, klea),
+);
+
+/* ---------- Sotto-task: i pezzi di un lavoro -------------------------- */
+const lavoro = { owner_id: "klea", created_by: "klea" };
+const pezzoDiLorenzo = {
+  owner_id: "lorenzo",
+  // Creato da un terzo: cosi l unica via per Klea e essere referente del lavoro.
+  created_by: "sara",
+  parent_id: "lavoro",
+};
+
+check(
+  "Chi guida il lavoro governa anche i pezzi affidati ad altri",
+  puoModificareTask(pezzoDiLorenzo, klea, lavoro),
+);
+check(
+  "Chi esegue il pezzo lo lavora",
+  puoModificareTask(pezzoDiLorenzo, lorenzo, lavoro),
+);
+check(
+  "Un estraneo resta fuori anche dai pezzi",
+  !puoModificareTask(pezzoDiLorenzo, { id: "riccardo", role: "member" }, lavoro),
+);
+check(
+  "Il referente del lavoro aggiunge pezzi e li affida",
+  puoAggiungereSottoTask(lavoro, klea) &&
+    puoAggiungereSottoTask(lavoro, francesco),
+);
+check(
+  "Chi non guida il lavoro non ne aggiunge pezzi",
+  !puoAggiungereSottoTask(lavoro, lorenzo),
+);
+check(
+  "Il permesso del padre vale solo se il padre c'è davvero",
+  !puoModificareTask(pezzoDiLorenzo, klea, null),
 );
 
 console.log(falliti === 0 ? "\nTUTTO VERDE" : `\n${falliti} CONTROLLI FALLITI`);

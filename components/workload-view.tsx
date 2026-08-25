@@ -20,7 +20,14 @@ export function WorkloadView() {
   const today = todayIso();
   const weekEnd = addDaysIso(7);
 
-  const open = tasks.filter((t) => t.status !== "done" && !t.archived_at);
+  /* I lavori divisi in pezzi non pesano sulle spalle di chi li coordina:
+     a pesare sono i pezzi, ognuno sulla persona che lo esegue. */
+  const contenitori = new Set(
+    tasks.filter((t) => t.parent_id).map((t) => t.parent_id),
+  );
+  const open = tasks.filter(
+    (t) => t.status !== "done" && !t.archived_at && !contenitori.has(t.id),
+  );
 
   const people = profiles
     .filter((p) => p.is_active)

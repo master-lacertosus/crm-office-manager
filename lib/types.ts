@@ -160,6 +160,9 @@ export interface Task {
   template_id?: string | null;
   /** Task creati insieme da un template «pacchetto» condividono il batch. */
   batch_id?: string | null;
+  /** Lavoro padre di cui questo è un pezzo (M10). NULL = lavoro principale.
+   *  Un solo livello: un sotto-task non ha sotto-task. */
+  parent_id?: string | null;
   /** Chi collabora, oltre al responsabile. Il responsabile resta uno solo
    *  (`owner_id`): questi affiancano, non rispondono del risultato — e per
    *  questo non contano nel carico di lavoro. */

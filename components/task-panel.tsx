@@ -51,6 +51,7 @@ import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { PriorityBadge } from "@/components/priority-badge";
 import { AvanzamentoProcesso } from "@/components/processo-avanzamento";
+import { SottoTask } from "@/components/sotto-task";
 import { StatusLabel } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
 import { cn } from "@/lib/utils";
@@ -345,6 +346,7 @@ function TaskForm({
   const {
     profiles,
     projects,
+    tasks,
     currentUser,
     createTask,
     updateTask,
@@ -380,7 +382,12 @@ function TaskForm({
   /* Un task lo lavora chi ne risponde. Sugli altri si legge e si commenta:
      mostrare campi che il database rifiuterebbe sarebbe una promessa falsa.
      In creazione il task è di chi lo sta scrivendo, quindi sempre sì. */
-  const modificabile = task ? puoModificareTask(task, currentUser) : true;
+  const padre = task?.parent_id
+    ? (tasks.find((t) => t.id === task.parent_id) ?? null)
+    : null;
+  const modificabile = task
+    ? puoModificareTask(task, currentUser, padre)
+    : true;
   const puoRiassegnare = puoAssegnareAdAltri(currentUser);
 
   const [saving, setSaving] = React.useState(false);
@@ -660,6 +667,7 @@ function TaskForm({
           </form>
           <div className="[&>section]:!px-0">
             {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
+            {task ? <SottoTask task={task} /> : null}
             {task ? <ChecklistSection task={task} /> : null}
             {children}
           </div>
@@ -691,6 +699,7 @@ function TaskForm({
         {task ? <TaskMeta task={task} /> : null}
       </form>
       {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
+      {task ? <SottoTask task={task} /> : null}
       {task ? <ChecklistSection task={task} /> : null}
       {children}
     </>

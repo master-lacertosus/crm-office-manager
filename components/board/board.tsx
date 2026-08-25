@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 import { updateSearch } from "@/lib/shallow-nav";
-import { puoModificareTask } from "@/lib/permessi";
+import { puoModificareTask } from "@/lib/permessi";
 import { MAX_CUSTOM_STATUSES, useAppStore } from "@/lib/store";
 import {
   CUSTOM_STATUS_PRESETS,
@@ -196,11 +196,21 @@ export function Board({ projectId }: { projectId?: string }) {
     byStatusRef.current = byStatus;
   }, [byStatus]);
 
+  /** Il lavoro padre, quando la scheda è un pezzo: serve al permesso. */
+  const tasksRef = React.useRef(tasks);
+  React.useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
+  const padreDi = (t: Task) =>
+    t.parent_id
+      ? (tasksRef.current.find((x) => x.id === t.parent_id) ?? null)
+      : null;
+
   const onCardPointerDown = (e: React.PointerEvent, task: Task) => {
     if (e.button !== 0 || e.pointerType === "touch") return;
     // Le schede altrui non si trascinano: lo spostamento sarebbe respinto
     // dal database, e la card tornerebbe indietro da sola.
-    if (!puoModificareTask(task, currentUser)) return;
+    if (!puoModificareTask(task, currentUser, padreDi(task))) return;
     const wrapper = e.currentTarget as HTMLElement;
     const rect = wrapper.getBoundingClientRect();
     const start = { x: e.clientX, y: e.clientY };
@@ -409,7 +419,10 @@ export function Board({ projectId }: { projectId?: string }) {
       if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
         if (!task) return;
         // Stessa regola del trascinamento: le schede altrui non si spostano.
-        if (!puoModificareTask(task, currentUser)) return;
+        const padre = task.parent_id
+          ? (tasksRef.current.find((x) => x.id === task.parent_id) ?? null)
+          : null;
+        if (!puoModificareTask(task, currentUser, padre)) return;
         const dir = e.key === "ArrowLeft" ? -1 : 1;
         let targetLane = pos.lane + dir;
         while (
