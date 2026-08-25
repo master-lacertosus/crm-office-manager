@@ -14,7 +14,6 @@ import {
   LoaderCircle,
   Maximize2,
   Minimize2,
-  Package,
   Plus,
   Quote,
   Trash2,
@@ -51,8 +50,8 @@ import { CollaboratorsSection } from "@/components/collaborators-section";
 import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { PriorityBadge } from "@/components/priority-badge";
-import { SearchLink } from "@/components/search-link";
-import { StatusLabel, StatusPip } from "@/components/status-pip";
+import { AvanzamentoProcesso } from "@/components/processo-avanzamento";
+import { StatusLabel } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -97,7 +96,7 @@ export function TaskPanelHost() {
   }, []);
 
   const close = React.useCallback(() => {
-    updateSearch({ task: null });
+    updateSearch({ task: null, due: null });
   }, []);
 
   React.useEffect(() => {
@@ -323,6 +322,16 @@ function PanelBody({
 /* Form del task (creazione e modifica)                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Ponte tra creazione e dettaglio: appena creato, il pannello si rimonta
+ * sull'id nuovo (`key={taskParam}`) e con lui sparirebbe ogni stato di
+ * conferma. L'id viaggia qui fuori per un istante, così il dettaglio nasce
+ * già con la spunta «Creato».
+ */
+let justCreatedId: string | null = null;
+
+type SaveKind = "created" | "saved" | null;
+
 function TaskForm({
   task,
   expanded,
@@ -375,12 +384,19 @@ function TaskForm({
   const puoRiassegnare = puoAssegnareAdAltri(currentUser);
 
   const [saving, setSaving] = React.useState(false);
-  const [saved, setSaved] = React.useState(false);
+  const [saved, setSaved] = React.useState<SaveKind>(() =>
+    task && justCreatedId === task.id ? "created" : null,
+  );
   const [error, setError] = React.useState<string | null>(null);
+
+  // Il ponte vale per un solo mount: consumato, si azzera.
+  React.useEffect(() => {
+    justCreatedId = null;
+  }, []);
 
   React.useEffect(() => {
     if (!saved) return;
-    const id = setTimeout(() => setSaved(false), 2500);
+    const id = setTimeout(() => setSaved(null), 2500);
     return () => clearTimeout(id);
   }, [saved]);
 
@@ -405,7 +421,7 @@ function TaskForm({
     if (task) {
       const revert = await updateTask(task.id, patch);
       setSaving(false);
-      setSaved(true);
+      setSaved("saved");
       if (revert) {
         const label = statuses.find((s) => s.key === status)?.label ?? status;
         toast(`Task spostato in «${label}»`, {
@@ -415,7 +431,11 @@ function TaskForm({
     } else {
       const created = await createTask(patch);
       setSaving(false);
-      updateSearch({ task: created.id }, { replace: true });
+      toast(`«${created.title}» creato`);
+      justCreatedId = created.id;
+      // Il pannello resta aperto sul task appena nato: da qui si aggiungono
+      // checklist, allegati e commenti, che in creazione non esistono ancora.
+      updateSearch({ task: created.id, due: null }, { replace: true });
     }
   };
 
@@ -506,7 +526,7 @@ function TaskForm({
           className="inline-flex items-center gap-1.5 rounded-lg bg-success-soft px-2.5 py-1 text-[13px] font-medium text-success-text"
         >
           <span className="size-1.5 rounded-full bg-success" />
-          Salvato
+          {saved === "created" ? "Creato" : "Salvato"}
         </span>
       ) : null}
     </div>
@@ -637,7 +657,9 @@ function TaskForm({
             {descriptionField}
           </form>
           <div className="[&>section]:!px-0">
-            {task ? <ChecklistSection task={task} /> : null}
+            {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
+            {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
+      {task ? <ChecklistSection task={task} /> : null}
             {children}
           </div>
         </div>
@@ -951,8 +973,6 @@ function TaskMeta({ task }: { task: Task }) {
 
       <CollaboratorsSection task={task} />
 
-      {task.batch_id ? <PackSiblings task={task} /> : null}
-
       <p className="font-mono text-xs text-ink-muted">
         Creato da {creator?.full_name ?? "—"}
       </p>
@@ -1081,44 +1101,6 @@ function DeleteTask({ task }: { task: Task }) {
   );
 }
 
-/** Task fratelli dello stesso pacchetto (template multi-task). */
-function PackSiblings({ task }: { task: Task }) {
-  const { tasks } = useAppStore();
-  const siblings = tasks
-    .filter((t) => t.batch_id === task.batch_id && t.id !== task.id)
-    .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""));
-  if (siblings.length === 0) return null;
-
-  return (
-    <div className="space-y-1 rounded-xl border border-border-soft bg-white p-2.5">
-      <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.05em] text-ink-secondary uppercase">
-        <Package className="size-3.5" />
-        Pacchetto · altri {siblings.length} task
-      </p>
-      <ul className="space-y-0.5">
-        {siblings.map((s) => (
-          <li key={s.id}>
-            <SearchLink
-              params={{ task: s.id }}
-              className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[13px] text-ink outline-none transition-colors hover:bg-accent/60 focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <StatusPip status={s.status} className="size-3" />
-              <span className="min-w-0 flex-1 truncate">{s.title}</span>
-              {s.due_date ? (
-                <span className="shrink-0 font-mono text-[11px] text-ink-muted">
-                  {formatDue(s.due_date)}
-                </span>
-              ) : null}
-            </SearchLink>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Allegati-link (fase senza Supabase Storage: si allegano URL)        */
 /* ------------------------------------------------------------------ */
 
 const IMAGE_RE = /\.(png|jpe?g|gif|webp|avif)(\?|$)/i;

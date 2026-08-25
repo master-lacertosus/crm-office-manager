@@ -192,7 +192,7 @@ export function RecurringPlanner() {
                   const cadenceLabel = isPack ? (
                     <span className="inline-flex items-center gap-1">
                       <Package className="size-3" strokeWidth={2} />
-                      Pacchetto · {tpl.pack?.length} task
+                      Processo · {tpl.pack?.length} fasi
                     </span>
                   ) : tpl.repeat !== "none" ? (
                     REPEAT_META[tpl.repeat].label

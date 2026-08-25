@@ -22,6 +22,58 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 
+/**
+ * Il POST arriva dalla pagina /auth/conferma: e li che il token si consuma
+ * davvero. Gli scanner antivirus delle caselle aziendali aprono i link con un
+ * GET e lo brucerebbero prima della persona; un modulo da inviare no.
+ */
+export async function POST(request: NextRequest) {
+  const modulo = await request.formData();
+  const tokenHash = String(modulo.get("token_hash") ?? "");
+  const type = String(modulo.get("type") ?? "") as EmailOtpType;
+  const destinazione = interna(String(modulo.get("next") ?? ""));
+
+  if (!tokenHash || !type) {
+    return vaiAlRecupero(request, "Link non valido: chiedine uno nuovo.", 303);
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({
+    type,
+    token_hash: tokenHash,
+  });
+
+  /* 303: dopo un POST il redirect deve diventare un GET, altrimenti il
+     browser riproverebbe a inviare il modulo alla pagina d'arrivo. */
+  if (!error) {
+    return NextResponse.redirect(new URL(destinazione, request.url), 303);
+  }
+  return vaiAlRecupero(request, messaggio(error.message), 303);
+}
+
+/** Percorso interno, o la pagina della password come ripiego. */
+function interna(valore: string): string {
+  return valore.startsWith("/") && !valore.startsWith("//")
+    ? valore
+    : "/auth/imposta-password";
+}
+
+/**
+ * Un link bruciato non deve essere un vicolo cieco: si torna all'accesso con
+ * il modulo di recupero gia aperto e il motivo spiegato, cosi chi e rimasto
+ * fuori si rimanda il link da solo.
+ */
+function vaiAlRecupero(
+  request: NextRequest,
+  spiegazione: string,
+  stato?: number,
+) {
+  const url = new URL("/login", request.url);
+  url.searchParams.set("recupero", "1");
+  url.searchParams.set("errore", spiegazione);
+  return NextResponse.redirect(url, stato);
+}
+
 export async function GET(request: NextRequest) {
   const parametri = request.nextUrl.searchParams;
   const tokenHash = parametri.get("token_hash");
@@ -47,12 +99,7 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(new URL(destinazione, request.url));
     }
-    return NextResponse.redirect(
-      new URL(
-        `/login?errore=${encodeURIComponent(messaggio(error.message))}`,
-        request.url,
-      ),
-    );
+    return vaiAlRecupero(request, messaggio(error.message));
   }
 
   if (code) {
@@ -60,12 +107,7 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(new URL(destinazione, request.url));
     }
-    return NextResponse.redirect(
-      new URL(
-        `/login?errore=${encodeURIComponent(messaggio(error.message))}`,
-        request.url,
-      ),
-    );
+    return vaiAlRecupero(request, messaggio(error.message));
   }
 
   /* Nessuno dei due: probabilmente il token è nel frammento dell'URL, che il
@@ -77,10 +119,10 @@ export async function GET(request: NextRequest) {
  *  qualcosa che si può leggere in una pagina di accesso. */
 function messaggio(originale: string): string {
   if (/expired/i.test(originale)) {
-    return "Il link è scaduto. Chiedi a un responsabile di rimandare l'invito.";
+    return "Il link è scaduto: qui sotto puoi fartene mandare uno nuovo.";
   }
   if (/already|used/i.test(originale)) {
-    return "Questo link è già stato usato. Prova ad accedere normalmente.";
+    return "Questo link era già stato usato. Se hai già una password accedi pure, altrimenti fattene mandare uno nuovo.";
   }
-  return "Link non valido. Chiedi a un responsabile di rimandare l'invito.";
+  return "Link non valido: qui sotto puoi fartene mandare uno nuovo.";
 }
