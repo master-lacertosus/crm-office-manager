@@ -44,6 +44,7 @@ const DA_INCOLLARE = [
   "supabase/audit-ruoli.sql",
   "supabase/allinea-ruoli.sql",
   "supabase/perche-non-salva.sql",
+  "supabase/migrations/20260825160000_m11_ricorsione.sql",
 ];
 
 /** Svuota le stringhe fra apici, lasciando spazi al loro posto: così le

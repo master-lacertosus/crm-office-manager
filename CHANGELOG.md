@@ -72,6 +72,14 @@ versioni (fase pre-1.0).
   cima al componente la riporta in scena quando si vuole. (#32)
 
 ### Corretto
+- **Nessun task si poteva più creare: la policy si mordeva la coda.** Per
+  permettere a un dipendente di appendere un pezzo a un lavoro di cui è
+  referente, la policy di inserimento (M10) leggeva `tasks` con un `select`
+  scritto in linea. Ma per leggere `tasks` PostgreSQL deve applicare le
+  policy di `tasks` — quelle che sta già valutando: ricorsione infinita
+  (`42P17`), e ogni creazione respinta, anche quelle senza padre. La
+  migrazione **M11** sposta la domanda in una funzione `security definer`,
+  che non ripassa dalle policy. Nuovo controllo `npm run verify:rls`. (#43)
 - **Lo zoom-dezoom a ogni ricaricamento.** La densità scelta in Impostazioni
   rimappa `--spacing`, che in Tailwind è l’unità da cui discende ogni misura:
   cambiarla riscala l’interfaccia intera, del 9% fra «compatto» e «comodo».
