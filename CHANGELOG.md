@@ -48,6 +48,22 @@ versioni (fase pre-1.0).
   all'accesso con il recupero già aperto e il motivo spiegato — prima quel
   messaggio veniva costruito e poi buttato via, e si vedeva un login muto.
   La configurazione del dashboard sta in `docs/AUTH_SETUP.md`. (#30)
+- **Template a più mani: fasi con responsabili diversi e avanzamento.** Un
+  processo come «Creazione prodotto» sono testi, foto, caricamento,
+  controllo: mani diverse, in ordine. Il template poteva già creare più task
+  collegati, ma la cosa era sepolta sotto «pacchetto multi-task» e, una volta
+  lanciata, il processo spariva. Ora l'editor parla di **fasi** numerate e
+  riordinabili, ognuna col suo responsabile, e la scheda mostra il quadro
+  d'insieme: tutte le fasi con stato e responsabile, la propria in evidenza,
+  barra di avanzamento, blocchi segnalati e «adesso tocca a…». Ogni fase
+  resta un task con un solo responsabile, così compare nella sua board e nel
+  suo carico. Nessuna migrazione. (#31)
+### Corretto
+- **I task creati da un template non arrivavano mai al database.** Era
+  l'unica creazione che non scriveva: le attività lanciate da un template —
+  processi compresi — restavano in memoria, sparivano al ricaricamento e i
+  colleghi non le vedevano. Con la checklist del template si perdevano anche
+  le spunte. (#31)
 - **Niente piu avvisi per decisioni mai avvenute.** Approvazioni, rifiuti e
   decisioni sulle ferie annunciavano l'esito prima di sapere se il database
   lo avesse accettato: quando lo rifiutava, la modifica tornava indietro ma
