@@ -21,7 +21,24 @@ versioni (fase pre-1.0).
   cronologia, checklist e allegati. Per togliere un task dalla board
   conservandone la storia resta l'archivio. (#24)
 
+### Modificato
+- **Il Capo esce di scena.** L'apparizione del Cavaliere è sospesa su
+  richiesta: per ora non compare a nessuno, non risponde all'evocazione e
+  non viene più annunciata dal tour. Non è cancellata — un interruttore in
+  cima al componente la riporta in scena quando si vuole. (#32)
+
 ### Corretto
+- **Creare un task non diceva se fosse andata bene.** Il task nasceva
+  davvero, ma niente lo confermava: nessun messaggio, nessuna spunta, e il
+  pannello restava identico a prima — cambiava solo l'etichetta del
+  pulsante. Sembrava che il salvataggio fosse fallito. Ora compare il
+  messaggio «*Titolo* creato» e il dettaglio nasce con la spunta «Creato»,
+  mentre il pannello resta aperto sul task appena nato, dove si aggiungono
+  checklist, allegati e commenti. (#27)
+- **La scadenza scelta dal calendario non resta appesa all'URL.** Creando
+  un task dal «+» di un giorno, il parametro `?due=` sopravviveva alla
+  creazione e alla chiusura del pannello, e poteva ricomparire
+  precompilato in un task creato dopo. (#27)
 - **Gli inviti arrivavano già scaduti.** Chi veniva invitato apriva
   l'email e leggeva che il link era scaduto: per entrare doveva passare da
   «Password dimenticata». I link valgono una volta sola e i filtri antivirus
