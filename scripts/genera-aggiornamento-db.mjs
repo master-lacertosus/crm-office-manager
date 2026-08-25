@@ -19,6 +19,7 @@ const MIGRAZIONI = [
   ["M8", "20260824140000_m8_realtime_workspace.sql", "La board si aggiorna da sola"],
   ["M9", "20260825120000_m9_permessi.sql", "Responsabili e dipendenti: il confine"],
   ["M10", "20260825140000_m10_sotto_task.sql", "Sotto-task: un lavoro, più mani"],
+  ["M11", "20260825160000_m11_ricorsione.sql", "La policy che si mordeva la coda"],
 ];
 
 const DIR = process.argv[2] ?? "supabase/migrations";
