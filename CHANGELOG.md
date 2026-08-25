@@ -59,6 +59,13 @@ versioni (fase pre-1.0).
   tabelle del workspace). (#29)
 
 ### Modificato
+- **`docs/AUTH_SETUP.md`: via il dominio d’esempio.** Il documento usava
+  `crm.lacertosus.com` come esempio di **Site URL**, ma quel dominio non
+  esiste: copiato alla lettera manda ogni invito verso il vuoto, e a chi lo
+  riceve sembra un link scaduto. Ora c’è un segnaposto che non si può
+  scambiare per un valore, l’indicazione di copiare l’indirizzo da Vercel ›
+  Domains, e una controprova per riconoscere la Deployment Protection, che
+  blocca gli invitati con un login di Vercel. (#44)
 - **Via i giudizi sul carico delle persone.** Nel «Polso del team» ogni
   collega portava un’etichetta — «Bilanciato», «Carico», «Sovraccarico» —
   decisa da soglie inventate: due task bilanciato, cinque sovraccarico. Un

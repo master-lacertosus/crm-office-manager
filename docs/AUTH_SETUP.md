@@ -67,13 +67,30 @@ Expiration**.
 
 ## 3. Indirizzi di ritorno
 
+> **Prima di compilare, prendi l'indirizzo vero.** Vercel → il progetto →
+> **Domains**: quello marcato *Production* è il valore da usare, copiato
+> esattamente com'è. Non inventarlo e non dedurlo dal nome dell'azienda:
+> qui sotto `TUO-DOMINIO` è un segnaposto, non un esempio da ricopiare.
+>
+> Sbagliare questo campo non dà nessun errore visibile: le email partono,
+> arrivano, e il link dentro punta a un indirizzo che non esiste. Chi ci
+> clicca vede una pagina che non si apre — indistinguibile da un invito
+> scaduto. È il motivo per cui vale la pena copiare invece di scrivere.
+
 Dashboard → **Authentication › URL Configuration**:
 
-- **Site URL**: l'indirizzo di produzione (es. `https://crm.lacertosus.com`).
-  È la base di `{{ .SiteURL }}` nei template.
-- **Redirect URLs**: aggiungere il dominio di produzione con il jolly
-  `https://crm.lacertosus.com/**` e, se si prova dalle anteprime Vercel,
+- **Site URL**: l'indirizzo di produzione, `https://TUO-DOMINIO`.
+  È la base di `{{ .SiteURL }}` nei template: tutti i link delle email
+  nascono da qui.
+- **Redirect URLs**: lo stesso dominio con il jolly,
+  `https://TUO-DOMINIO/**` e, se si prova dalle anteprime Vercel,
   `https://*.vercel.app/**`.
+
+Controprova in dieci secondi: apri `https://TUO-DOMINIO/auth/conferma` in
+una scheda. Deve rispondere la pagina dell'app — se compare un login di
+Vercel, quel dominio ha la **Deployment Protection** attiva e nessun
+invitato riuscirà a passare; va tolta per la produzione (Vercel → Settings
+› Deployment Protection).
 
 ## 4. Se si usa un SMTP proprio
 
@@ -97,7 +114,14 @@ per contare i clic e rompe i link di Supabase, che poi risultano non validi.
 
 1. Invita un indirizzo di prova (meglio se su una casella aziendale, dove gli
    scanner sono attivi).
-2. Apri l'email: il link deve puntare a `…/auth/conferma?token_hash=…`.
+2. Apri l'email e **guarda il link prima di cliccarlo**: deve puntare a
+   `…/auth/conferma?token_hash=…` sul dominio di produzione, quello vero.
+   Se il dominio è un altro, il problema è la **Site URL** del punto 3 e non
+   serve andare avanti — nessun clic funzionerà finché resta così.
 3. Aspetta qualche minuto — il tempo che gli scanner facciano il loro giro —
    poi clicca: deve comparire «Ci siamo quasi» e, dopo «Continua», la pagina
    della password.
+
+Se al passo 3 compare un login di **Vercel** invece della pagina dell'app, il
+token è a posto: è la Deployment Protection a fermare tutto, e va tolta per la
+produzione.
