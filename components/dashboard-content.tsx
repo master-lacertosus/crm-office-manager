@@ -537,22 +537,34 @@ export function DashboardContent() {
                 (t) =>
                   t.status !== "done" && t.due_date && t.due_date < today,
               ).length;
-              // Etichetta di carico spiegata (solo presentazione).
-              // L'assenza di oggi vince su tutto: chi è fuori è fuori.
+              /* Sotto il conteggio si scrive solo ciò che è vero.
+
+                 Qui prima comparivano «Bilanciato», «Carico»,
+                 «Sovraccarico», decisi da soglie inventate: due task
+                 bilanciato, cinque sovraccarico. Numeri senza fondamento —
+                 un montaggio video da due giorni conta uno esattamente
+                 come una mail da mandare — che davano a una supposizione
+                 l'aria di una misura. Chi legge la dashboard si fa un'idea
+                 del lavoro dei colleghi: quell'idea deve venire dai fatti.
+
+                 Restano l'assenza, che è registrata, e il ritardo, che si
+                 conta. Il carico lo dice già il numero di task aperti,
+                 senza bisogno che qualcuno lo giudichi. */
               const away = personLeaveOnDay(leaves, person.id, today);
-              const load = away
-                ? away.type === "ferie"
-                  ? { label: "In ferie", cls: "text-success-text" }
-                  : { label: "Permesso", cls: "text-info-text" }
+              const nota = away
+                ? {
+                    label: away.type === "ferie" ? "In ferie" : "Permesso",
+                    cls:
+                      away.type === "ferie"
+                        ? "text-success-text"
+                        : "text-info-text",
+                  }
                 : personLate > 0
-                  ? { label: "In ritardo", cls: "text-danger-text" }
-                  : personOpen === 0
-                    ? { label: "Disponibile", cls: "text-success-text" }
-                    : personOpen <= 2
-                      ? { label: "Bilanciato", cls: "text-ink-muted" }
-                      : personOpen <= 4
-                        ? { label: "Carico", cls: "text-warning-text" }
-                        : { label: "Sovraccarico", cls: "text-danger-text" };
+                  ? {
+                      label: `${personLate} in ritardo`,
+                      cls: "text-danger-text",
+                    }
+                  : null;
               return (
                 <li key={person.id}>
                   <Link
@@ -589,11 +601,16 @@ export function DashboardContent() {
                       <span className="block font-mono text-xs text-ink-muted">
                         {personOpen} aperti
                       </span>
-                      <span
-                        className={cn("block text-[10px] font-semibold", load.cls)}
-                      >
-                        {load.label}
-                      </span>
+                      {nota ? (
+                        <span
+                          className={cn(
+                            "block text-[10px] font-semibold",
+                            nota.cls,
+                          )}
+                        >
+                          {nota.label}
+                        </span>
+                      ) : null}
                     </span>
                   </Link>
                 </li>

@@ -59,6 +59,13 @@ versioni (fase pre-1.0).
   tabelle del workspace). (#29)
 
 ### Modificato
+- **Via i giudizi sul carico delle persone.** Nel «Polso del team» ogni
+  collega portava un’etichetta — «Bilanciato», «Carico», «Sovraccarico» —
+  decisa da soglie inventate: due task bilanciato, cinque sovraccarico. Un
+  montaggio video da due giorni contava esattamente come una mail da
+  mandare, e una supposizione prendeva l’aria di una misura. Restano i
+  fatti: quanti task aperti, quanti in ritardo, e chi è in ferie o in
+  permesso. (#42)
 - **Il Capo esce di scena.** L'apparizione del Cavaliere è sospesa su
   richiesta: per ora non compare a nessuno, non risponde all'evocazione e
   non viene più annunciata dal tour. Non è cancellata — un interruttore in
