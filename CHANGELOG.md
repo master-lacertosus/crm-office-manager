@@ -10,6 +10,10 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Un file solo per aggiornare il database.** `supabase/AGGIORNA-DATABASE.sql`
+  raccoglie M7, M8, M9 e M10 nell’ordine giusto: si apre il SQL Editor di
+  Supabase, si incolla, si preme Run. Niente da scommentare, niente da
+  modificare, e si può ridare due volte senza danno. (#37)
 - **Collaboratori sui task**: un task puo coinvolgere piu persone senza
   perdere il responsabile unico. I collaboratori compaiono sulla scheda e
   ricevono gli avvisi, ma **non contano nel carico di lavoro** — quello resta
@@ -28,6 +32,12 @@ versioni (fase pre-1.0).
   cima al componente la riporta in scena quando si vuole. (#32)
 
 ### Corretto
+- **Una migrazione non sarebbe partita.** Due funzioni di M9 avevano il
+  delimitatore monco (`as $` invece di `as $$`): PostgreSQL si sarebbe
+  fermato a metà applicazione, lasciando il database mezzo cambiato. Né la
+  build né il typecheck guardano dentro i file .sql, quindi nessuno se ne
+  era accorto. Ora ogni .sql passa dal parser vero di PostgreSQL
+  (`npm run verify:sql`). (#37)
 - **«Modifica non salvata» mentre il task veniva salvato.** Creando un task,
   la sua voce di cronologia partiva insieme al task invece che dopo: quando
   arrivava per prima, il database la respingeva perche punta a una riga che
