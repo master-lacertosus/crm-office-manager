@@ -96,7 +96,7 @@ export async function requestPasswordReset(
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origine}/auth/confirm?next=/auth/imposta-password`,
+    redirectTo: `${origine}/auth/conferma?next=/auth/imposta-password`,
   });
 
   // Un errore di invio è un problema nostro, non dell'utente: si mostra.
