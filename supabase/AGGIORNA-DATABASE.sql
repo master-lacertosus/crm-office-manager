@@ -1,24 +1,24 @@
 -- =============================================================================
--- Lacertosus Office OS — AGGIORNAMENTO DEL DATABASE
+-- Lacertosus Office OS -- AGGIORNAMENTO DEL DATABASE
 --
 -- COSA FARE, in breve:
---   1. Apri Supabase, voce «SQL Editor» nel menu a sinistra.
+--   1. Apri Supabase, voce "SQL Editor" nel menu a sinistra.
 --   2. Incolla tutto questo file.
---   3. Premi «Run».
+--   3. Premi "Run".
 --
--- È tutto. Non c'è niente da scommentare, niente da modificare, niente da
+-- E' tutto. Non c'e' niente da scommentare, niente da modificare, niente da
 -- decidere. E se lo esegui due volte non succede niente di male: il file
--- rifà soltanto ciò che manca.
+-- rifa' soltanto cio' che manca.
 --
--- Alla fine leggerai un elenco di righe «NOTICE»: sono il resoconto, non
--- errori. Un errore, se capita, si presenta in rosso e ferma tutto — in quel
--- caso non è stato applicato niente, e il messaggio dice cosa non è andato.
+-- Alla fine leggerai un elenco di righe "NOTICE": sono il resoconto, non
+-- errori. Un errore, se capita, si presenta in rosso e ferma tutto -- in quel
+-- caso non e' stato applicato niente, e il messaggio dice cosa non e' andato.
 --
 -- COSA PORTA (le quattro cose ferme in attesa di questo file):
 --   M7  Ricorrenze: da tre cadenze a otto
 --   M8  La board si aggiorna da sola
 --   M9  Responsabili e dipendenti: il confine
---   M10 Sotto-task: un lavoro, più mani
+--   M10 Sotto-task: un lavoro, piu' mani
 --
 -- Questo file NON tocca i dati esistenti: non cancella e non riscrive righe.
 -- Aggiunge regole, permessi e una colonna.
@@ -28,28 +28,28 @@ begin;
 
 
 -- #############################################################################
--- M7 — Ricorrenze: da tre cadenze a otto
+-- M7 -- Ricorrenze: da tre cadenze a otto
 -- (equivale a supabase/migrations/20260824120000_m7_ricorrenze.sql)
 -- #############################################################################
 
 -- =============================================================================
--- Lacertosus Office OS — migrazione M7: ricorrenze più fitte
+-- Lacertosus Office OS -- migrazione M7: ricorrenze piu' fitte
 --
 -- Il vincolo ammetteva tre sole cadenze: settimanale, ogni due settimane,
--- mensile. Fuori restava tutto ciò che in un ufficio marketing si ripete
--- davvero ogni giorno — il controllo degli ordini, la pubblicazione sui
--- social, il presidio delle campagne — e chi ci provava doveva ricreare il
+-- mensile. Fuori restava tutto cio' che in un ufficio marketing si ripete
+-- davvero ogni giorno -- il controllo degli ordini, la pubblicazione sui
+-- social, il presidio delle campagne -- e chi ci provava doveva ricreare il
 -- task a mano ogni mattina.
 --
 -- Si aggiungono cinque cadenze: quotidiana, nei soli giorni feriali, a giorni
--- alterni, trimestrale e annuale. «weekdays» non è un passo fisso in giorni:
+-- alterni, trimestrale e annuale. "weekdays" non e' un passo fisso in giorni:
 -- il salto lo calcola l'applicazione (primo giorno feriale successivo), qui
 -- serve solo che il valore sia ammesso.
 --
 -- I valori esistenti restano validi: nessun dato da convertire. Il vincolo
--- viene ricreato perché in PostgreSQL un CHECK non si allarga sul posto.
+-- viene ricreato perche' in PostgreSQL un CHECK non si allarga sul posto.
 --
--- Regola del repo: additiva. M1–M6 non si toccano.
+-- Regola del repo: additiva. M1-M6 non si toccano.
 -- =============================================================================
 
 alter table public.tasks
@@ -73,8 +73,8 @@ alter table public.tasks
 comment on column public.tasks.repeat is
   'Cadenza con cui il task si ricrea al completamento. «weekdays» = primo giorno feriale successivo (sabato e domenica saltati). La scadenza del nuovo giro non nasce mai nel passato: i giri già trascorsi vengono saltati.';
 
--- Gli stessi valori valgono per le attività ricorrenti del workspace: se il
--- template ammettesse cadenze che il task non può avere, il planner
+-- Gli stessi valori valgono per le attivita' ricorrenti del workspace: se il
+-- template ammettesse cadenze che il task non puo' avere, il planner
 -- creerebbe righe rifiutate dal vincolo qui sopra.
 alter table public.workspace_templates
   drop constraint if exists template_repeat_valid;
@@ -95,29 +95,29 @@ alter table public.workspace_templates
   );
 
 -- #############################################################################
--- M8 — La board si aggiorna da sola
+-- M8 -- La board si aggiorna da sola
 -- (equivale a supabase/migrations/20260824140000_m8_realtime_workspace.sql)
 -- #############################################################################
 
 -- =============================================================================
--- Lacertosus Office OS — migrazione M8: aggiornamenti del workspace dal vivo
+-- Lacertosus Office OS -- migrazione M8: aggiornamenti del workspace dal vivo
 --
 -- Finora il lavoro degli altri si vedeva solo ricaricando la pagina: chi non
 -- lo faceva assegnava due volte lo stesso task o discuteva di una scheda che
--- nel frattempo era cambiata. La board è condivisa, ma ognuno ne guardava
+-- nel frattempo era cambiata. La board e' condivisa, ma ognuno ne guardava
 -- una fotografia vecchia.
 --
--- M4 aveva già acceso Realtime sulla chat. Qui si estende alle tabelle che
+-- M4 aveva gia' acceso Realtime sulla chat. Qui si estende alle tabelle che
 -- cambiano durante la giornata: l'annuncio arriva al browser, che rilegge.
--- Non passano dati sul canale — solo il fatto che qualcosa è cambiato — e
+-- Non passano dati sul canale -- solo il fatto che qualcosa e' cambiato -- e
 -- comunque la RLS resta l'ultima parola: Realtime consegna a ciascuno solo
--- le righe che quella persona potrebbe già leggere.
+-- le righe che quella persona potrebbe gia' leggere.
 --
 -- Come in M4, il blocco `exception` isola il caso in cui il ruolo che applica
 -- la migrazione non possa toccare la publication: in quel caso si attiva a
--- mano dal dashboard, in Database › Publications.
+-- mano dal dashboard, in Database > Publications.
 --
--- Regola del repo: additiva. M1–M7 non si toccano.
+-- Regola del repo: additiva. M1-M7 non si toccano.
 -- =============================================================================
 
 do $$
@@ -159,47 +159,47 @@ end;
 $$;
 
 -- #############################################################################
--- M9 — Responsabili e dipendenti: il confine
+-- M9 -- Responsabili e dipendenti: il confine
 -- (equivale a supabase/migrations/20260825120000_m9_permessi.sql)
 -- #############################################################################
 
 -- =============================================================================
--- Lacertosus Office OS — migrazione M9: responsabili e dipendenti
+-- Lacertosus Office OS -- migrazione M9: responsabili e dipendenti
 --
--- Il modello di M1 era la «trasparenza D5»: ogni membro attivo poteva
--- modificare qualunque cosa, perché la proprietà era responsabilità e non un
+-- Il modello di M1 era la "trasparenza D5": ogni membro attivo poteva
+-- modificare qualunque cosa, perche' la proprieta' era responsabilita' e non un
 -- lucchetto. Decisione del committente del 25/08/2026: il workspace ha due
 -- responsabili (Francesco e Sara) che governano tutto; gli altri sono
--- dipendenti e mettono le mani su ciò che li riguarda.
+-- dipendenti e mettono le mani su cio' che li riguarda.
 --
--- Questa migrazione sposta quel confine dove conta — nel database. Nasconde
--- un pulsante è cosmetica: chi conosce l'API scrive lo stesso.
+-- Questa migrazione sposta quel confine dove conta -- nel database. Nasconde
+-- un pulsante e' cosmetica: chi conosce l'API scrive lo stesso.
 --
 -- Insieme al confine si chiudono i buchi emersi dall'audit, che erano tali
 -- anche col modello vecchio:
---   · una ferie GIÀ APPROVATA restava modificabile dal richiedente (date
+--   - una ferie GIA' APPROVATA restava modificabile dal richiedente (date
 --     spostate a piacere, e persino la firma di chi aveva approvato);
---   · idem per una richiesta di task approvata;
---   · si poteva cancellare il task di chiunque in due mosse: prima
---     riassegnarlo a sé, poi eliminarlo da «proprietario»;
---   · si potevano zittire le escalation verso i responsabili inserendo
+--   - idem per una richiesta di task approvata;
+--   - si poteva cancellare il task di chiunque in due mosse: prima
+--     riassegnarlo a se', poi eliminarlo da "proprietario";
+--   - si potevano zittire le escalation verso i responsabili inserendo
 --     avvisi con la chiave di deduplicazione indovinata;
---   · il registro append-only accettava eventi inventati su task altrui,
+--   - il registro append-only accettava eventi inventati su task altrui,
 --     con data a piacere;
---   · si potevano marcare come «decisione» i commenti altrui, spostarli di
+--   - si potevano marcare come "decisione" i commenti altrui, spostarli di
 --     progetto e retrodatarli;
---   · si poteva togliere qualunque collaboratore da qualunque task;
---   · si poteva cambiare la propria email desincronizzandola da auth.
+--   - si poteva togliere qualunque collaboratore da qualunque task;
+--   - si poteva cambiare la propria email desincronizzandola da auth.
 --
 -- Un admin che approva la propria richiesta di task era possibile: sulle
--- ferie il divieto c'era già, sulle richieste no. Ora sono simmetriche.
+-- ferie il divieto c'era gia', sulle richieste no. Ora sono simmetriche.
 --
--- Regola del repo: additiva. M1–M8 non si toccano. (M7 e M8 sono nelle PR
+-- Regola del repo: additiva. M1-M8 non si toccano. (M7 e M8 sono nelle PR
 -- #28 e #29: questa migrazione non le presuppone e non le tocca.)
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 0. Chi può mettere le mani su un task
+-- 0. Chi puo' mettere le mani su un task
 --
 -- Una funzione sola, usata da tutte le policy che dipendono da questa
 -- domanda: il responsabile del task, chi l'ha creato, i collaboratori, e i
@@ -237,7 +237,7 @@ revoke all on function public.puo_modificare_task(uuid) from public, anon;
 grant execute on function public.puo_modificare_task(uuid) to authenticated, service_role;
 
 -- -----------------------------------------------------------------------------
--- 1. Task: si modifica ciò che è proprio
+-- 1. Task: si modifica cio' che e' proprio
 -- -----------------------------------------------------------------------------
 drop policy if exists tasks_update_active_members on public.tasks;
 
@@ -247,7 +247,7 @@ create policy tasks_update_own_or_admin
   using ((select public.puo_modificare_task(id)))
   with check ((select public.puo_modificare_task(id)));
 
--- Chi crea un task lo prende in carico: assegnare lavoro ad altri è dei
+-- Chi crea un task lo prende in carico: assegnare lavoro ad altri e' dei
 -- responsabili, e per proporlo esiste il flusso delle Richieste.
 drop policy if exists tasks_insert_own on public.tasks;
 
@@ -263,7 +263,7 @@ create policy tasks_insert_own_or_admin
     )
   );
 
--- La riassegnazione e la paternità non si toccano da dipendenti: senza
+-- La riassegnazione e la paternita' non si toccano da dipendenti: senza
 -- questa guardia bastava passarsi un task per poterlo poi cancellare.
 create or replace function public.tasks_guard()
 returns trigger
@@ -316,7 +316,7 @@ create policy projects_update_admin
   with check ((select public.is_admin()));
 
 -- -----------------------------------------------------------------------------
--- 3. Checklist: si spunta ciò che si può lavorare
+-- 3. Checklist: si spunta cio' che si puo' lavorare
 -- -----------------------------------------------------------------------------
 drop policy if exists checklist_write_active_members on public.task_checklist_items;
 drop policy if exists checklist_update_active_members on public.task_checklist_items;
@@ -470,9 +470,9 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
--- 6. Avvisi: la chiave di deduplicazione è del sistema
+-- 6. Avvisi: la chiave di deduplicazione e' del sistema
 --
--- Indovinandola (il formato è deterministico) si poteva inserire in anticipo
+-- Indovinandola (il formato e' deterministico) si poteva inserire in anticipo
 -- l'avviso che le escalation avrebbero mandato ai responsabili: il vero
 -- allarme sarebbe poi caduto sul conflitto, in silenzio.
 -- -----------------------------------------------------------------------------
@@ -489,7 +489,7 @@ create policy notifications_insert_sender
 
 -- -----------------------------------------------------------------------------
 -- 7. Cronologia: eventi solo sui task che si possono lavorare, e mai datati
---    a piacere. È un registro: se si può riscrivere, non è un registro.
+--    a piacere. E' un registro: se si puo' riscrivere, non e' un registro.
 -- -----------------------------------------------------------------------------
 drop policy if exists events_insert_own on public.task_events;
 
@@ -534,7 +534,7 @@ create policy collaborators_delete_own_task_or_self
   );
 
 -- -----------------------------------------------------------------------------
--- 9. Commenti: restano dove sono nati, e la «decisione» la marca chi ha
+-- 9. Commenti: restano dove sono nati, e la "decisione" la marca chi ha
 --    titolo per farlo
 -- -----------------------------------------------------------------------------
 create or replace function public.task_comments_guard()
@@ -571,7 +571,7 @@ security definer
 set search_path = ''
 as $$
 begin
-  -- L'autore non si cambia mai, nemmeno dal server: è la firma del messaggio.
+  -- L'autore non si cambia mai, nemmeno dal server: e' la firma del messaggio.
   if new.author_id is distinct from old.author_id then
     raise exception 'L''autore di un messaggio non si cambia'
       using errcode = 'P0001';
@@ -587,14 +587,14 @@ begin
       using errcode = '42501';
   end if;
 
-  -- Nuovo: un messaggio resta nel progetto in cui è nato, con la sua data.
+  -- Nuovo: un messaggio resta nel progetto in cui e' nato, con la sua data.
   if new.project_id is distinct from old.project_id
      or new.created_at is distinct from old.created_at then
     raise exception 'Un messaggio non si sposta di progetto e non si retrodata'
       using errcode = '42501';
   end if;
 
-  -- Nuovo: la marcatura «decisione» la mette chi ha scritto, o un
+  -- Nuovo: la marcatura "decisione" la mette chi ha scritto, o un
   -- responsabile. Prima poteva farlo chiunque sul messaggio di chiunque.
   if new.is_decision is distinct from old.is_decision
      and old.author_id <> (select auth.uid())
@@ -608,7 +608,7 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
--- 10. Profili: l'email è quella con cui si entra, non un'etichetta
+-- 10. Profili: l'email e' quella con cui si entra, non un'etichetta
 -- -----------------------------------------------------------------------------
 create or replace function public.profiles_guard()
 returns trigger
@@ -664,35 +664,35 @@ end;
 $$;
 
 -- #############################################################################
--- M10 — Sotto-task: un lavoro, più mani
+-- M10 -- Sotto-task: un lavoro, piu' mani
 -- (equivale a supabase/migrations/20260825140000_m10_sotto_task.sql)
 -- #############################################################################
 
 -- =============================================================================
--- Lacertosus Office OS — migrazione M10: un lavoro, più mani
+-- Lacertosus Office OS -- migrazione M10: un lavoro, piu' mani
 --
--- In un ufficio marketing/e-commerce/video il lavoro non è mai un blocco
--- solo: «Video prodotto X» sono riprese, montaggio, testi, caricamento,
--- ADV — mani diverse, tempi diversi. Finora c'erano tre mezze risposte:
+-- In un ufficio marketing/e-commerce/video il lavoro non e' mai un blocco
+-- solo: "Video prodotto X" sono riprese, montaggio, testi, caricamento,
+-- ADV -- mani diverse, tempi diversi. Finora c'erano tre mezze risposte:
 -- la checklist (passaggi senza nome), i collaboratori (nomi senza lavoro
 -- proprio) e i pacchetti da template (lavori con nome, ma solo partendo da
 -- un template e senza padre).
 --
--- Qui arriva la risposta intera: un task può contenere SOTTO-TASK, e ogni
--- sotto-task è un task vero — con il suo responsabile, la sua scadenza, il
--- suo stato. Compare nella board e nel carico di chi lo esegue, perché è
+-- Qui arriva la risposta intera: un task puo' contenere SOTTO-TASK, e ogni
+-- sotto-task e' un task vero -- con il suo responsabile, la sua scadenza, il
+-- suo stato. Compare nella board e nel carico di chi lo esegue, perche' e'
 -- lavoro suo; il padre resta il quadro d'insieme, con un referente che
 -- risponde del risultato.
 --
 -- Il principio del prodotto non si rompe: OGNI task (padre o figlio) ha un
--- solo responsabile. «Più responsabili su un lavoro» significa più pezzi con
--- un nome ciascuno, non più nomi sullo stesso pezzo — altrimenti carico,
--- solleciti ed escalation non saprebbero più a chi rivolgersi.
+-- solo responsabile. "Piu' responsabili su un lavoro" significa piu' pezzi con
+-- un nome ciascuno, non piu' nomi sullo stesso pezzo -- altrimenti carico,
+-- solleciti ed escalation non saprebbero piu' a chi rivolgersi.
 --
 -- UN SOLO LIVELLO di annidamento, per scelta: servono liste di lavori, non
--- alberi in cui perdersi. Un sotto-task non può avere figli.
+-- alberi in cui perdersi. Un sotto-task non puo' avere figli.
 --
--- Regola del repo: additiva. M1–M9 non si toccano.
+-- Regola del repo: additiva. M1-M9 non si toccano.
 -- (M7 e M8 vivono nelle PR #28 e #29; questa migrazione non le presuppone.)
 -- =============================================================================
 
@@ -703,7 +703,7 @@ alter table public.tasks
 comment on column public.tasks.parent_id is
   'Task padre di cui questo è un pezzo. NULL = lavoro principale. Un solo livello: un sotto-task non può avere figli. Cancellando il padre spariscono i pezzi (on delete cascade).';
 
--- La lettura tipica è «i pezzi di questo lavoro».
+-- La lettura tipica e' "i pezzi di questo lavoro".
 create index if not exists tasks_parent_idx
   on public.tasks (parent_id)
   where parent_id is not null;
@@ -724,7 +724,7 @@ declare
   padre public.tasks%rowtype;
 begin
   if new.parent_id is null then
-    -- Un lavoro che ha pezzi non può diventare a sua volta un pezzo: si
+    -- Un lavoro che ha pezzi non puo' diventare a sua volta un pezzo: si
     -- creerebbe il secondo livello dalla porta di servizio.
     return new;
   end if;
@@ -771,7 +771,7 @@ create trigger tasks_gerarchia_guard
 -- Si estende la regola di M9: oltre a responsabile, creatore, collaboratori
 -- e responsabili del workspace, un pezzo lo governa anche il REFERENTE DEL
 -- LAVORO PADRE. Chi guida un lavoro deve poterlo organizzare senza chiedere
--- il permesso a ogni passo — è la scelta presa il 25/08/2026.
+-- il permesso a ogni passo -- e' la scelta presa il 25/08/2026.
 -- -----------------------------------------------------------------------------
 create or replace function public.puo_modificare_task(task_id uuid)
 returns boolean
@@ -807,7 +807,7 @@ comment on function public.puo_modificare_task is
 -- 3. Creare un pezzo e darlo a un collega
 --
 -- M9 aveva chiuso l'assegnazione ad altri ai soli responsabili. Il referente
--- di un lavoro però deve poter distribuire i pezzi del PROPRIO lavoro: è
+-- di un lavoro pero' deve poter distribuire i pezzi del PROPRIO lavoro: e'
 -- l'eccezione decisa insieme, e vale solo dentro il perimetro del padre.
 -- -----------------------------------------------------------------------------
 drop policy if exists tasks_insert_own_or_admin on public.tasks;
@@ -820,7 +820,7 @@ create policy tasks_insert_own_or_delegato
     and created_by = (select auth.uid())
     and (
       (select public.is_admin())
-      -- Un lavoro per sé: sempre.
+      -- Un lavoro per se': sempre.
       or owner_id = (select auth.uid())
       -- Un pezzo del proprio lavoro, affidato a un collega.
       or (
@@ -833,7 +833,7 @@ create policy tasks_insert_own_or_delegato
     )
   );
 
--- La riassegnazione segue la stessa logica: il referente del lavoro può
+-- La riassegnazione segue la stessa logica: il referente del lavoro puo'
 -- spostare un pezzo da una persona all'altra, dentro il suo perimetro.
 create or replace function public.tasks_guard()
 returns trigger
@@ -871,6 +871,6 @@ $$;
 commit;
 
 -- =============================================================================
--- Fatto. Da qui in poi il CRM può usare le ricorrenze fitte, gli aggiornamenti
+-- Fatto. Da qui in poi il CRM puo' usare le ricorrenze fitte, gli aggiornamenti
 -- dal vivo, il confine fra responsabili e dipendenti e i sotto-task.
 -- =============================================================================

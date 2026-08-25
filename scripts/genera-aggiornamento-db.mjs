@@ -23,6 +23,50 @@ const MIGRAZIONI = [
 
 const DIR = process.argv[2] ?? "supabase/migrations";
 
+/* ------------------------------------------------------------------ */
+/* Commenti in ASCII                                                   */
+/*                                                                     */
+/* Questo file lo si incolla dentro un browser, e un carattere fuori   */
+/* dall'ASCII e' la prima cosa che si rovina per strada: basta un      */
+/* passaggio di troppo fra editor, appunti e casella di testo perche'  */
+/* arrivi al server qualcosa che non e' piu' quello che c'era scritto  */
+/* — e a quel punto PostgreSQL si ferma con «syntax error», a meta'    */
+/* lavoro. Le migrazioni sorgenti restano in italiano vero: e' solo    */
+/* questo artefatto, quello che fa il viaggio, a viaggiare leggero.    */
+/*                                                                     */
+/* Le stringhe fra apici non si toccano: sono i messaggi che il team   */
+/* legge quando qualcosa va storto, e li' l'italiano serve. Un         */
+/* carattere rovinato dentro una stringa fa al massimo un glifo        */
+/* sbagliato in un messaggio, non un errore di sintassi.               */
+/* ------------------------------------------------------------------ */
+const TRASLITTERA = {
+  à: "a'", è: "e'", é: "e'", ì: "i'", ò: "o'", ù: "u'",
+  À: "A'", È: "E'", É: "E'", Ì: "I'", Ò: "O'", Ù: "U'",
+  "«": '"', "»": '"', "‹": "<", "›": ">",
+  "‘": "'", "’": "'", "“": '"', "”": '"',
+  "—": "--", "–": "-", "…": "...", "·": "-", "•": "-",
+  "→": "->", "←": "<-", "↓": "v", "↑": "^", "★": "*", "☆": "*",
+};
+
+function commentiInAscii(sql) {
+  const righe = sql.split("\n");
+  let cambiate = 0;
+  const fatte = righe.map((riga) => {
+    const taglio = riga.indexOf("--");
+    // Solo i commenti che occupano tutta la riga: un «--» dopo del codice
+    // potrebbe stare dentro una stringa, e li' non si tocca niente.
+    if (taglio !== 0 && riga.slice(0, taglio).trim() !== "") return riga;
+    if (taglio < 0) return riga;
+    let fuori = "";
+    for (const ch of riga) {
+      fuori += ch.codePointAt(0) > 127 ? (TRASLITTERA[ch] ?? "?") : ch;
+    }
+    if (fuori !== riga) cambiate++;
+    return fuori;
+  });
+  return { sql: fatte.join("\n"), cambiate };
+}
+
 /* --- Le tre creazioni che non tollerano di essere ridate ------------- */
 function rendiRipetibile(sql, nome) {
   let n = 0;
@@ -108,6 +152,23 @@ pezzi.push(
   "",
 );
 
+const { sql: finale, cambiate } = commentiInAscii(pezzi.join("\n"));
+console.log(`  commenti resi ASCII: ${cambiate} righe`);
+
+/* Controprova prima di scrivere: fuori dalle stringhe non deve restare
+   niente sopra il codice 127. Se ne resta, il file non parte — meglio
+   accorgersene qui che dentro il SQL Editor. */
+const rimasti = finale
+  .split("\n")
+  .map((r, n) => [n + 1, r])
+  .filter(([, r]) => r.trimStart().startsWith("--") && [...r].some((c) => c.codePointAt(0) > 127));
+if (rimasti.length > 0) {
+  console.error(`\nNon-ASCII rimasto in ${rimasti.length} commenti, il primo alla riga ${rimasti[0][0]}:`);
+  console.error(`  ${rimasti[0][1]}`);
+  console.error("Aggiungere il carattere alla tabella TRASLITTERA.");
+  process.exit(1);
+}
+
 const uscita = "supabase/AGGIORNA-DATABASE.sql";
-writeFileSync(uscita, pezzi.join("\n"));
-console.log(`\n${uscita} scritto (${pezzi.join("\n").split("\n").length} righe)`);
+writeFileSync(uscita, finale);
+console.log(`\n${uscita} scritto (${finale.split("\n").length} righe)`);

@@ -32,6 +32,14 @@ versioni (fase pre-1.0).
   cima al componente la riporta in scena quando si vuole. (#32)
 
 ### Corretto
+- **I file SQL da incollare ora sono in ASCII puro.** `audit-ruoli.sql` si
+  fermava con un errore di sintassi: il file su disco è valido, ma stelle,
+  virgolette basse e accenti sono la prima cosa che si rovina passando per
+  gli appunti e un campo di testo dentro il browser. Tolti da `audit-ruoli.sql`,
+  `allinea-ruoli.sql` e dai commenti di `AGGIORNA-DATABASE.sql`; le migrazioni
+  sorgenti restano in italiano vero. `npm run verify:sql` ora lo pretende, e
+  distingue: dentro una stringa un carattere rovinato fa un glifo storto,
+  fuori ferma il database a metà lavoro. (#38)
 - **Una migrazione non sarebbe partita.** Due funzioni di M9 avevano il
   delimitatore monco (`as $` invece di `as $$`): PostgreSQL si sarebbe
   fermato a metà applicazione, lasciando il database mezzo cambiato. Né la
