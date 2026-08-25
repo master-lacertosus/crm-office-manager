@@ -13,7 +13,13 @@ import { useAppStore } from "@/lib/store";
  * reale) appare a sorpresa in basso a destra e commenta i dati VERI dello
  * store: ritardi, revisioni, completamenti. Cliccalo per congedarlo,
  * «Non oggi» lo silenzia fino a domani (localStorage). Debug: ?capo=1.
+ *
+ * IN PAUSA dal 25/08/2026, su richiesta del committente: non deve comparire
+ * a nessuno. Il codice resta intero — è una funzione sospesa, non cancellata
+ * — e per riportarlo in scena basta rimettere `IN_SCENA` a `true`.
  */
+
+const IN_SCENA = false;
 
 const STORAGE_KEY = "ilcapo-off-until";
 const FIRST_DELAY = () => 2_000 + Math.random() * 2_000;
@@ -254,6 +260,13 @@ function CapoSvg() {
 }
 
 export function IlCapo() {
+  /* L'interruttore sta prima di ogni hook: spento, il Capo non osserva, non
+     ascolta la scorciatoia e non consuma nulla. */
+  if (!IN_SCENA) return null;
+  return <CapoInScena />;
+}
+
+function CapoInScena() {
   const { tasks, currentUser } = useAppStore();
   const searchParams = useSearchParams();
   const reduced = useReducedMotion();
