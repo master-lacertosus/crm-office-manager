@@ -61,6 +61,13 @@ versioni (fase pre-1.0).
   cima al componente la riporta in scena quando si vuole. (#32)
 
 ### Corretto
+- **Le fini riga ora le decide il repository.** Due file stavano in
+  archivio con le righe terminate CRLF mentre il resto stava a LF: per git
+  ogni riga risultava diversa da quella corrispondente sull’altro ramo, e
+  invece di fondere produceva un file con dentro tutte e due le versioni —
+  2944 righe al posto di 1474, con il pannello dei task disegnato due
+  volte. Codice sintatticamente valido, quindi build, lint e typecheck non
+  se ne accorgevano. Ora c’è un `.gitattributes` che impone LF. (#39)
 - **I file SQL da incollare ora sono in ASCII puro.** `audit-ruoli.sql` si
   fermava con un errore di sintassi: il file su disco è valido, ma stelle,
   virgolette basse e accenti sono la prima cosa che si rovina passando per
