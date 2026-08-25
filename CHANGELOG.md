@@ -21,6 +21,12 @@ versioni (fase pre-1.0).
   cronologia, checklist e allegati. Per togliere un task dalla board
   conservandone la storia resta l'archivio. (#24)
 
+### Modificato
+- **Il Capo esce di scena.** L'apparizione del Cavaliere è sospesa su
+  richiesta: per ora non compare a nessuno, non risponde all'evocazione e
+  non viene più annunciata dal tour. Non è cancellata — un interruttore in
+  cima al componente la riporta in scena quando si vuole. (#32)
+
 ### Corretto
 - **Niente piu avvisi per decisioni mai avvenute.** Approvazioni, rifiuti e
   decisioni sulle ferie annunciavano l'esito prima di sapere se il database

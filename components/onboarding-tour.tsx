@@ -44,7 +44,7 @@ const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
   {
     icon: Bell,
     title: "Niente più dimenticanze",
-    text: "La campanella raccoglie avvisi e solleciti; la pillola rossa in alto conta i TUOI task urgenti. E ogni tanto passa il Capo… non farci caso. O forse sì.",
+    text: "La campanella raccoglie avvisi e solleciti; la pillola rossa in alto conta i TUOI task urgenti.",
   },
   {
     icon: Command,
