@@ -10,6 +10,11 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **`scripts/imposta-password.mjs`**: imposta la password di un account da
+  riga di comando, quando l’invio del link è bloccato e un collega deve
+  entrare adesso. Non è un’azione dell’app ed è voluto: nel CRM un
+  responsabile può rimandare il link, non entrare nell’account di un altro.
+  La chiave di servizio resta sul computer di chi lo esegue. (#47)
 - **`supabase/perche-non-salva.sql`**: diagnosi da incollare nel SQL Editor
   quando un salvataggio viene rifiutato. Controlla le colonne che l’app
   invia, chi può creare task, le regole e i trigger in vigore, e prova un
