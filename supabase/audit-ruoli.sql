@@ -1,34 +1,36 @@
 -- =============================================================================
--- CHI COMANDA NEL WORKSPACE — sola lettura, non modifica niente.
+-- CHI COMANDA NEL WORKSPACE -- sola lettura, non modifica niente.
 --
 -- L'interfaccia mostra quello che vuole; i permessi veri li decide il
--- database leggendo `profiles.role`. Questo file risponde a una domanda
--- sola: chi è responsabile adesso?
+-- database leggendo profiles.role. Questo file risponde a una domanda sola:
+-- chi e' responsabile adesso?
 --
--- COME SI USA: aprire il dashboard Supabase › SQL Editor, incollare tutto,
--- premere «Run». Niente da modificare, niente da scommentare.
+-- COME SI USA: dashboard Supabase > SQL Editor, incollare tutto, premere
+-- Run. Niente da modificare, niente da scommentare.
 --
--- Se qualcuno risulta responsabile e non dovrebbe (o viceversa), il file
--- che sistema è `supabase/allinea-ruoli.sql`.
+-- Se qualcuno risulta responsabile e non dovrebbe (o viceversa), il file che
+-- sistema e' supabase/allinea-ruoli.sql.
+--
+-- NOTA: questo file e' scritto in ASCII puro, senza accenti ne' simboli.
+-- Non e' pigrizia: passa da un copia-e-incolla dentro un browser, e i
+-- caratteri fuori dall'ASCII sono la prima cosa che si rovina per strada.
 -- =============================================================================
 
 select
   case
-    when p.role = 'admin' and p.is_active then '★ RESPONSABILE'
-    when p.role = 'admin' then '☆ responsabile disattivato'
-    when p.is_active then '· dipendente'
-    else '· disattivato'
-  end                                            as ruolo,
-  p.full_name                                    as persona,
+    when p.role = 'admin' and p.is_active then 'RESPONSABILE'
+    when p.role = 'admin' then 'responsabile disattivato'
+    when p.is_active then 'dipendente'
+    else 'disattivato'
+  end as ruolo,
+  p.full_name as persona,
   p.email,
   case
-    when p.role = 'admin' and p.is_active
-      then 'approva, decide, gestisce tutto'
-    when p.is_active
-      then 'lavora i task di cui risponde'
+    when p.role = 'admin' and p.is_active then 'approva, decide, gestisce tutto'
+    when p.is_active then 'lavora i task di cui risponde'
     else 'non entra'
-  end                                            as cosa_puo_fare,
-  u.last_sign_in_at                              as ultimo_accesso
+  end as cosa_puo_fare,
+  u.last_sign_in_at as ultimo_accesso
 from public.profiles p
 left join auth.users u on u.id = p.id
 order by
@@ -38,7 +40,7 @@ order by
 
 -- Conteggio secco, per non doverli contare a occhio.
 select
-  count(*) filter (where role = 'admin' and is_active)  as responsabili_attivi,
+  count(*) filter (where role = 'admin' and is_active) as responsabili_attivi,
   count(*) filter (where role <> 'admin' and is_active) as dipendenti_attivi,
-  count(*) filter (where not is_active)                 as disattivati
+  count(*) filter (where not is_active) as disattivati
 from public.profiles;
