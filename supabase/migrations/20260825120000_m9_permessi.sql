@@ -389,7 +389,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 begin
   -- L'autore non si cambia mai, nemmeno dal server: è la firma del messaggio.
   if new.author_id is distinct from old.author_id then
@@ -425,7 +425,7 @@ begin
 
   return new;
 end;
-$;
+$$;
 
 -- -----------------------------------------------------------------------------
 -- 10. Profili: l'email è quella con cui si entra, non un'etichetta
@@ -435,7 +435,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 begin
   -- Permesso: ruolo e stato attivo li cambia solo un admin
   if (select auth.uid()) is not null
@@ -481,4 +481,4 @@ begin
 
   return new;
 end;
-$;
+$$;
