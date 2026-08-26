@@ -20,6 +20,7 @@ import type {
   Profile,
   Project,
   ProjectComment,
+  Role,
   Task,
   TaskComment,
   TaskEvent,
@@ -53,7 +54,13 @@ function toProfile(row: ProfileRow): Profile {
     full_name: row.full_name,
     // La colonna ammette null (profili nati prima di M2); il tipo dell'app no.
     email: row.email ?? "",
-    role: row.role === "admin" ? "admin" : "member",
+    /* Si tengono i tre ruoli veri. Scrivere `=== "admin" ? … : "member"`
+       schiaccerebbe un freelance a membro appena letto dal database, e il
+       suo calendario tornerebbe quello dell'ufficio senza che nessuno
+       abbia cambiato niente. Un valore sconosciuto ricade su `member`:
+       il ruolo meno potente, che è la scelta giusta quando non si sa. */
+    role:
+      row.role === "admin" || row.role === "freelance" ? row.role : "member",
     title: row.title ?? undefined,
     avatar_url: row.avatar_url,
     is_active: row.is_active,
@@ -104,7 +111,10 @@ export async function updateProfileRow(
 export async function updateProfileAccess(
   supabase: SupabaseClient,
   id: string,
-  patch: { role?: "admin" | "member"; is_active?: boolean },
+  /* I ruoli stanno in un posto solo, `Role`: ripeterli qui a mano significa
+     che il giorno in cui se ne aggiunge uno, questa riga lo rifiuta senza
+     che nessuno se ne ricordi. È già successo con «freelance». */
+  patch: { role?: Role; is_active?: boolean },
 ): Promise<void> {
   const { error } = await supabase.from("profiles").update(patch).eq("id", id);
   if (error) throw error;

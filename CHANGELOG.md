@@ -10,6 +10,14 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Ruolo «freelance»: assenze anche di sabato e domenica.** Chi collabora a
+  partita IVA non ha la settimana dell’ufficio, ma il calendario la dava per
+  scontata: un sabato valeva zero giorni e il modulo rifiutava di mandare la
+  richiesta, senza spiegare perché. Ora per un freelance ogni giorno conta,
+  weekend compreso — e il numero è lo stesso per chi chiede e per chi
+  approva. Sui permessi non cambia nulla: freelance e membro sono identici,
+  responsabili restano solo gli admin. Le chiusure aziendali continuano a
+  non consumare ferie per tutti. Serve la migrazione **M12**. (#49)
 - **`scripts/imposta-password.mjs`**: imposta la password di un account da
   riga di comando, quando l’invio del link è bloccato e un collega deve
   entrare adesso. Non è un’azione dell’app ed è voluto: nel CRM un

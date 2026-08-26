@@ -7,7 +7,7 @@ import { messaggioErrore } from "@/lib/errori";
 import { extractMentionIds } from "@/lib/mentions";
 import { puoModificareTask } from "@/lib/permessi";
 import { prossimaScadenza } from "@/lib/repeat";
-import { CUSTOM_STATUS_PRESETS } from "@/lib/types";
+import { CUSTOM_STATUS_PRESETS, lavoraNelWeekend } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { subscribeToWorkspace } from "@/lib/supabase/realtime";
@@ -2599,7 +2599,15 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       };
       setLeaves((prev) => [...prev, leave]);
       const range = formatRange(leave.start_date, leave.end_date);
-      const days = workingDaysCount(leave.start_date, leave.end_date, closures);
+      /* Chi chiede l'assenza è chi sta scrivendo: per un freelance il
+         weekend conta, e l'avviso ai responsabili deve dire lo stesso
+         numero che vedrà chi approva. */
+      const days = workingDaysCount(
+        leave.start_date,
+        leave.end_date,
+        closures,
+        lavoraNelWeekend(currentUser.role),
+      );
       const detail =
         leave.type === "permesso" && leave.time_range
           ? `${range} · ${leave.time_range}`

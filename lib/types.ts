@@ -105,7 +105,37 @@ export const REPEAT_META: Record<
   },
 };
 
-export type Role = "admin" | "member";
+/**
+ * Che rapporto ha questa persona con l'ufficio.
+ *
+ * `admin` è l'unico che dà poteri: approva, decide, gestisce. `member` e
+ * `freelance` sono identici sui permessi — la differenza è il calendario.
+ * Un freelance non ha la settimana lunedì-venerdì, quindi può segnare
+ * un'assenza anche di sabato o domenica, e quei giorni gli contano.
+ */
+export type Role = "admin" | "member" | "freelance";
+
+/** Etichette dei ruoli, per non riscriverle a ogni schermata. */
+export const RUOLI: Record<Role, { label: string; hint: string }> = {
+  admin: {
+    label: "Responsabile",
+    hint: "Approva, decide, gestisce tutto",
+  },
+  member: {
+    label: "Membro",
+    hint: "Lavora i task di cui risponde, settimana lunedì-venerdì",
+  },
+  freelance: {
+    label: "Freelance",
+    hint: "Come un membro, ma senza settimana fissa: le assenze valgono anche nel weekend",
+  },
+};
+
+/** Un freelance non ha la settimana dell'ufficio: per lui contano tutti i
+ *  giorni, weekend compresi. */
+export function lavoraNelWeekend(role: Role): boolean {
+  return role === "freelance";
+}
 
 export interface Profile {
   id: string;

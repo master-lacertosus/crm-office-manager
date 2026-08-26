@@ -38,18 +38,29 @@ export function formatRange(start: string, end: string): string {
 /**
  * Giorni LAVORATIVI dell'intervallo: esclude weekend e chiusure aziendali
  * (un giorno di chiusura non consuma ferie). È il numero mostrato ovunque.
+ *
+ * `contaWeekend` serve a chi non ha la settimana dell'ufficio — i freelance.
+ * Per loro sabato e domenica sono giorni come gli altri, e senza questa
+ * distinzione un'assenza di sabato valeva zero giorni: il modulo la
+ * rifiutava, senza nemmeno dire perché.
+ *
+ * Le chiusure aziendali restano escluse per tutti, e di proposito: sono una
+ * decisione presa e registrata dall'ufficio, non una convenzione sul
+ * calendario. Se in quei giorni non si lavora, non si consumano ferie —
+ * vale per chi ha la partita IVA come per chi non ce l'ha.
  */
 export function workingDaysCount(
   start: string,
   end: string,
   closures: CompanyClosure[],
+  contaWeekend = false,
 ): number {
   if (end < start) return 0;
   let count = 0;
   const span = Math.min(diffIsoDays(start, end), 366);
   for (let i = 0; i <= span; i++) {
     const day = shiftIsoDays(start, i);
-    if (isWeekendIso(day)) continue;
+    if (!contaWeekend && isWeekendIso(day)) continue;
     if (closures.some((c) => rangeCovers(c.start_date, c.end_date, day)))
       continue;
     count++;
