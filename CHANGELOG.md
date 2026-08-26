@@ -84,6 +84,12 @@ versioni (fase pre-1.0).
   tabelle del workspace). (#29)
 
 ### Modificato
+- **Chi non è responsabile ora apre il CRM sui propri task.** L’indirizzo
+  senza filtri significava «tutti» per chiunque: un dipendente apriva la
+  board e si trovava il lavoro di cinque colleghi da scremare a mano, ogni
+  mattina. Il panorama completo serve a chi deve sorvegliarlo, quindi il
+  predefinito segue il ruolo — responsabile: tutti; chiunque altro: i
+  propri. Nessuno perde niente, «Tutto il team» resta a un clic. (#53)
 - **`docs/AUTH_SETUP.md` ora dice il dominio vero**: `lct-ufficio.vercel.app`,
   verificato — risponde l’app, `/auth/conferma` è raggiungibile, nessuna
   Deployment Protection di mezzo. Con i due valori esatti da incollare in

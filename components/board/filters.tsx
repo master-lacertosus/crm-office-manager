@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 
 import { updateSearch } from "@/lib/shallow-nav";
+import { responsabileEffettivo, TUTTI } from "@/lib/filtro-responsabile";
 import { useAppStore } from "@/lib/store";
 import { NativeSelect } from "@/components/ui/native-select";
 
@@ -19,7 +20,7 @@ export function BoardFilters({
    *  (header desktop vs sotto-barra mobile) così le label restano valide. */
   idPrefix?: string;
 }) {
-  const { profiles, projects } = useAppStore();
+  const { profiles, projects, currentUser } = useAppStore();
   const searchParams = useSearchParams();
 
   const setParam = (key: "owner" | "project", value: string) => {
@@ -34,10 +35,21 @@ export function BoardFilters({
       <NativeSelect
         id={`${idPrefix}-owner`}
         className="w-40"
-        value={searchParams.get("owner") ?? ""}
+        /* Il valore mostrato è quello EFFETTIVO, non quello scritto
+           nell'indirizzo: un dipendente che apre la pagina senza filtri sta
+           vedendo i propri task, e il menu deve dirlo invece di sostenere
+           che stia guardando tutti. */
+        value={
+          responsabileEffettivo(searchParams.get("owner"), currentUser) ??
+          TUTTI
+        }
         onChange={(e) => setParam("owner", e.target.value)}
       >
-        <option value="">Tutti i responsabili</option>
+        {/* «Tutti» ha un valore proprio (`all`) e non la stringa vuota:
+            senza, un dipendente che lo sceglie produrrebbe un indirizzo
+            identico al predefinito, e la scelta gli tornerebbe indietro
+            appena fatta. */}
+        <option value={TUTTI}>Tutti i responsabili</option>
         {profiles
           .filter((p) => p.is_active)
           .map((p) => (
