@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ChevronDown,
@@ -17,6 +17,7 @@ import {
 
 import { drawer, pop, scrim } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { conFiltri, ricorda } from "@/lib/memoria-filtri";
 import { useAppStore } from "@/lib/store";
 import { signOut } from "@/lib/supabase/auth";
 import { AvatarInitials } from "@/components/avatar-initials";
@@ -66,9 +67,21 @@ function NavLink({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { requests, leaves, currentUser } = useAppStore();
   const active = isActive(pathname, item.href);
   const Icon = item.icon;
+
+  /* Si annota dove si è e con quali filtri, così tornando qui li si
+     ritrova. L'annotazione avviene durante il render — è una scrittura in
+     una mappa, non uno stato di React, e deve essere già fatta quando
+     qualcuno clicca un altro link. */
+  ricorda(pathname, searchParams.toString());
+
+  /* Il link porta con sé gli ultimi filtri della sezione. Sulla sezione in
+     cui si è già, l'indirizzo resta nudo: cliccare «Task» stando nei task
+     è il modo naturale di dire «togli i filtri». */
+  const href = active ? item.href : conFiltri(item.href);
 
   // In attesa di decisione: contatore per i responsabili.
   const badge =
@@ -82,7 +95,7 @@ function NavLink({
 
   return (
     <Link
-      href={item.href}
+      href={href}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(

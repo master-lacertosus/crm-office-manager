@@ -396,7 +396,13 @@ export function ChatPanel() {
           ? `Apri la comunicazione rapida, ${totaleNonLetti} non letti`
           : "Apri la comunicazione rapida"
       }
-      className="btn-glow fixed bottom-0 left-1/2 z-90 flex h-10 w-20 -translate-x-1/2 items-end justify-center rounded-t-full pb-2.5 text-white shadow-[0_-6px_24px_rgb(15_23_42/0.22)] transition-transform duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      /* La linguetta è incollata al bordo inferiore: sollevarla all'hover
+         (`-translate-y-0.5`) la staccava, lasciando due pixel di pagina
+         visibili sotto una forma mezza tonda. Cresce invece verso l'alto —
+         stessa idea di «reagisce al passaggio», senza scollarsi da dove
+         deve stare. L'imbottitura segue l'altezza, così l'icona resta
+         centrata. */
+      className="btn-glow fixed bottom-0 left-1/2 z-90 flex h-10 w-20 -translate-x-1/2 items-end justify-center rounded-t-full pb-2.5 text-white shadow-[0_-6px_24px_rgb(15_23_42/0.22)] transition-[height,padding] duration-200 hover:h-12 hover:pb-3.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       <MessageSquare className="size-5" strokeWidth={1.75} />
       {totaleNonLetti > 0 ? (

@@ -96,6 +96,29 @@ versioni (fase pre-1.0).
   cima al componente la riporta in scena quando si vuole. (#32)
 
 ### Corretto
+- **Ctrl+K non sfocava lo sfondo.** Il velo era trasparente e basta: la
+  sfocatura non c’era proprio, mentre il pannello dei task ce l’aveva. (#50)
+- **L’accento arrivava solo a metà.** Scegliendo il verde restavano un alone
+  arancione sotto le CTA, l’aura di sfondo arancione e la card-vetrina
+  arancione: erano colori scritti a mano mentre lo sfondo seguiva l’accento.
+  Ora derivano tutti dall’accento scelto. (#50)
+- **Le richieste erano illeggibili.** Il testo c’era ed era completo, ma gli
+  a-capo collassavano: un elenco puntato diventava un unico blocco
+  corrente. Stessa correzione sulle note delle ferie. (#50)
+- **La linguetta della chat si staccava dal bordo.** All’hover si sollevava
+  di due pixel, lasciando vedere la pagina sotto una forma mezza tonda. Ora
+  cresce verso l’alto restando incollata dov’è. (#50)
+- **I filtri si perdevano cambiando pagina.** Filtrare i task, andare altrove
+  e tornare riportava l’elenco completo. Ora ogni sezione ricorda i suoi
+  filtri — non il pannello aperto, che riaprirsi da solo sarebbe una
+  sorpresa. (#50)
+- **Una vista salvata non si poteva togliere, solo eliminare.** Ora
+  cliccarla di nuovo la disattiva, e la crocetta chiede conferma invece di
+  cancellare al primo clic. (#50)
+- **Lo standup era più stretto del resto del CRM** (1152px contro tutta la
+  finestra). (#50)
+- **Il task in pannello laterale era stretto**: 460px fissi anche su un
+  monitor grande. Ora cresce con lo schermo. (#50)
 - **«Link incompleto» su link perfettamente validi.** La pagina di conferma
   conosceva una sola delle tre forme che Supabase può mandare: `token_hash`
   nella query. Con i template predefiniti arriva invece un `code` (PKCE) o

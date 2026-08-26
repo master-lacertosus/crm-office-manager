@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { BookmarkPlus, X } from "lucide-react";
+import { BookmarkPlus, Check, X } from "lucide-react";
 
 import { pushSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
@@ -29,6 +29,17 @@ export function SavedViews() {
   const toast = useToast();
   const [naming, setNaming] = React.useState(false);
   const [name, setName] = React.useState("");
+  /* Quale vista ha la crocetta armata. Una sola alla volta: armarne
+     un'altra disarma la precedente. */
+  const [confermaId, setConfermaId] = React.useState<string | null>(null);
+
+  /* Un'eliminazione armata e dimenticata è una trappola per il clic
+     successivo: dopo tre secondi torna da sé una crocetta innocua. */
+  React.useEffect(() => {
+    if (!confermaId) return;
+    const id = setTimeout(() => setConfermaId(null), 3000);
+    return () => clearTimeout(id);
+  }, [confermaId]);
 
   const current = viewParams(new URLSearchParams(searchParams));
   const canSave =
@@ -51,10 +62,16 @@ export function SavedViews() {
       </span>
       {savedViews.map((view) => {
         const active = view.params === current;
+        const daEliminare = confermaId === view.id;
         return (
           <span key={view.id} className="group/view relative">
             <button
-              onClick={() => pushSearch(`?${view.params}`)}
+              /* Cliccare una vista già attiva la toglie. Prima riapplicava
+                 gli stessi filtri, cioè non faceva niente: per tornare a
+                 vedere tutto l'unica strada era cancellare la vista. */
+              onClick={() => pushSearch(active ? "?" : `?${view.params}`)}
+              title={active ? "Togli questa vista" : `Applica «${view.name}»`}
+              aria-pressed={active}
               className={cn(
                 "rounded-full border py-1 pr-6 pl-3 text-[12px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 active
@@ -65,11 +82,37 @@ export function SavedViews() {
               {view.name}
             </button>
             <button
-              onClick={() => removeSavedView(view.id)}
-              aria-label={`Elimina la vista ${view.name}`}
-              className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded-sm text-ink-faint opacity-0 outline-none group-hover/view:opacity-100 hover:text-danger-text focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
+              /* Due passaggi, non uno. La crocetta stava a tre pixel dal
+                 nome, compariva al passaggio del mouse e cancellava
+                 all'istante: il gesto per applicare una vista e quello per
+                 perderla erano quasi lo stesso. Il primo clic arma, il
+                 secondo conferma, e dopo tre secondi si disarma da sé. */
+              onClick={() => {
+                if (daEliminare) {
+                  removeSavedView(view.id);
+                  setConfermaId(null);
+                } else {
+                  setConfermaId(view.id);
+                }
+              }}
+              aria-label={
+                daEliminare
+                  ? `Conferma: elimina la vista ${view.name}`
+                  : `Elimina la vista ${view.name}`
+              }
+              title={daEliminare ? "Premi ancora per eliminare" : "Elimina"}
+              className={cn(
+                "absolute top-1/2 right-1.5 -translate-y-1/2 rounded-sm outline-none transition-opacity focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring",
+                daEliminare
+                  ? "text-danger-text opacity-100"
+                  : "text-ink-faint opacity-0 group-hover/view:opacity-100 hover:text-danger-text",
+              )}
             >
-              <X className="size-3" />
+              {daEliminare ? (
+                <Check className="size-3" />
+              ) : (
+                <X className="size-3" />
+              )}
             </button>
           </span>
         );

@@ -139,7 +139,12 @@ export function TaskPanelHost() {
               "absolute flex flex-col bg-white",
               expanded
                 ? "inset-0 m-auto h-[min(90dvh,840px)] w-[min(1080px,95vw)] overflow-hidden rounded-3xl border border-border shadow-[0_28px_90px_rgb(15_23_42/0.24)]"
-                : "inset-y-0 right-0 w-full border-l border-border shadow-[-16px_0_56px_rgb(15_23_42/0.18)] sm:w-[460px] sm:rounded-l-2xl",
+                /* 460px erano stretti per un task con descrizione, checklist
+                   e commenti: si leggeva tutto in colonne di poche parole.
+                   Cresce con lo schermo invece di restare fisso — su un
+                   monitor da ufficio si guadagna quasi metà larghezza, su un
+                   portatile resta quello di prima. */
+                : "inset-y-0 right-0 w-full border-l border-border shadow-[-16px_0_56px_rgb(15_23_42/0.18)] sm:w-[460px] lg:w-[560px] xl:w-[680px] sm:rounded-l-2xl",
             )}
           >
             <PanelBody

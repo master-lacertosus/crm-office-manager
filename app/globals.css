@@ -351,7 +351,11 @@
     inset: 0;
     z-index: -1;
     background:
-      radial-gradient(820px 500px at 92% -10%, rgb(255 107 0 / 0.17), transparent 62%),
+      radial-gradient(
+        820px 500px at 92% -10%,
+        color-mix(in oklch, var(--brand-500), transparent 83%),
+        transparent 62%
+      ),
       radial-gradient(560px 400px at 68% 2%, rgb(255 176 102 / 0.12), transparent 58%),
       radial-gradient(820px 600px at 2% 112%, rgb(96 128 176 / 0.14), transparent 64%),
       radial-gradient(600px 440px at 38% 120%, rgb(109 93 251 / 0.1), transparent 60%),
@@ -462,7 +466,11 @@
     position: relative;
     overflow: hidden;
     background:
-      radial-gradient(560px 300px at 96% 20%, rgb(255 107 0 / 0.12), transparent 62%),
+      radial-gradient(
+        560px 300px at 96% 20%,
+        color-mix(in oklch, var(--brand-500), transparent 88%),
+        transparent 62%
+      ),
       radial-gradient(420px 260px at 70% -30%, rgb(255 138 31 / 0.1), transparent 60%),
       #ffffff;
     border: 1px solid var(--border);
@@ -478,7 +486,7 @@
     background:
       repeating-radial-gradient(
         140% 100% at 115% 50%,
-        rgb(255 107 0 / 0.055) 0 1px,
+        color-mix(in oklch, var(--brand-500), transparent 94.5%) 0 1px,
         transparent 1px 22px
       );
     pointer-events: none;
@@ -512,13 +520,24 @@
   /* Bottone primario: arancio PIATTO con tocco di vetro — luce interna
      sottile, hairline chiara, ombra tinta minima. Niente gradiente
      verticale né glow (revisione 31/07: "flat glass premium"). */
+  /*
+   * L'alone segue l'accento, non l'arancione.
+   *
+   * Era scritto a mano — `rgb(255 107 0 / 0.3)` — mentre lo sfondo usa
+   * `var(--brand-500)`. Scegliendo il verde si otteneva un pulsante verde
+   * con un alone arancione sotto: due colori che litigano su un elemento
+   * che dovrebbe essere il piu' curato della pagina.
+   *
+   * `color-mix` prende lo stesso colore del pulsante e lo diluisce: qualunque
+   * accento si scelga, l'ombra e' la sua.
+   */
   .btn-glow {
     background-color: var(--brand-500);
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.25),
       inset 0 0 0 1px rgb(255 255 255 / 0.14),
       0 1px 2px rgb(15 23 42 / 0.08),
-      0 4px 12px -4px rgb(255 107 0 / 0.3);
+      0 4px 12px -4px color-mix(in oklch, var(--brand-500), transparent 70%);
   }
   .btn-glow:hover {
     background-color: var(--brand-550);
