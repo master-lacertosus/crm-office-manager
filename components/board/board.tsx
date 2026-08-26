@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { updateSearch } from "@/lib/shallow-nav";
+import { responsabileEffettivo } from "@/lib/filtro-responsabile";
 import { puoModificareTask } from "@/lib/permessi";
 import { MAX_CUSTOM_STATUSES, useAppStore } from "@/lib/store";
 import {
@@ -84,7 +85,12 @@ export function Board({ projectId }: { projectId?: string }) {
   const searchParams = useSearchParams();
   const toast = useToast();
 
-  const ownerFilter = searchParams.get("owner");
+  /* Il predefinito segue il ruolo: chi non sorveglia il lavoro degli
+     altri vede il proprio. Vedi lib/filtro-responsabile.ts. */
+  const ownerFilter = responsabileEffettivo(
+    searchParams.get("owner"),
+    currentUser,
+  );
   const projectFilter = projectId ?? searchParams.get("project");
 
   const byStatus = React.useMemo(() => {

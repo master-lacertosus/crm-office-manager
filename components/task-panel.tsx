@@ -35,6 +35,7 @@ import {
   CommentBody,
   DecisionBadge,
 } from "@/components/comment-bits";
+import { responsabileEffettivo } from "@/lib/filtro-responsabile";
 import { messaggioErrore } from "@/lib/errori";
 import { panel, scrim } from "@/lib/motion";
 import {
@@ -176,7 +177,7 @@ function PanelBody({
   onToggleExpanded: () => void;
   onClose: () => void;
 }) {
-  const { tasks, projects, statuses } = useAppStore();
+  const { tasks, projects, statuses, currentUser } = useAppStore();
   const searchParams = useSearchParams();
   const isNew = taskParam === "new";
   const task = isNew ? null : tasks.find((t) => t.id === taskParam);
@@ -186,7 +187,13 @@ function PanelBody({
 
   /* Navigazione ‹ › tra i task, nello stesso ordine di board/elenco,
      rispettando i filtri owner/progetto attivi. */
-  const ownerFilter = searchParams.get("owner");
+  /* Le frecce del pannello scorrono quello che si sta guardando: se la
+     board mostra i propri task, «avanti» non deve saltare su quello di un
+     collega. */
+  const ownerFilter = responsabileEffettivo(
+    searchParams.get("owner"),
+    currentUser,
+  );
   const projectFilter = searchParams.get("project");
   const ordered = React.useMemo(() => {
     const visible = tasks.filter(

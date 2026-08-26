@@ -4,6 +4,10 @@ import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { UserRound, Users } from "lucide-react";
 
+import {
+  parametroPerTutti,
+  responsabileEffettivo,
+} from "@/lib/filtro-responsabile";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -34,24 +38,34 @@ export function SoloMie({ compact = false }: { compact?: boolean }) {
      obbliga ogni pagina che contiene questa barra a rinunciare alla
      generazione statica, e questa barra sta nel layout — cioè dentro tutte.
      È già costato una build rotta su /calendar. */
+  /* Si guarda il filtro EFFETTIVO, non il parametro grezzo: per un
+     dipendente l'indirizzo senza `owner` significa già «solo le mie», e
+     l'interruttore deve dirlo. */
   const [attivo, setAttivo] = React.useState(false);
   React.useEffect(() => {
-    const leggi = () =>
-      setAttivo(
-        new URLSearchParams(window.location.search).get("owner") ===
-          currentUser.id,
-      );
+    const leggi = () => {
+      const p = new URLSearchParams(window.location.search).get("owner");
+      setAttivo(responsabileEffettivo(p, currentUser) === currentUser.id);
+    };
     leggi();
     window.addEventListener("popstate", leggi);
     return () => window.removeEventListener("popstate", leggi);
-  }, [currentUser.id, pathname]);
+  }, [currentUser, pathname]);
 
   if (!SEZIONI.some((s) => pathname.startsWith(s))) return null;
 
   const cambia = () => {
     const params = new URLSearchParams(window.location.search);
-    if (attivo) params.delete("owner");
-    else params.set("owner", currentUser.id);
+    if (attivo) {
+      /* Per un responsabile «tutti» è già il predefinito e l'indirizzo
+         resta pulito; per gli altri va detto, altrimenti si tornerebbe al
+         predefinito — cioè di nuovo ai propri. */
+      const tutti = parametroPerTutti(currentUser);
+      if (tutti) params.set("owner", tutti);
+      else params.delete("owner");
+    } else {
+      params.set("owner", currentUser.id);
+    }
     /* Il pannello aperto non c'entra con il filtro: cambiando lente resta
        aperto quello che si stava guardando. */
     const query = params.toString();

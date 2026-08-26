@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { ChevronRight, Repeat } from "lucide-react";
 
+import { responsabileEffettivo } from "@/lib/filtro-responsabile";
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
@@ -72,9 +73,12 @@ function Row({ task }: { task: Task }) {
  * dell'URL valgono anche qui.
  */
 export function TaskList() {
-  const { tasks, statuses } = useAppStore();
+  const { tasks, statuses, currentUser } = useAppStore();
   const searchParams = useSearchParams();
-  const ownerFilter = searchParams.get("owner");
+  const ownerFilter = responsabileEffettivo(
+    searchParams.get("owner"),
+    currentUser,
+  );
   const projectFilter = searchParams.get("project");
 
   const visible = tasks.filter((task) => {

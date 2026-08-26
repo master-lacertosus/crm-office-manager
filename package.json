@@ -16,7 +16,8 @@
     "verify:link": "node scripts/link-email-verify.mjs",
     "verify:freelance": "node --import ./scripts/alias.mjs scripts/freelance-verify.mjs",
     "verify:filtri": "node --import ./scripts/alias.mjs scripts/filtri-verify.mjs",
-    "verify:build": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next build"
+    "verify:build": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next build",
+    "verify:filtro": "node --import ./scripts/alias.mjs scripts/filtro-responsabile-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
