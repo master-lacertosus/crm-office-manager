@@ -10,6 +10,14 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Un progetto si crea mentre si scrive il task.** Prima, per un lavoro che
+  non aveva ancora un progetto, bisognava abbandonare il task, andare in
+  Progetti, crearlo e ricominciare: il primo task di ogni progetto nuovo
+  costava quel giro, cioè proprio quando si ha più fretta. Ora c’è «+ Nuovo
+  progetto…» nel menu, e se non ce n’è ancora nessuno un pulsante lo dice.
+  Solo per i responsabili: la policy del database non consentirebbe agli
+  altri di crearne, e offrire una porta che si apre con un no è peggio che
+  non offrirla. (#55)
 - **`npm run verify`**: tutti i controlli in un comando — tipi, regole, SQL,
   policy, permessi di visibilità, filtri, calendario dei freelance e build
   pulita. Con `-- --prod` interroga anche il sito vero: le pagine
