@@ -96,6 +96,13 @@ versioni (fase pre-1.0).
   cima al componente la riporta in scena quando si vuole. (#32)
 
 ### Corretto
+- **La build di /calendar si era rotta.** La memoria dei filtri usava
+  `useSearchParams()` nella barra laterale, che sta nel layout e quindi
+  dentro ogni pagina: quell’hook impedisce la generazione statica se non è
+  avvolto in un `<Suspense>`. I filtri ora si annotano al clic leggendo
+  `window.location`, senza rendere dinamico niente. Aggiunto
+  `npm run verify:build`, che ricostruisce da zero come fa Vercel: la build
+  normale riusa la cache e nascondeva l’errore. (#51)
 - **Ctrl+K non sfocava lo sfondo.** Il velo era trasparente e basta: la
   sfocatura non c’era proprio, mentre il pannello dei task ce l’aveva. (#50)
 - **L’accento arrivava solo a metà.** Scegliendo il verde restavano un alone

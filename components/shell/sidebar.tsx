@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ChevronDown,
@@ -67,21 +67,31 @@ function NavLink({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { requests, leaves, currentUser } = useAppStore();
   const active = isActive(pathname, item.href);
   const Icon = item.icon;
-
-  /* Si annota dove si è e con quali filtri, così tornando qui li si
-     ritrova. L'annotazione avviene durante il render — è una scrittura in
-     una mappa, non uno stato di React, e deve essere già fatta quando
-     qualcuno clicca un altro link. */
-  ricorda(pathname, searchParams.toString());
 
   /* Il link porta con sé gli ultimi filtri della sezione. Sulla sezione in
      cui si è già, l'indirizzo resta nudo: cliccare «Task» stando nei task
      è il modo naturale di dire «togli i filtri». */
   const href = active ? item.href : conFiltri(item.href);
+
+  /* I filtri si annotano al momento del clic, leggendoli dalla barra degli
+     indirizzi.
+
+     La via ovvia era `useSearchParams()`, ed è sbagliata qui: la barra
+     laterale sta nel layout, quindi vive dentro OGNI pagina, e quel hook
+     obbliga tutta la pagina a rinunciare alla generazione statica se non è
+     avvolto in un <Suspense>. Il risultato è stato una build rotta su
+     /calendar — non un dettaglio di stile, la pagina non si generava più.
+
+     Qui non serve reagire ai cambiamenti: basta sapere dove si era un
+     istante prima di andarsene, e `window.location` lo dice senza costringere
+     niente a diventare dinamico. */
+  const vado = () => {
+    ricorda(window.location.pathname, window.location.search);
+    onNavigate?.();
+  };
 
   // In attesa di decisione: contatore per i responsabili.
   const badge =
@@ -96,7 +106,7 @@ function NavLink({
   return (
     <Link
       href={href}
-      onClick={onNavigate}
+      onClick={vado}
       aria-current={active ? "page" : undefined}
       className={cn(
         "relative flex h-9.5 items-center gap-3 rounded-lg px-2.5 text-sm outline-none transition-all",
