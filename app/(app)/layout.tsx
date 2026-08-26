@@ -1,6 +1,7 @@
 import { AggiornamentiLive } from "@/components/shell/aggiornamenti-live";
 import { AppShell } from "@/components/shell/app-shell";
 import { LazyOverlays } from "@/components/shell/lazy-overlays";
+import { Scorciatoie } from "@/components/shell/scorciatoie";
 import { ToastProvider } from "@/components/toaster";
 import { PreferencesProvider } from "@/lib/preferences";
 import { AppStoreProvider } from "@/lib/store";
@@ -22,6 +23,7 @@ export default function AppLayout({
           <AppShell>
             {children}
             <AggiornamentiLive />
+            <Scorciatoie />
             <LazyOverlays />
           </AppShell>
         </ToastProvider>
