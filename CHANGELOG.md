@@ -10,6 +10,18 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Scorciatoie da tastiera**: `T` apre i Task, `P` i Progetti, `N` crea un
+  task nuovo ovunque ci si trovi. Non scattano mentre si scrive, né con un
+  pannello aperto, né in combinazione con Ctrl o Cmd — `Ctrl+P` resta la
+  stampa. (#52)
+- **«Solo le mie» accanto al profilo**: un interruttore per passare fra il
+  proprio lavoro e quello del team. Vive nell’indirizzo, quindi il tasto
+  indietro lo annulla e tornando nella sezione lo si ritrova. (#52)
+- **Contatore dei task in corso** sulla voce Task: quanti se ne hanno
+  aperti adesso, non il totale del workspace. (#52)
+- **Si possono spegnere gli avvisi sul lavoro altrui** (Impostazioni ›
+  Aspetto). La board continua ad aggiornarsi da sola: sparisce
+  l’interruzione, non il dato. (#52)
 - **Ruolo «freelance»: assenze anche di sabato e domenica.** Chi collabora a
   partita IVA non ha la settimana dell’ufficio, ma il calendario la dava per
   scontata: un sabato valeva zero giorni e il modulo rifiutava di mandare la

@@ -119,8 +119,10 @@ function Switch({
 }
 
 export function AppearanceSettings() {
-  const { prefs, setAccent, setDensity, setReduceMotion } = usePreferences();
+  const { prefs, setAccent, setDensity, setReduceMotion, setAvvisiAltrui } =
+    usePreferences();
   const reduceId = React.useId();
+  const avvisiId = React.useId();
 
   return (
     <div className="space-y-4">
@@ -205,6 +207,23 @@ export function AppearanceSettings() {
             id={reduceId}
             checked={prefs.reduceMotion}
             onChange={setReduceMotion}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-4 border-t border-border-soft pt-4">
+          <label htmlFor={avvisiId} className="min-w-0">
+            <span className="block text-[13px] font-medium text-ink">
+              Avvisami quando lavora qualcun altro
+            </span>
+            <span className="block text-[12px] text-ink-muted">
+              La board si aggiorna da sola in ogni caso: qui si sceglie solo
+              se farsi interrompere da un avviso.
+            </span>
+          </label>
+          <Switch
+            id={avvisiId}
+            checked={prefs.avvisiAltrui}
+            onChange={setAvvisiAltrui}
           />
         </div>
       </SettingCard>

@@ -32,6 +32,7 @@ import {
   IconTasks,
   IconTeam,
 } from "@/components/shell/nav-icons";
+import { SoloMie } from "@/components/shell/solo-mie";
 import { Button } from "@/components/ui/button";
 
 const NAV_ITEMS: {
@@ -67,7 +68,7 @@ function NavLink({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const { requests, leaves, currentUser } = useAppStore();
+  const { requests, leaves, tasks, currentUser } = useAppStore();
   const active = isActive(pathname, item.href);
   const Icon = item.icon;
 
@@ -93,15 +94,28 @@ function NavLink({
     onNavigate?.();
   };
 
-  // In attesa di decisione: contatore per i responsabili.
+  /* Contatori sulle voci. Due nature diverse, di proposito:
+       - Richieste e Ferie: cose in attesa di una DECISIONE, quindi solo per
+         chi le decide.
+       - Task: quanti ne ho aperti IO in questo momento. Non il totale del
+         workspace, che sarebbe un numero grande e inerte; nemmeno tutti i
+         miei, che comprende il fondo del cassetto. Quelli su cui sto
+         lavorando ora — il numero a cui si risponde «e adesso?». */
   const badge =
-    currentUser.role !== "admin"
-      ? 0
-      : item.href === "/requests"
-        ? requests.filter((r) => r.status === "pending").length
-        : item.href === "/leave"
-          ? leaves.filter((l) => l.status === "pending").length
-          : 0;
+    item.href === "/tasks"
+      ? tasks.filter(
+          (t) =>
+            t.owner_id === currentUser.id &&
+            t.status === "progress" &&
+            !t.archived_at,
+        ).length
+      : currentUser.role !== "admin"
+        ? 0
+        : item.href === "/requests"
+          ? requests.filter((r) => r.status === "pending").length
+          : item.href === "/leave"
+            ? leaves.filter((l) => l.status === "pending").length
+            : 0;
 
   return (
     <Link
@@ -178,6 +192,9 @@ function UserFooter({ compact = false }: { compact?: boolean }) {
 
   return (
     <div ref={rootRef} className="relative px-2.5 pb-3">
+      {/* Sopra il profilo: è lì che si guarda quando ci si chiede «e io
+          cosa devo fare?». */}
+      <SoloMie compact={compact} />
       <AnimatePresence>
         {open ? (
           <motion.div

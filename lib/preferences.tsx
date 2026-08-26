@@ -31,12 +31,19 @@ export interface Preferences {
   accent: AccentKey;
   density: DensityKey;
   reduceMotion: boolean;
+  /** Avvisare quando la board cambia per mano di qualcun altro. Resta
+   *  acceso: sapere che il lavoro degli altri è arrivato è il motivo per
+   *  cui la board si aggiorna da sola. Ma chi lavora concentrato su un
+   *  compito ha il diritto di spegnerlo, invece di vedere comparire
+   *  avvisi su task che non lo riguardano. */
+  avvisiAltrui: boolean;
 }
 
 const DEFAULTS: Preferences = {
   accent: "orange",
   density: "comfortable",
   reduceMotion: false,
+  avvisiAltrui: true,
 };
 
 /** Accenti selezionabili. Le tavolozze stanno in app/globals.css come
@@ -91,6 +98,7 @@ interface PreferencesContextValue {
   setAccent: (accent: AccentKey) => void;
   setDensity: (density: DensityKey) => void;
   setReduceMotion: (on: boolean) => void;
+  setAvvisiAltrui: (on: boolean) => void;
   reset: () => void;
 }
 
@@ -135,6 +143,8 @@ export function PreferencesProvider({
       setDensity: (density) => setPrefs((p) => ({ ...p, density })),
       setReduceMotion: (reduceMotion) =>
         setPrefs((p) => ({ ...p, reduceMotion })),
+      setAvvisiAltrui: (avvisiAltrui) =>
+        setPrefs((p) => ({ ...p, avvisiAltrui })),
       reset: () => setPrefs(DEFAULTS),
     }),
     [prefs],
