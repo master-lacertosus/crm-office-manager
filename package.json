@@ -17,7 +17,9 @@
     "verify:freelance": "node --import ./scripts/alias.mjs scripts/freelance-verify.mjs",
     "verify:filtri": "node --import ./scripts/alias.mjs scripts/filtri-verify.mjs",
     "verify:build": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next build",
-    "verify:filtro": "node --import ./scripts/alias.mjs scripts/filtro-responsabile-verify.mjs"
+    "verify:filtro": "node --import ./scripts/alias.mjs scripts/filtro-responsabile-verify.mjs",
+    "verify:prod": "node scripts/produzione-verify.mjs",
+    "verify": "node scripts/verifica-tutto.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
