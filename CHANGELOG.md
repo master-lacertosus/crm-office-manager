@@ -10,6 +10,13 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **`npm run verify`**: tutti i controlli in un comando — tipi, regole, SQL,
+  policy, permessi di visibilità, filtri, calendario dei freelance e build
+  pulita. Con `-- --prod` interroga anche il sito vero: le pagine
+  rispondono, sono le nostre e non una schermata di Vercel, e le correzioni
+  recenti sono davvero quelle servite. Non si ferma al primo rosso: sapere
+  che sono rotti tre controlli su otto è un’informazione diversa da «il
+  primo è rotto». (#54)
 - **Scorciatoie da tastiera**: `T` apre i Task, `P` i Progetti, `N` crea un
   task nuovo ovunque ci si trovi. Non scattano mentre si scrive, né con un
   pannello aperto, né in combinazione con Ctrl o Cmd — `Ctrl+P` resta la
