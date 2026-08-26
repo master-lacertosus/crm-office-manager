@@ -13,7 +13,8 @@
     "verify:sql": "node scripts/sql-verify.mjs",
     "db:genera": "node scripts/genera-aggiornamento-db.mjs",
     "verify:rls": "node scripts/rls-ricorsione-verify.mjs",
-    "verify:link": "node scripts/link-email-verify.mjs"
+    "verify:link": "node scripts/link-email-verify.mjs",
+    "verify:freelance": "node --import ./scripts/alias.mjs scripts/freelance-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

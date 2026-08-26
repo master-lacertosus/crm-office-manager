@@ -12,6 +12,7 @@ import {
 import { messaggioErrore } from "@/lib/errori";
 import { AvatarError, fileToAvatarDataUrl } from "@/lib/avatar";
 import { useAppStore } from "@/lib/store";
+import { RUOLI } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { useToast } from "@/components/toaster";
 import { Badge } from "@/components/ui/badge";
@@ -98,7 +99,7 @@ export function ProfileForm() {
               ) : (
                 <User aria-hidden />
               )}
-              {isAdmin ? "Responsabile" : "Membro"}
+              {RUOLI[currentUser.role].label}
             </Badge>
           </p>
           <p className="mt-0.5 text-[13px] text-ink-muted">

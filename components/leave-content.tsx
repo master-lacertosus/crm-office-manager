@@ -26,7 +26,12 @@ import {
 } from "@/lib/leave";
 import { updateSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
-import { LEAVE_META, type LeaveRequest, type LeaveType } from "@/lib/types";
+import {
+  LEAVE_META,
+  lavoraNelWeekend,
+  type LeaveRequest,
+  type LeaveType,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { EmptyState } from "@/components/empty-state";
@@ -138,7 +143,12 @@ function LeaveForm() {
 
   // Il permesso è di un giorno solo; le ferie hanno l'intervallo.
   const effEnd = type === "permesso" ? start : end < start ? start : end;
-  const days = workingDaysCount(start, effEnd, closures);
+  const days = workingDaysCount(
+    start,
+    effEnd,
+    closures,
+    lavoraNelWeekend(currentUser.role),
+  );
 
   // Sovrapposizione con proprie richieste vive (in attesa o approvate).
   const overlap = leaves.find(
@@ -573,7 +583,15 @@ function PendingLeaveCard({ leave }: { leave: LeaveRequest }) {
   const [busy, setBusy] = React.useState(false);
 
   const today = todayIso();
-  const days = workingDaysCount(leave.start_date, leave.end_date, closures);
+  /* Il ruolo che conta e' quello di chi ha chiesto l'assenza: un
+     responsabile che approva il sabato di un freelance deve leggere
+     "1 giorno", non "0". */
+  const days = workingDaysCount(
+    leave.start_date,
+    leave.end_date,
+    closures,
+    lavoraNelWeekend(requester?.role ?? "member"),
+  );
   const startsIn = diffIsoDays(today, leave.start_date);
   const urgent = startsIn <= 3;
 
@@ -746,7 +764,12 @@ function LeaveRow({
   const toast = useToast();
   const requester = profiles.find((p) => p.id === leave.requester_id);
   const decider = profiles.find((p) => p.id === leave.decided_by);
-  const days = workingDaysCount(leave.start_date, leave.end_date, closures);
+  const days = workingDaysCount(
+    leave.start_date,
+    leave.end_date,
+    closures,
+    lavoraNelWeekend(requester?.role ?? "member"),
+  );
   const canWithdraw =
     leave.status === "pending" && leave.requester_id === currentUser.id;
 
@@ -963,7 +986,14 @@ export function LeaveContent() {
         l.start_date.slice(0, 4) === year,
     )
     .reduce(
-      (sum, l) => sum + workingDaysCount(l.start_date, l.end_date, closures),
+      (sum, l) =>
+        sum +
+        workingDaysCount(
+          l.start_date,
+          l.end_date,
+          closures,
+          lavoraNelWeekend(currentUser.role),
+        ),
       0,
     );
 
