@@ -245,7 +245,13 @@ function PendingCard({ req }: { req: TaskRequest }) {
       <div>
         <p className="text-[15px] font-bold text-ink">{req.title}</p>
         {req.description ? (
-          <p className="mt-1 text-[13px]/[19px] text-ink-secondary">
+          /* `whitespace-pre-line` non è un dettaglio tipografico: senza, gli
+             a-capo collassano e una richiesta scritta a elenco puntato
+             diventa un unico blocco corrente. Il testo c'era ed era anche
+             completo — semplicemente non si riusciva più a leggerlo.
+             `break-words` tiene dentro i link lunghi, che altrimenti
+             sfondano la scheda. */
+          <p className="mt-1 text-[13px]/[19px] break-words whitespace-pre-line text-ink-secondary">
             {req.description}
           </p>
         ) : null}

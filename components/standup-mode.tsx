@@ -125,7 +125,7 @@ export function StandupMode({
 
           {/* Barra superiore */}
           <header className="sticky top-0 z-10 border-b border-border-soft bg-canvas/90 backdrop-blur-md">
-            <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-4">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-6 py-4">
               <div className="min-w-0">
                 <h2 className="text-[26px]/8 font-bold tracking-[-0.015em] text-ink">
                   Standup del team
@@ -170,7 +170,7 @@ export function StandupMode({
           </header>
 
           {/* Card persona */}
-          <div className="mx-auto max-w-6xl px-6 py-6">
+          <div className="px-6 py-6">
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {people.map(({ profile, openTasks, overdue, review, done7 }, i) => (
                 <motion.section

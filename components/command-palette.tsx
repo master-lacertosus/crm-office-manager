@@ -176,7 +176,11 @@ export function CommandPalette() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="absolute inset-0 bg-scrim"
+            /* Lo stesso velo del pannello dei task. Qui mancava la sfocatura,
+               e senza si vedeva la pagina nitida sotto un velo trasparente:
+               la palette galleggiava su un fondo che continuava a chiedere
+               attenzione. */
+            className="absolute inset-0 bg-scrim backdrop-blur-[3px]"
             onClick={() => setOpen(false)}
             aria-hidden
           />

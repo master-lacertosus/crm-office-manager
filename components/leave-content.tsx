@@ -668,8 +668,12 @@ function PendingLeaveCard({ leave }: { leave: LeaveRequest }) {
         </span>
       </div>
 
+      {/* Stessa ragione delle richieste: la nota è testo scritto a mano, e
+          gli a-capo che ci mette chi scrive vanno rispettati. */}
       {leave.note ? (
-        <p className="text-[13px]/[19px] text-ink-secondary">«{leave.note}»</p>
+        <p className="text-[13px]/[19px] break-words whitespace-pre-line text-ink-secondary">
+          «{leave.note}»
+        </p>
       ) : null}
       {conflicts.length > 0 ? (
         <p className="text-[12px] font-medium text-warning-text">
