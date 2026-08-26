@@ -53,6 +53,7 @@ import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { PriorityBadge } from "@/components/priority-badge";
 import { AvanzamentoProcesso } from "@/components/processo-avanzamento";
+import { SceltaProgetto } from "@/components/scelta-progetto";
 import { SottoTask } from "@/components/sotto-task";
 import { StatusLabel } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
@@ -358,7 +359,6 @@ function TaskForm({
   const searchParams = useSearchParams();
   const {
     profiles,
-    projects,
     tasks,
     currentUser,
     createTask,
@@ -625,23 +625,7 @@ function TaskForm({
             <DueChip iso={dueDate} status={status} />
           ) : null}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="task-project">Progetto</Label>
-          <NativeSelect
-            id="task-project"
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-          >
-            <option value="">Nessun progetto</option>
-            {projects
-              .filter((p) => !p.is_archived)
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-          </NativeSelect>
-        </div>
+        <SceltaProgetto value={projectId} onChange={setProjectId} />
         <div className="space-y-2">
           <Label htmlFor="task-repeat">Ripetizione</Label>
           <NativeSelect

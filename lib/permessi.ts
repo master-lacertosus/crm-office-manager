@@ -29,6 +29,18 @@ export function eResponsabile(utente: UtenteMinimo): boolean {
 }
 
 /**
+ * Un progetto nasce per mano di un responsabile.
+ * Specchio di `projects_insert_admin` (M9).
+ *
+ * Serve a non offrire quello che il database rifiuterebbe: un pulsante
+ * «crea progetto» mostrato a chi non può usarlo è una porta che si apre
+ * con un no.
+ */
+export function puoCreareProgetto(utente: UtenteMinimo): boolean {
+  return eResponsabile(utente);
+}
+
+/**
  * Un task lo lavora chi ne risponde: il responsabile, chi l'ha creato, i
  * collaboratori — e il referente del lavoro padre, perché chi guida un
  * lavoro deve poterne organizzare i pezzi.
