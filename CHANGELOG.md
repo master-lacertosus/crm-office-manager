@@ -138,6 +138,14 @@ versioni (fase pre-1.0).
   tabelle del workspace). (#29)
 
 ### Modificato
+- **Un template a fasi ora crea un lavoro con i suoi pezzi.** Prima faceva
+  N task fratelli legati da un `batch_id`: un secondo modo di dire «questo
+  lavoro ha dei pezzi», accanto ai sotto-task. Due modi per la stessa idea
+  significa scrivere ogni funzionalità futura due volte. Ora «Creazione
+  prodotto» è un task con dentro «Scrittura testi» e «Caricamento
+  online» — che è anche il modo in cui la si descrive a voce — e tutto
+  quello che i sotto-task hanno già imparato vale da subito anche per i
+  template. Migrazione **M13** (solo commenti, nessun dato toccato). (#62)
 - **Le CTA reagiscono al passaggio del mouse**, come sul sito. Il colore si
   scuriva già, ma di scatto: mancava la transizione, e l’unico segno che il
   puntatore fosse sul bersaglio arrivava come un lampeggio. Ora sfondo e

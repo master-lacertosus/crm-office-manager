@@ -52,7 +52,6 @@ import { CollaboratorsSection } from "@/components/collaborators-section";
 import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { PriorityBadge } from "@/components/priority-badge";
-import { AvanzamentoProcesso } from "@/components/processo-avanzamento";
 import {
   PezziInCreazione,
   type PezzoNuovo,
@@ -710,7 +709,6 @@ function TaskForm({
             ) : null}
           </form>
           <div className="[&>section]:!px-0">
-            {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
             {task ? <SottoTask task={task} /> : null}
             {task ? <ChecklistSection task={task} /> : null}
             {children}
@@ -750,7 +748,6 @@ function TaskForm({
         {saveRow}
         {task ? <TaskMeta task={task} /> : null}
       </form>
-      {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
       {task ? <SottoTask task={task} /> : null}
       {task ? <ChecklistSection task={task} /> : null}
       {children}
