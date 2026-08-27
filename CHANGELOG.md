@@ -10,6 +10,16 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **La ricerca (Ctrl+K) trova davvero tutto.** Prima guardava solo nei
+  titoli di task aperti, progetti e persone. Ora cerca anche nelle
+  descrizioni, e comprende task chiusi, richieste, ferie e commenti — è
+  dentro le conversazioni che finisce il perché delle cose. I sotto-task
+  dicono di quale lavoro sono un pezzo, e un tetto per categoria impedisce
+  che cento commenti seppelliscano i due task che servivano. (#59)
+- **Modalità Zen**, accanto alla chat: restano Task, Richieste e Progetti,
+  spariscono le altre sette voci. Non nasconde dati, toglie di mezzo le
+  destinazioni che adesso non servono. Resta accesa fra un ricaricamento e
+  l’altro, e fra due schede aperte. (#59)
 - **Azioni su più task insieme**, da board ed elenco. Una casella su ogni
   scheda, e una barra che compare in basso: sposta di fase, affida a
   qualcuno, cambia progetto. Un solo «Annulla» per tutto il gruppo.

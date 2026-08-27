@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   ListTodo,
   MailPlus,
+  MessageSquare,
   Plus,
   Repeat,
   Search,
@@ -24,6 +25,8 @@ import {
 import { pop, scrim } from "@/lib/motion";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { formatRange } from "@/lib/leave";
+import { LEAVE_META } from "@/lib/types";
 import { StatusPip } from "@/components/status-pip";
 
 interface Item {
@@ -34,6 +37,14 @@ interface Item {
   icon?: LucideIcon;
   pip?: React.ReactNode;
   run: () => void;
+  /** Testo aggiuntivo su cui cercare: descrizioni, note, motivi. Non si
+   *  mostra — serve solo a farsi trovare. Una richiesta la si ricorda per
+   *  una parola scritta dentro, non per il titolo che le si è dato. */
+  cerca?: string;
+  /** Voci che si costruiscono solo quando si sta cercando davvero: i task
+   *  chiusi, i commenti, le ferie. A palette appena aperta si vuole una
+   *  scorciatoia, non l'archivio. */
+  soloConRicerca?: boolean;
 }
 
 /**
@@ -42,7 +53,8 @@ interface Item {
  */
 export function CommandPalette() {
   const router = useRouter();
-  const { tasks, projects, profiles, currentUser } = useAppStore();
+  const { tasks, projects, profiles, requests, leaves, comments, currentUser } =
+    useAppStore();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [active, setActive] = React.useState(0);
@@ -108,6 +120,12 @@ export function CommandPalette() {
         id: `task-${t.id}`,
         group: "Task",
         label: t.title,
+        /* Un pezzo si distingue dal lavoro: due titoli simili in elenco,
+           senza dire quale sia quale, costringono ad aprirli entrambi. */
+        hint: t.parent_id
+          ? `pezzo di «${tasks.find((p) => p.id === t.parent_id)?.title ?? "un lavoro"}»`
+          : undefined,
+        cerca: t.description ?? "",
         pip: <StatusPip status={t.status} className="size-3.5" />,
         run: () => go(`/tasks?task=${t.id}`),
       }));
@@ -130,19 +148,106 @@ export function CommandPalette() {
         icon: User,
         run: () => go(`/tasks?owner=${p.id}`),
       }));
-    return [...nav, ...taskItems, ...projectItems, ...peopleItems];
-  }, [tasks, projects, profiles, currentUser.role, go]);
+    /* I task CHIUSI si cercano, ma non ingombrano la palette appena
+       aperta: «dov'era finita quella cosa di marzo» è una domanda vera. */
+    const chiusi: Item[] = tasks
+      .filter((t) => t.status === "done")
+      .map((t) => ({
+        id: `done-${t.id}`,
+        group: "Task chiusi",
+        label: t.title,
+        hint: "chiuso",
+        cerca: t.description ?? "",
+        pip: <StatusPip status={t.status} className="size-3.5" />,
+        soloConRicerca: true,
+        run: () => go(`/tasks?task=${t.id}`),
+      }));
+
+    const richiesteItems: Item[] = requests.map((r) => ({
+      id: `req-${r.id}`,
+      group: "Richieste",
+      label: r.title,
+      hint:
+        r.status === "pending"
+          ? "in attesa"
+          : r.status === "approved"
+            ? "approvata"
+            : "rifiutata",
+      cerca: `${r.description ?? ""} ${r.rejection_reason ?? ""}`,
+      icon: MailPlus,
+      soloConRicerca: true,
+      run: () => go("/requests"),
+    }));
+
+    const ferieItems: Item[] = leaves.map((l) => {
+      const chi = profiles.find((p) => p.id === l.requester_id);
+      return {
+        id: `leave-${l.id}`,
+        group: "Ferie e permessi",
+        label: `${chi?.full_name.split(" ")[0] ?? "?"} — ${LEAVE_META[l.type]?.label ?? l.type}`,
+        hint: formatRange(l.start_date, l.end_date),
+        cerca: `${l.note ?? ""} ${chi?.full_name ?? ""}`,
+        icon: TreePalm,
+        soloConRicerca: true,
+        run: () => go("/leave"),
+      };
+    });
+
+    /* I commenti: è dentro le conversazioni che finisce il perché delle
+       cose, ed è lì che si cerca quando non si ricorda dove stava. */
+    const commentiItems: Item[] = comments.map((c) => {
+      const suQuale = tasks.find((t) => t.id === c.task_id);
+      return {
+        id: `cmt-${c.id}`,
+        group: "Commenti",
+        label: c.body.slice(0, 90),
+        hint: suQuale ? `su «${suQuale.title}»` : undefined,
+        cerca: c.body,
+        icon: MessageSquare,
+        soloConRicerca: true,
+        run: () => go(`/tasks?task=${c.task_id}`),
+      };
+    });
+
+    return [
+      ...nav,
+      ...taskItems,
+      ...projectItems,
+      ...peopleItems,
+      ...chiusi,
+      ...richiesteItems,
+      ...ferieItems,
+      ...commentiItems,
+    ];
+  }, [tasks, projects, profiles, requests, leaves, comments, currentUser.role, go]);
 
   const q = query.trim().toLowerCase();
-  const visible = q
-    ? items
-        .filter((i) => i.label.toLowerCase().includes(q))
-        .sort(
-          (a, b) =>
-            Number(b.label.toLowerCase().startsWith(q)) -
-            Number(a.label.toLowerCase().startsWith(q)),
-        )
-    : items.slice(0, 12);
+
+  const visible = React.useMemo(() => {
+    if (!q) return items.filter((i) => !i.soloConRicerca).slice(0, 12);
+
+    const trovati = items
+      .filter((i) =>
+        `${i.label} ${i.cerca ?? ""}`.toLowerCase().includes(q),
+      )
+      /* Chi comincia con quello che si è scritto viene prima: cercando
+         «rip» si vuole «Riprese», non un commento che la nomina. */
+      .sort(
+        (a, b) =>
+          Number(b.label.toLowerCase().startsWith(q)) -
+          Number(a.label.toLowerCase().startsWith(q)),
+      );
+
+    /* Un tetto per gruppo. Senza, una parola comune in cento commenti
+       seppellirebbe i due task che si stavano cercando. */
+    const perGruppo = new Map<string, number>();
+    return trovati.filter((i) => {
+      const quanti = perGruppo.get(i.group) ?? 0;
+      if (quanti >= 6) return false;
+      perGruppo.set(i.group, quanti + 1);
+      return true;
+    });
+  }, [items, q]);
 
   React.useEffect(() => {
     listRef.current

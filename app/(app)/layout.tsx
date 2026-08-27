@@ -1,6 +1,7 @@
 import { AggiornamentiLive } from "@/components/shell/aggiornamenti-live";
 import { AppShell } from "@/components/shell/app-shell";
 import { LazyOverlays } from "@/components/shell/lazy-overlays";
+import { InterruttoreZen } from "@/components/shell/modalita-zen";
 import { Scorciatoie } from "@/components/shell/scorciatoie";
 import { AzioniMultiple } from "@/components/azioni-multiple";
 import { SelezioneProvider } from "@/lib/selezione";
@@ -27,6 +28,7 @@ export default function AppLayout({
             {children}
             <AggiornamentiLive />
             <Scorciatoie />
+            <InterruttoreZen />
             <AzioniMultiple />
             <LazyOverlays />
             </AppShell>
