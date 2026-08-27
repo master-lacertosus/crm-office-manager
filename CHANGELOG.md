@@ -10,6 +10,13 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **In Zen si scrivono i task a parole.** «Devo fare un video entro venerdì
+  per Rimini Wellness e mi serve da Lorenzo una landing entro il 12»
+  diventa due lavori, due responsabili, due scadenze e un progetto. Nomi e
+  progetti vengono **riconosciuti** contro il workspace vero, non
+  indovinati: un collega che non esiste non può comparire. Ogni deduzione
+  dice da dove viene («venerdì» → scadenza), e niente nasce senza
+  anteprima. Nessun modello linguistico, nessun costo. (#65)
 - **Il calendario mostra anche l’attività svolta** (richiesta di Riccardo).
   Diceva cosa scade; ora, con un interruttore, dice anche cosa è stato
   fatto: quanti task chiusi e quanti movimenti di fase, giorno per giorno,

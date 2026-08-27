@@ -21,7 +21,8 @@
     "verify:prod": "node scripts/produzione-verify.mjs",
     "verify": "node scripts/verifica-tutto.mjs",
     "verify:multiple": "node --import ./scripts/alias.mjs scripts/azioni-multiple-verify.mjs",
-    "verify:tema": "node scripts/tema-scuro-verify.mjs"
+    "verify:tema": "node scripts/tema-scuro-verify.mjs",
+    "verify:interpreta": "node --import ./scripts/alias.mjs scripts/interpreta-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
