@@ -158,5 +158,50 @@ const CTX = { profiles: PROFILI, projects: PROGETTI, io: "francesco", oggi: OGGI
   check("Testo vuoto: nessun lavoro", interpreta("   ", CTX).length === 0);
 }
 
+/* --- 8. La barra comandi: ordini, non ricerche ---------------------- */
+{
+  const r = interpreta(
+    "Crea una task per il progetto BACK TO GYM di creazione di una landing page entro giorno 01/09/2026",
+    { ...CTX, projects: [{ id: "btg", name: "BACK TO GYM", is_archived: false }] },
+  );
+  check(
+    "Il preambolo del comando non finisce nel titolo",
+    r[0]?.titolo === "landing page",
+    `«${r[0]?.titolo}»`,
+  );
+  check("La data scritta per esteso viene letta", r[0]?.due_date === "2026-09-01", r[0]?.due_date ?? "nessuna");
+  check("Il progetto in maiuscolo viene riconosciuto", r[0]?.project_id === "btg");
+}
+
+/* --- 9. I pezzi elencati nella frase -------------------------------- */
+{
+  const r = interpreta(
+    "Crea una landing page con dentro scrittura testi Klea e caricamento online Lorenzo",
+    CTX,
+  );
+  check("Un lavoro solo, non tre", r.length === 1, `${r.length}`);
+  check("Con due pezzi", r[0]?.pezzi?.length === 2, `${r[0]?.pezzi?.length ?? 0}`);
+  check(
+    "Ogni pezzo al suo incaricato",
+    r[0]?.pezzi?.[0]?.owner_id === "klea" && r[0]?.pezzi?.[1]?.owner_id === "lorenzo",
+    (r[0]?.pezzi ?? []).map((p) => `${p.titolo}:${p.owner_id}`).join(" · "),
+  );
+  check(
+    "E i nomi non restano nei titoli dei pezzi",
+    (r[0]?.pezzi ?? []).every((p) => !/klea|lorenzo/i.test(p.titolo)),
+    (r[0]?.pezzi ?? []).map((p) => `«${p.titolo}»`).join(" "),
+  );
+}
+
+/* --- 10. Il ritaglio non mangia le parole vicine -------------------- */
+{
+  const r = interpreta("mi serve da Klea la grafica entro il 5", CTX);
+  check(
+    "«grafica» resta intera",
+    r.some((t) => t.titolo === "grafica"),
+    r.map((t) => `«${t.titolo}»`).join(" ") + "  (la «a» di «da» e quella di «grafica» non vanno mangiate)",
+  );
+}
+
 console.log(falliti === 0 ? "\nTUTTO VERDE" : `\n${falliti} CONTROLLI FALLITI`);
 process.exit(falliti === 0 ? 0 : 1);

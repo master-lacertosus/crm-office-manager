@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { LoaderCircle, Sparkles, X } from "lucide-react";
+import { LoaderCircle, Mic, MicOff, Sparkles, X } from "lucide-react";
 
+import { useDettatura } from "@/lib/dettatura";
 import { messaggioErrore } from "@/lib/errori";
 import { interpreta, type TaskProposto } from "@/lib/interpreta";
 import { puoAssegnareAdAltri } from "@/lib/permessi";
@@ -32,12 +33,21 @@ import { Textarea } from "@/components/ui/textarea";
  * Ogni deduzione dice da dove viene: «venerdì → scadenza». Chi corregge
  * capisce anche PERCHÉ ha sbagliato, e la volta dopo scrive meglio.
  */
-export function ZenScrivi({ onFatto }: { onFatto?: () => void }) {
+export function ZenScrivi({
+  onFatto,
+  testoIniziale = "",
+}: {
+  onFatto?: () => void;
+  /** Quello che era già stato scritto nella barra comandi: si riparte da
+   *  lì invece di far ribattere la frase da capo. */
+  testoIniziale?: string;
+}) {
   const { profiles, projects, currentUser, createTask } = useAppStore();
   const toast = useToast();
-  const [testo, setTesto] = React.useState("");
+  const [testo, setTesto] = React.useState(testoIniziale);
   const [bozze, setBozze] = React.useState<TaskProposto[] | null>(null);
   const [creando, setCreando] = React.useState(false);
+  const dettatura = useDettatura(setTesto);
 
   const attivi = profiles.filter((p) => p.is_active);
   const progettiVivi = projects.filter((p) => !p.is_archived);
@@ -66,13 +76,24 @@ export function ZenScrivi({ onFatto }: { onFatto?: () => void }) {
     try {
       for (const b of bozze) {
         try {
-          await createTask({
+          const padre = await createTask({
             title: b.titolo,
             owner_id: b.owner_id,
             due_date: b.due_date,
             project_id: b.project_id,
           });
           fatti++;
+          /* I pezzi dopo il padre, che è quello a cui puntano. Ereditano
+             il progetto: un pezzo altrove racconterebbe un'altra storia. */
+          for (const p of b.pezzi ?? []) {
+            await createTask({
+              title: p.titolo,
+              owner_id: p.owner_id,
+              project_id: b.project_id,
+              parent_id: padre.id,
+            });
+            fatti++;
+          }
         } catch (e) {
           errore ??= messaggioErrore(e, "Non creato.");
         }
@@ -119,7 +140,7 @@ export function ZenScrivi({ onFatto }: { onFatto?: () => void }) {
             }
           }}
         />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             onClick={leggi}
@@ -127,11 +148,41 @@ export function ZenScrivi({ onFatto }: { onFatto?: () => void }) {
           >
             Vedi cosa nasce
           </Button>
+
+          {/* Il microfono compare solo dove il browser sa ascoltare: su
+              Firefox non esiste, e un pulsante presente ma inerte è
+              peggio di uno assente. */}
+          {dettatura.disponibile ? (
+            <Button
+              type="button"
+              variant={dettatura.ascolta ? "default" : "outline"}
+              size="icon"
+              onClick={() =>
+                dettatura.ascolta
+                  ? dettatura.ferma()
+                  : dettatura.avvia(testo)
+              }
+              aria-pressed={dettatura.ascolta}
+              aria-label={dettatura.ascolta ? "Smetti di dettare" : "Detta"}
+              title={
+                dettatura.ascolta
+                  ? "Sto ascoltando — premi per fermare"
+                  : "Detta invece di scrivere"
+              }
+              className={cn(dettatura.ascolta && "animate-pulse")}
+            >
+              {dettatura.ascolta ? <MicOff /> : <Mic />}
+            </Button>
+          ) : null}
           <span className="text-[12px] text-ink-muted">
-            Nomi, progetti e date vengono riconosciuti. Controlli prima di
-            confermare.
+            {dettatura.ascolta
+              ? "Sto ascoltando…"
+              : "Nomi, progetti e date vengono riconosciuti. Controlli prima di confermare."}
           </span>
         </div>
+        {dettatura.errore ? (
+          <p className="text-[12px] text-danger-text">{dettatura.errore}</p>
+        ) : null}
       </div>
 
       {bozze ? (
@@ -226,6 +277,41 @@ export function ZenScrivi({ onFatto }: { onFatto?: () => void }) {
                       ))}
                     </NativeSelect>
                   </div>
+
+                  {b.pezzi && b.pezzi.length > 0 ? (
+                    <ul className="space-y-1 border-l-2 border-border pl-3">
+                      {b.pezzi.map((p) => (
+                        <li
+                          key={p.chiave}
+                          className="flex items-center gap-2 text-[13px]"
+                        >
+                          <span className="min-w-0 flex-1 truncate text-ink">
+                            {p.titolo}
+                          </span>
+                          <NativeSelect
+                            className="w-32 shrink-0"
+                            value={p.owner_id}
+                            onChange={(e) =>
+                              aggiorna(b.chiave, {
+                                pezzi: b.pezzi?.map((x) =>
+                                  x.chiave === p.chiave
+                                    ? { ...x, owner_id: e.target.value }
+                                    : x,
+                                ),
+                              })
+                            }
+                            aria-label={`Chi fa «${p.titolo}»`}
+                          >
+                            {attivi.map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.full_name.split(" ")[0]}
+                              </option>
+                            ))}
+                          </NativeSelect>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
 
                   {b.perche.length > 0 ? (
                     /* Da dove viene ogni deduzione. Chi corregge capisce

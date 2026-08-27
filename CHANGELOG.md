@@ -10,6 +10,15 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Barra comandi: si scrive o si detta, e nascono i lavori.** Da Ctrl+K,
+  quando quello che si scrive sembra un ordine («Crea una task per il
+  progetto BACK TO GYM…») compare «Crea da questo testo», e la barra
+  diventa composizione senza perdere quello che si era già scritto.
+  Riconosce il preambolo del comando, i sotto-task elencati nella frase
+  («con dentro scrittura testi Klea e caricamento online Lorenzo») e le
+  date scritte per esteso. **Dettatura vocale** col riconoscimento del
+  browser: nessuna chiave, nessun costo, e il pulsante compare solo dove
+  il browser sa ascoltare. (#66)
 - **In Zen si scrivono i task a parole.** «Devo fare un video entro venerdì
   per Rimini Wellness e mi serve da Lorenzo una landing entro il 12»
   diventa due lavori, due responsabili, due scadenze e un progetto. Nomi e

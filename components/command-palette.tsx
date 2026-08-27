@@ -11,6 +11,7 @@ import {
   ListTodo,
   MailPlus,
   MessageSquare,
+  Sparkles,
   Plus,
   Repeat,
   Search,
@@ -28,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { formatRange } from "@/lib/leave";
 import { LEAVE_META } from "@/lib/types";
 import { StatusPip } from "@/components/status-pip";
+import { ZenScrivi } from "@/components/zen-scrivi";
 
 interface Item {
   id: string;
@@ -58,6 +60,9 @@ export function CommandPalette() {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [active, setActive] = React.useState(0);
+  /* Quando si passa da «cerco» a «detto cosa va fatto». La barra resta
+     una sola: cambia cosa ci si fa dentro. */
+  const [scrivendo, setScrivendo] = React.useState(false);
   const listRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -67,6 +72,7 @@ export function CommandPalette() {
         setOpen((v) => !v);
         setQuery("");
         setActive(0);
+        setScrivendo(false);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -223,6 +229,19 @@ export function CommandPalette() {
 
   const q = query.trim().toLowerCase();
 
+  /* Sembra un'istruzione? Un verbo di comando, oppure una frase lunga con
+     dentro un riferimento a quando o a chi. Nel dubbio la voce compare
+     comunque in fondo: proporla di troppo costa una riga, non proporla
+     quando serviva costa il gesto. */
+  const paresUnOrdine =
+    /^(?:crea|creare|aggiungi|fai|fammi|nuovo|nuova|inserisci|devo|serve|mi serve|ho bisogno)\b/i.test(
+      query.trim(),
+    ) ||
+    (query.trim().split(/\s+/).length >= 5 &&
+      /\b(?:entro|domani|luned|marted|mercoled|gioved|venerd|sabato|domenica|progetto|task|attivit)/i.test(
+        query,
+      ));
+
   const visible = React.useMemo(() => {
     if (!q) return items.filter((i) => !i.soloConRicerca).slice(0, 12);
 
@@ -312,13 +331,58 @@ export function CommandPalette() {
                 autoFocus
                 className="h-12 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
               />
+              {!scrivendo ? (
+                <button
+                  type="button"
+                  onClick={() => setScrivendo(true)}
+                  title="Scrivi o detta cosa va fatto"
+                  aria-label="Scrivi o detta cosa va fatto"
+                  className="rounded-lg p-1.5 text-ink-muted outline-none transition-colors hover:bg-accent hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Sparkles className="size-4" />
+                </button>
+              ) : null}
               <kbd className="rounded-xs border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-ink-muted">
                 Esc
               </kbd>
             </div>
 
+            {scrivendo ? (
+              /* Da qui in poi non si cerca più: si detta. Il testo scritto
+                 nella barra passa dentro come punto di partenza, così non
+                 si ricomincia da capo. */
+              <div className="max-h-[420px] overflow-y-auto p-4">
+                <ZenScrivi
+                  testoIniziale={query}
+                  onFatto={() => {
+                    setScrivendo(false);
+                    setOpen(false);
+                    setQuery("");
+                  }}
+                />
+              </div>
+            ) : (
             <div ref={listRef} className="max-h-[320px] overflow-y-auto p-1.5">
-              {visible.length === 0 ? (
+              {paresUnOrdine ? (
+                /* In cima, non in fondo: se quello che si è scritto è un
+                   ordine, è quella la cosa che si vuole fare. */
+                <button
+                  type="button"
+                  onClick={() => setScrivendo(true)}
+                  className="mb-1 flex w-full items-center gap-2.5 rounded-lg bg-brand-50 px-3 py-2.5 text-left outline-none transition-colors hover:bg-brand-100 focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Sparkles aria-hidden className="size-4 shrink-0 text-brand-600" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-semibold text-brand-700">
+                      Crea da questo testo
+                    </span>
+                    <span className="block truncate text-[12px] text-ink-muted">
+                      Vedi cosa nasce prima di confermare
+                    </span>
+                  </span>
+                </button>
+              ) : null}
+              {visible.length === 0 && !paresUnOrdine ? (
                 <p className="px-3 py-6 text-center text-[13px] text-ink-muted">
                   Nessun risultato per «{query}».
                 </p>
@@ -367,6 +431,7 @@ export function CommandPalette() {
                 })
               )}
             </div>
+            )}
 
             <footer className="flex items-center gap-3 border-t border-border-soft px-4 py-2">
               <p className="font-mono text-[10px] text-ink-muted">
