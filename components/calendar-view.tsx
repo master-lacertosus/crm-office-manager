@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, History, Plus } from "lucide-react";
 
 import { dueUrgency, todayIso } from "@/lib/format";
 import { updateSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
-import type { Task } from "@/lib/types";
+import type { Task, TaskEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { PriorityBadge } from "@/components/priority-badge";
 import { SearchLink } from "@/components/search-link";
@@ -55,10 +55,13 @@ interface DragState {
  * (crea un task già datato). Le scadenze si spostano trascinando.
  */
 export function CalendarView() {
-  const { tasks, rescheduleTask, statuses } = useAppStore();
+  const { tasks, events, rescheduleTask, statuses } = useAppStore();
   const metaByKey = new Map(statuses.map((m) => [m.key, m]));
   const statusColor = (key: string) =>
     metaByKey.get(key)?.color ?? "#64748B";
+  /** L'etichetta di una fase, per il riepilogo dell'attività svolta. */
+  const statusLabelOf = (key: string | null | undefined) =>
+    metaByKey.get(key ?? "")?.label ?? key ?? "—";
 
   const now = new Date();
   const [cursor, setCursor] = React.useState({
@@ -78,6 +81,37 @@ export function CalendarView() {
   const unscheduled = tasks.filter(
     (t) => !t.due_date && t.status !== "done" && !t.archived_at,
   );
+
+  /*
+   * Cosa e' successo, giorno per giorno.
+   *
+   * Il calendario diceva cosa SCADE. La domanda di Riccardo era un'altra:
+   * cosa e' stato FATTO. Sono due informazioni diverse e servono
+   * entrambe — una guarda avanti, l'altra indietro.
+   *
+   * Si registrano da soli i movimenti di fase, che sono gia' eventi veri:
+   * nessuno deve ricordarsi di segnare niente, ed e' il motivo per cui una
+   * CTA «segna nel calendario» sarebbe rimasta inutilizzata. I commenti no:
+   * sono conversazione, e riversarli qui dentro trasformerebbe il mese in
+   * un registro illeggibile.
+   *
+   * Spento di partenza. Chi apre il calendario di solito vuole sapere cosa
+   * lo aspetta, non ripercorrere la settimana scorsa.
+   */
+  const [mostraAttivita, setMostraAttivita] = React.useState(false);
+
+  const attivitaPerGiorno = React.useMemo(() => {
+    const mappa = new Map<string, TaskEvent[]>();
+    if (!mostraAttivita) return mappa;
+    for (const ev of events) {
+      if (ev.type !== "status_changed") continue;
+      const giorno = ev.created_at.slice(0, 10);
+      const lista = mappa.get(giorno) ?? [];
+      lista.push(ev);
+      mappa.set(giorno, lista);
+    }
+    return mappa;
+  }, [events, mostraAttivita]);
 
   const gridRef = React.useRef<HTMLDivElement>(null);
   const stripRef = React.useRef<HTMLDivElement>(null);
@@ -257,6 +291,23 @@ export function CalendarView() {
       </div>
 
       {/* Griglia mensile */}
+      <div className="mb-2 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setMostraAttivita((v) => !v)}
+          aria-pressed={mostraAttivita}
+          title="Mostra cosa e' stato fatto, oltre a cosa scade"
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+            mostraAttivita
+              ? "bg-brand-50 text-brand-700"
+              : "text-ink-secondary hover:bg-accent hover:text-ink",
+          )}
+        >
+          <History aria-hidden className="size-3.5" />
+          {mostraAttivita ? "Attivita' svolta" : "Mostra l'attivita' svolta"}
+        </button>
+      </div>
       <div className="card-soft overflow-hidden">
         <div className="grid grid-cols-7 border-b border-border-soft bg-[#fafbfd]">
           {WEEKDAYS.map((d, i) => (
@@ -329,6 +380,37 @@ export function CalendarView() {
                     +{dayTasks.length - 3} altri
                   </p>
                 ) : null}
+
+                {/* Cosa e' stato fatto quel giorno. Sta in fondo alla
+                    cella e in tono minore: e' un consuntivo, non un
+                    impegno, e non deve competere con le scadenze. */}
+                {(() => {
+                  const svolte = attivitaPerGiorno.get(cell.iso);
+                  if (!svolte || svolte.length === 0) return null;
+                  const conclusi = svolte.filter((e) => e.to === "done").length;
+                  return (
+                    <p
+                      className="mt-1 flex items-center gap-1 border-t border-border-soft pt-1 text-[11px] text-ink-muted"
+                      title={svolte
+                        .map((e) => {
+                          const t = tasks.find((x) => x.id === e.task_id);
+                          return `${t?.title ?? "un task"}: ${statusLabelOf(e.from)} → ${statusLabelOf(e.to)}`;
+                        })
+                        .join("\n")}
+                    >
+                      <History aria-hidden className="size-3 shrink-0" />
+                      {conclusi > 0 ? (
+                        <span className="font-semibold text-success-text">
+                          {conclusi} chius{conclusi === 1 ? "o" : "i"}
+                        </span>
+                      ) : null}
+                      {conclusi > 0 && svolte.length > conclusi ? " · " : null}
+                      {svolte.length > conclusi
+                        ? `${svolte.length - conclusi} movimenti`
+                        : null}
+                    </p>
+                  );
+                })()}
               </div>
             );
           })}
