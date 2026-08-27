@@ -53,6 +53,10 @@ import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { PriorityBadge } from "@/components/priority-badge";
 import { AvanzamentoProcesso } from "@/components/processo-avanzamento";
+import {
+  PezziInCreazione,
+  type PezzoNuovo,
+} from "@/components/pezzi-in-creazione";
 import { SceltaProgetto } from "@/components/scelta-progetto";
 import { SottoTask } from "@/components/sotto-task";
 import { StatusLabel } from "@/components/status-pip";
@@ -391,6 +395,9 @@ function TaskForm({
     task?.due_date ?? searchParams.get("due") ?? "",
   );
   const [repeat, setRepeat] = React.useState<TaskRepeat>(task?.repeat ?? "none");
+  /* I pezzi si raccolgono qui e nascono dopo il padre: in creazione non
+     esiste ancora un id da mettere in `parent_id`. */
+  const [pezzi, setPezzi] = React.useState<PezzoNuovo[]>([]);
 
   /* Un task lo lavora chi ne risponde. Sugli altri si legge e si commenta:
      mostrare campi che il database rifiuterebbe sarebbe una promessa falsa.
@@ -455,7 +462,30 @@ function TaskForm({
         }
       } else {
         const created = await createTask(patch);
-        toast(`«${created.title}» creato`);
+        /* I pezzi nascono ORA, che un padre a cui appendersi finalmente
+           esiste. In fila e non in parallelo: la coda delle scritture li
+           manderebbe comunque in ordine, ma qui si aspetta anche l'esito —
+           se uno viene rifiutato, chi scrive deve saperlo prima di credere
+           che il lavoro sia completo.
+
+           Ereditano il progetto del padre: un pezzo che sta in un progetto
+           diverso dal lavoro a cui appartiene farebbe raccontare a board e
+           report due storie diverse (ed è ciò che il trigger di M10
+           impone comunque, lato database). */
+        for (const pezzo of pezzi) {
+          await createTask({
+            title: pezzo.titolo,
+            owner_id: pezzo.owner_id,
+            project_id: patch.project_id,
+            parent_id: created.id,
+            priority: patch.priority,
+          });
+        }
+        toast(
+          pezzi.length > 0
+            ? `«${created.title}» creato con ${pezzi.length} ${pezzi.length === 1 ? "pezzo" : "pezzi"}`
+            : `«${created.title}» creato`,
+        );
         justCreatedId = created.id;
         // Il pannello resta aperto sul task appena nato: da qui si aggiungono
         // checklist, allegati e commenti, che in creazione non esistono ancora.
@@ -670,6 +700,14 @@ function TaskForm({
             {templatePicker}
             {titleField}
             {descriptionField}
+            {!task ? (
+              <PezziInCreazione
+                pezzi={pezzi}
+                onChange={setPezzi}
+                ownerPadre={ownerId}
+                puoAssegnareAdAltri={puoRiassegnare}
+              />
+            ) : null}
           </form>
           <div className="[&>section]:!px-0">
             {task?.batch_id ? <AvanzamentoProcesso task={task} /> : null}
@@ -701,6 +739,14 @@ function TaskForm({
         {titleField}
         {fieldsGrid}
         {descriptionField}
+        {!task ? (
+          <PezziInCreazione
+            pezzi={pezzi}
+            onChange={setPezzi}
+            ownerPadre={ownerId}
+            puoAssegnareAdAltri={puoRiassegnare}
+          />
+        ) : null}
         {saveRow}
         {task ? <TaskMeta task={task} /> : null}
       </form>
