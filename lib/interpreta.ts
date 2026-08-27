@@ -33,6 +33,10 @@ export interface TaskProposto {
   /** Cosa ha fatto scattare ogni deduzione: si mostra a chi corregge, così
    *  capisce perché il sistema ha scelto quel campo. */
   perche: { campo: string; indizio: string }[];
+  /** I pezzi di questo lavoro, quando la frase li elenca: «una landing con
+   *  dentro scrittura testi e caricamento online». Nascono come sotto-task
+   *  del lavoro, e non hanno pezzi a loro volta. */
+  pezzi?: { chiave: string; titolo: string; owner_id: string }[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -126,8 +130,13 @@ export function trovaData(
     }
   }
 
-  /* «12/3», «12-03-2026» */
-  const numerica = /\b(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/.exec(t);
+  /* «12/3», «12-03-2026», «entro giorno 01/09/2026». Il prefisso entra
+     nell'indizio perché è quello che poi si ritaglia dal titolo: senza,
+     resterebbe un «entro giorno» appeso in fondo. */
+  const numerica =
+    /\b(?:entro\s+(?:il\s+)?(?:giorno\s+)?|il\s+)?(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/.exec(
+      t,
+    );
   if (numerica) {
     const g = Number(numerica[1]);
     const m = Number(numerica[2]);
@@ -270,6 +279,29 @@ const SEPARATORI = [
   /\s+e\s+poi\s+/i,
 ];
 
+/* Come si annuncia che un lavoro ha dei pezzi. Sono modi di dire, non
+   grammatica: si aggiungono quando se ne incontra uno nuovo. */
+const APRE_PEZZI =
+  /\s+(?:con\s+dentro|che\s+comprende|comprensiv[ao]\s+di|compost[ao]\s+da|suddivis[ao]\s+in|con\s+le\s+fasi|sotto-?task:?|fasi:?)\s+/i;
+
+/** Separa un lavoro dai suoi pezzi, se la frase li elenca. */
+export function staccaPezzi(segmento: string): {
+  capo: string;
+  pezzi: string[];
+} {
+  const m = APRE_PEZZI.exec(segmento);
+  if (!m) return { capo: segmento, pezzi: [] };
+  const capo = segmento.slice(0, m.index).trim();
+  const coda = segmento.slice(m.index + m[0].length).trim();
+  /* Dentro l'elenco «e» e «," separano davvero: qui non c'è il rischio di
+     spezzare un titolo, perché siamo già dopo «con dentro». */
+  const pezzi = coda
+    .split(/\s*,\s*|\s+e\s+|\s*\+\s*/i)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 1);
+  return { capo: capo || segmento, pezzi };
+}
+
 export function spezza(testo: string): string[] {
   let pezzi = [testo.trim()];
   for (const sep of SEPARATORI) {
@@ -281,6 +313,22 @@ export function spezza(testo: string): string[] {
 /* ------------------------------------------------------------------ */
 /* Il titolo: cosa resta togliendo ciò che è diventato un campo        */
 /* ------------------------------------------------------------------ */
+
+/* L'apertura di un comando: si toglie tutta, non parola per parola.
+   «Crea una task per il progetto BACK TO GYM di creazione di una landing»
+   deve diventare «landing», non «task per il progetto di creazione di». */
+const PREAMBOLO = [
+  /^\s*(?:mi\s+)?(?:crea|creare|aggiungi|aggiungere|fai|fammi|inserisci|nuovo|nuova|apri)\s+/i,
+  /^\s*(?:un[ao]?|il|lo|la)\s+(?:nuov[ao]\s+)?(?:task|attivit[àa]|lavoro|cosa)\s+/i,
+  /^\s*(?:task|attivit[àa]|lavoro)\s+/i,
+  /^\s*per\s+(?:il\s+|la\s+)?(?:progetto|cliente)\s+/i,
+  /^\s*(?:di|per|con)\s+(?:la\s+|il\s+|lo\s+)?(?:creazione|realizzazione|preparazione|stesura)\s+(?:di\s+)?/i,
+  /^\s*(?:che\s+)?(?:deve|devo|dobbiamo)\s+/i,
+  /* «Mi serve la grafica entro venerdì» detto per intero è un comando, non
+     due lavori: a metà frase «mi serve» separa, in testa apre. */
+  /^\s*(?:mi\s+serv[eo]|ho\s+bisogno(?:\s+di)?|serve)\s+/i,
+  /^\s*da\s+/i,
+];
 
 const RUMORE = [
   /^(?:io\s+)?(?:devo|dovrei|voglio|vorrei)\s+/i,
@@ -298,19 +346,28 @@ function ripulisci(segmento: string, daTogliere: string[]): string {
   let t = segmento;
   for (const pezzo of daTogliere) {
     if (!pezzo) continue;
+    /* Il confine iniziale non è decorativo.
+       Senza, l'alternativa «a » del gruppo agganciava la «a» finale della
+       parola prima: da «da Klea la grafica entro il 5» usciva «d la
+       grafic» — mangiate la coda di «da» e quella di «grafica». Il gruppo
+       catturato si rimette, perché è testo che non c'entra nulla con quello
+       che si sta togliendo. */
     t = t.replace(
       new RegExp(
-        `\\s*(?:entro\\s+(?:il\\s+)?|per\\s+|di\\s+|a\\s+)?${pezzo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*`,
+        `(^|[^\\p{L}])\\s*(?:entro\\s+(?:il\\s+)?(?:giorno\\s+)?|per\\s+|di\\s+|a\\s+)?${pezzo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*`,
         "iu",
       ),
-      " ",
+      "$1 ",
     );
   }
   t = t.replace(/\s+/g, " ").trim();
-  /* Il rumore si toglie a giri: «io devo fare un video» → «video». */
+  /* Prima il preambolo del comando, poi il rumore. A giri, perché ogni
+     rimozione ne scopre un'altra: «Crea una task di creazione di una
+     landing» → «una landing» → «landing». */
   let prima = "";
   while (prima !== t) {
     prima = t;
+    for (const re of PREAMBOLO) t = t.replace(re, "").trim();
     for (const re of RUMORE) t = t.replace(re, "").trim();
   }
   return t.replace(/\s{2,}/g, " ").trim();
@@ -337,8 +394,13 @@ export function interpreta(
      Rimini Wellness» detto una volta vale per il video e per la landing. */
   const progetto = trovaProgetto(testo, contesto.projects);
 
-  return segmenti.map((segmento, i) => {
+  return segmenti.map((segmentoIntero, i) => {
     const perche: TaskProposto["perche"] = [];
+
+    /* Prima si staccano i pezzi: quello che resta è il lavoro, e le sue
+       deduzioni non devono essere inquinate dall'elenco. */
+    const { capo, pezzi: titoliPezzi } = staccaPezzi(segmentoIntero);
+    const segmento = capo;
 
     const persona = trovaPersona(segmento, contesto.profiles);
     /* Nessun nome nel pezzo: è roba di chi scrive. È anche il motivo per
@@ -361,6 +423,18 @@ export function interpreta(
       progetto?.indizio ?? "",
     ]);
 
+    /* Ogni pezzo può nominare il proprio incaricato: «scrittura testi
+       Klea, caricamento online Lorenzo». Se non lo fa, è di chi guida il
+       lavoro. */
+    const pezzi = titoliPezzi.map((testoPezzo, j) => {
+      const chi = trovaPersona(testoPezzo, contesto.profiles);
+      return {
+        chiave: `proposto-${i}-${j}`,
+        titolo: ripulisci(testoPezzo, [chi?.indizio ?? ""]) || testoPezzo,
+        owner_id: chi ? chi.profilo.id : owner_id,
+      };
+    });
+
     return {
       chiave: `proposto-${i}`,
       /* Se ripulendo non resta niente di sensato, meglio il pezzo intero
@@ -371,6 +445,7 @@ export function interpreta(
       due_date: data?.iso ?? null,
       project_id: progetto?.progetto.id ?? null,
       perche,
+      pezzi: pezzi.length > 0 ? pezzi : undefined,
     };
   });
 }
