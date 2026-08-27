@@ -2041,27 +2041,64 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             : null;
       const nowIso = new Date().toISOString();
 
-      // Pacchetto: un set di task collegati (stesso batch), con scadenze
-      // relative alla data àncora scelta.
+      /*
+       * Un template a fasi diventa UN LAVORO CON I SUOI PEZZI.
+       *
+       * Prima faceva N task fratelli con lo stesso `batch_id`: un secondo
+       * modo di dire «questo lavoro ha dei pezzi», accanto a `parent_id`
+       * dei sotto-task. Due modi per la stessa idea significa scrivere
+       * ogni funzionalità futura due volte, e vederli divergere.
+       *
+       * Ora «Creazione prodotto» è un task vero con dentro «Scrittura
+       * testi» e «Caricamento online» — che è anche il modo in cui la
+       * cosa viene descritta a voce. La sezione «Lavori», l'avanzamento,
+       * i permessi del referente: tutto quello che i sotto-task hanno già
+       * imparato vale da subito anche per i template.
+       */
       if (tpl.pack && tpl.pack.length > 0) {
-        const batchId = crypto.randomUUID();
-        const created: Task[] = tpl.pack.map((item, i) => ({
+        const padre: Task = {
+          id: crypto.randomUUID(),
+          title: tpl.name,
+          description: tpl.description || null,
+          status: "todo",
+          priority: tpl.priority,
+          /* Il lavoro è di chi lo lancia, salvo indicazione: è lui che ne
+             risponde e che potrà affidarne i pezzi. */
+          owner_id: overrides?.owner_id ?? tpl.owner_id ?? currentUser.id,
+          created_by: currentUser.id,
+          project_id: tpl.project_id,
+          /* La scadenza del lavoro è quella dell'ultimo pezzo: finisce
+             quando finisce tutto. */
+          due_date: anchor
+            ? shiftIsoDays(
+                anchor,
+                Math.max(...tpl.pack.map((i) => i.offset_days)),
+              )
+            : null,
+          position: Date.now(),
+          repeat: "none",
+          template_id: tpl.id,
+          completed_at: null,
+          created_at: nowIso,
+        };
+        const pezzi: Task[] = tpl.pack.map((item, i) => ({
           id: crypto.randomUUID(),
           title: item.title,
-          description: tpl.description || null,
+          description: null,
           status: "todo",
           priority: tpl.priority,
           owner_id: item.owner_id ?? overrides?.owner_id ?? currentUser.id,
           created_by: currentUser.id,
           project_id: tpl.project_id,
           due_date: anchor ? shiftIsoDays(anchor, item.offset_days) : null,
-          position: Date.now() + i,
+          position: Date.now() + i + 1,
           repeat: "none",
           template_id: tpl.id,
-          batch_id: batchId,
+          parent_id: padre.id,
           completed_at: null,
           created_at: nowIso,
         }));
+        const created: Task[] = [padre, ...pezzi];
         setTasks((prev) => [...prev, ...created]);
         setEvents((prev) => [
           ...prev,
@@ -2074,6 +2111,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         scriviCon(
           async () => {
             const supabase = createClient();
+            /* Il padre per primo: i pezzi puntano a lui, e una riga che
+               arriva prima di quella a cui punta viene respinta. `created`
+               è già ordinato, ma vale la pena che si veda. */
             for (const t of created) await insertTask(supabase, t);
           },
           () => {
