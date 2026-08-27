@@ -10,6 +10,13 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Una vista salvata può diventare il punto di partenza.** La stellina
+  accanto al nome: da lì in poi i Task si aprono già filtrati come si
+  vuole. Si applica solo se non è stato chiesto altro — un indirizzo con
+  dei parametri viene da un link, dal tasto indietro o dalla memoria dei
+  filtri, e sovrascriverlo sarebbe ignorare una richiesta esplicita per
+  imporne una vecchia. Cancellando la vista di partenza la preferenza si
+  libera, invece di restare a puntare nel vuoto. (#56)
 - **Un progetto si crea mentre si scrive il task.** Prima, per un lavoro che
   non aveva ancora un progetto, bisognava abbandonare il task, andare in
   Progetti, crearlo e ricominciare: il primo task di ogni progetto nuovo

@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { BookmarkPlus, Check, X } from "lucide-react";
+import { BookmarkPlus, Check, Star, X } from "lucide-react";
 
+import { usePreferences } from "@/lib/preferences";
 import { pushSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,10 @@ function viewParams(searchParams: URLSearchParams): string {
  */
 export function SavedViews() {
   const { savedViews, addSavedView, removeSavedView } = useAppStore();
+  const {
+    prefs: { vistaPredefinita: predefinita },
+    setVistaPredefinita,
+  } = usePreferences();
   const searchParams = useSearchParams();
   const toast = useToast();
   const [naming, setNaming] = React.useState(false);
@@ -73,13 +78,43 @@ export function SavedViews() {
               title={active ? "Togli questa vista" : `Applica «${view.name}»`}
               aria-pressed={active}
               className={cn(
-                "rounded-full border py-1 pr-6 pl-3 text-[12px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                "rounded-full border py-1 pr-10 pl-3 text-[12px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 active
                   ? "border-brand-300 bg-brand-50 text-brand-700"
                   : "border-border bg-white text-ink-secondary hover:text-ink",
               )}
             >
               {view.name}
+            </button>
+            <button
+              /* La stellina: questa vista è il punto di partenza. Sta prima
+                 della crocetta perché è il gesto che si fa più spesso, e
+                 quello distruttivo va tenuto in fondo. */
+              onClick={() =>
+                setVistaPredefinita(predefinita === view.id ? null : view.id)
+              }
+              aria-pressed={predefinita === view.id}
+              aria-label={
+                predefinita === view.id
+                  ? `«${view.name}» è la vista di partenza — premi per toglierla`
+                  : `Apri i Task su «${view.name}»`
+              }
+              title={
+                predefinita === view.id
+                  ? "È la tua vista di partenza"
+                  : "Rendila la vista di partenza"
+              }
+              className={cn(
+                "absolute top-1/2 right-[22px] -translate-y-1/2 rounded-sm outline-none transition-opacity focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring",
+                predefinita === view.id
+                  ? "text-brand-600 opacity-100"
+                  : "text-ink-faint opacity-0 group-hover/view:opacity-100 hover:text-brand-600",
+              )}
+            >
+              <Star
+                className="size-3"
+                fill={predefinita === view.id ? "currentColor" : "none"}
+              />
             </button>
             <button
               /* Due passaggi, non uno. La crocetta stava a tre pixel dal
@@ -90,6 +125,7 @@ export function SavedViews() {
               onClick={() => {
                 if (daEliminare) {
                   removeSavedView(view.id);
+                  if (predefinita === view.id) setVistaPredefinita(null);
                   setConfermaId(null);
                 } else {
                   setConfermaId(view.id);
