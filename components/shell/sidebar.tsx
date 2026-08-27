@@ -18,6 +18,7 @@ import {
 import { drawer, pop, scrim } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { conFiltri, ricorda } from "@/lib/memoria-filtri";
+import { SEZIONI_ZEN, useZen } from "@/components/shell/modalita-zen";
 import { useAppStore } from "@/lib/store";
 import { signOut } from "@/lib/supabase/auth";
 import { AvatarInitials } from "@/components/avatar-initials";
@@ -51,6 +52,13 @@ const NAV_ITEMS: {
   { href: "/team", label: "Team", icon: IconTeam },
   { href: "/settings/profile", label: "Impostazioni", icon: IconSettings },
 ];
+
+/** Le voci da mostrare: tutte, o le tre di Zen. */
+function vociVisibili(zen: boolean): typeof NAV_ITEMS {
+  return zen
+    ? NAV_ITEMS.filter((i) => SEZIONI_ZEN.includes(i.href))
+    : NAV_ITEMS;
+}
 
 function isActive(pathname: string, href: string): boolean {
   const root = "/" + href.split("/")[1];
@@ -325,6 +333,8 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
 
 /** Sidebar fissa: 240px da lg, rail icone 64px su md, assente sotto md. */
 export function Sidebar() {
+  const [zen] = useZen();
+  const voci = vociVisibili(zen);
   return (
     <aside className="glass-chrome sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-white/60 md:flex md:w-16 lg:top-4 lg:h-[calc(100dvh-2rem)] lg:w-60 print:hidden">
       <Wordmark compact />
@@ -332,7 +342,7 @@ export function Sidebar() {
         aria-label="Navigazione principale"
         className="flex flex-1 flex-col gap-0.5 px-2.5 pt-2"
       >
-        {NAV_ITEMS.map((item) => (
+        {voci.map((item) => (
           <NavLink key={item.href} item={item} />
         ))}
       </nav>
@@ -349,6 +359,9 @@ export function MobileDrawer({
   open: boolean;
   onClose: () => void;
 }) {
+  const [zenMobile] = useZen();
+  const vociMobile = vociVisibili(zenMobile);
+
   React.useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -397,7 +410,7 @@ export function MobileDrawer({
               aria-label="Navigazione principale"
               className="flex flex-1 flex-col gap-0.5 px-2.5 pt-2"
             >
-              {NAV_ITEMS.map((item) => (
+              {vociMobile.map((item) => (
                 <NavLink
                   key={item.href}
                   item={item}
