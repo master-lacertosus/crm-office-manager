@@ -22,6 +22,7 @@ const CONTROLLI = [
   ["verify:filtro", "Ognuno vede cio' che deve vedere", ["run", "verify:filtro"]],
   ["verify:filtri", "I filtri sopravvivono al cambio pagina", ["run", "verify:filtri"]],
   ["verify:freelance", "Il calendario di chi non ha la settimana", ["run", "verify:freelance"]],
+  ["verify:multiple", "Le azioni multiple rispettano i permessi", ["run", "verify:multiple"]],
   ["verify:build", "Il sito si costruisce da zero", ["run", "verify:build"]],
 ];
 

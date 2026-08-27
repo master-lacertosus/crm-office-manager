@@ -2,6 +2,8 @@ import { AggiornamentiLive } from "@/components/shell/aggiornamenti-live";
 import { AppShell } from "@/components/shell/app-shell";
 import { LazyOverlays } from "@/components/shell/lazy-overlays";
 import { Scorciatoie } from "@/components/shell/scorciatoie";
+import { AzioniMultiple } from "@/components/azioni-multiple";
+import { SelezioneProvider } from "@/lib/selezione";
 import { ToastProvider } from "@/components/toaster";
 import { PreferencesProvider } from "@/lib/preferences";
 import { AppStoreProvider } from "@/lib/store";
@@ -19,14 +21,17 @@ export default function AppLayout({
   return (
     <PreferencesProvider>
       <AppStoreProvider>
-        <ToastProvider>
-          <AppShell>
+        <SelezioneProvider>
+          <ToastProvider>
+            <AppShell>
             {children}
             <AggiornamentiLive />
             <Scorciatoie />
+            <AzioniMultiple />
             <LazyOverlays />
-          </AppShell>
-        </ToastProvider>
+            </AppShell>
+          </ToastProvider>
+        </SelezioneProvider>
       </AppStoreProvider>
     </PreferencesProvider>
   );

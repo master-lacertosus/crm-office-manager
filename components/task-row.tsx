@@ -3,6 +3,7 @@
 import { Star } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
+import { CasellaSelezione } from "@/components/casella-selezione";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
@@ -31,8 +32,9 @@ export function TaskRow({
   return (
     <SearchLink
       params={{ task: task.id }}
-      className="flex h-11 items-center gap-3 rounded-lg px-2.5 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+      className="group/task flex h-11 items-center gap-3 rounded-lg px-2.5 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
     >
+      <CasellaSelezione taskId={task.id} />
       <StatusPip status={task.status} />
       <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
         {task.title}

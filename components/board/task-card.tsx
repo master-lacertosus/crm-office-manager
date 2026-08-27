@@ -5,6 +5,7 @@ import { ListChecks, Repeat, Split } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { CasellaSelezione } from "@/components/casella-selezione";
 import { dueUrgency } from "@/lib/format";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { DueChip } from "@/components/due-chip";
@@ -142,11 +143,17 @@ export function TaskCard({
         }
       }}
       className={cn(
-        "block rounded-xl outline-none transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
+        "group/task relative block rounded-xl outline-none transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
         selected &&
           "ring-2 ring-brand-500 ring-offset-2 ring-offset-canvas",
       )}
     >
+      {/* In alto a sinistra, sopra la scheda: non ruba spazio al contenuto
+          e sta dove l'occhio cerca una casella. */}
+      <CasellaSelezione
+        taskId={task.id}
+        className="absolute top-2 left-2 z-10"
+      />
       <CardVisual task={task} />
     </SearchLink>
   );

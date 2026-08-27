@@ -10,6 +10,13 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Azioni su più task insieme**, da board ed elenco. Una casella su ogni
+  scheda, e una barra che compare in basso: sposta di fase, affida a
+  qualcuno, cambia progetto. Un solo «Annulla» per tutto il gruppo.
+  I permessi sono dichiarati **prima**: se fra i sette selezionati tre sono
+  di un collega, la barra lo dice mentre si decide — non a cose fatte. Chi
+  non può toccare niente trova i menu spenti, invece di scoprirlo dopo.
+  Esc annulla la selezione, e cambiando sezione si svuota da sola. (#58)
 - **I pezzi di un lavoro si scrivono già in creazione.** «Creazione
   prodotto» si pensa a pezzi fin dall’inizio: prima bisognava salvare il
   task, riaprirlo e solo allora spezzarlo. Ora titolo e incaricato si
