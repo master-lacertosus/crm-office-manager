@@ -19,7 +19,8 @@
     "verify:build": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next build",
     "verify:filtro": "node --import ./scripts/alias.mjs scripts/filtro-responsabile-verify.mjs",
     "verify:prod": "node scripts/produzione-verify.mjs",
-    "verify": "node scripts/verifica-tutto.mjs"
+    "verify": "node scripts/verifica-tutto.mjs",
+    "verify:multiple": "node --import ./scripts/alias.mjs scripts/azioni-multiple-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
