@@ -10,6 +10,13 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Il calendario mostra anche l’attività svolta** (richiesta di Riccardo).
+  Diceva cosa scade; ora, con un interruttore, dice anche cosa è stato
+  fatto: quanti task chiusi e quanti movimenti di fase, giorno per giorno,
+  con il dettaglio nel suggerimento. Si registra da solo — nessuno deve
+  ricordarsi di segnare niente, ed è il motivo per cui un pulsante «segna
+  nel calendario» sarebbe rimasto inutilizzato. Spento di partenza: chi
+  apre il calendario di solito vuole sapere cosa lo aspetta. (#64)
 - **Tema scuro** (Impostazioni › Aspetto): chiaro, scuro, o quello del
   computer. Non è un’inversione dei colori chiari — quella dà un grigio
   slavato in cui il testo secondario sparisce — ma una seconda tavolozza
