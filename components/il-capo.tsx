@@ -451,7 +451,7 @@ function CapoInScena() {
             {/* codina del fumetto */}
             <span
               aria-hidden
-              className="absolute -right-1.5 bottom-5 size-3 rotate-45 border-t border-r border-border bg-white"
+              className="absolute -right-1.5 bottom-5 size-3 rotate-45 border-t border-r border-border bg-card"
             />
           </motion.div>
 

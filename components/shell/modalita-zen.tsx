@@ -99,7 +99,7 @@ export function InterruttoreZen() {
         "fixed bottom-0 left-1/2 z-90 flex h-10 w-20 translate-x-[calc(-50%+5.5rem)] items-end justify-center rounded-t-full pb-2.5 shadow-[0_-6px_24px_rgb(15_23_42/0.22)] transition-[height,padding] duration-200 outline-none hover:h-12 hover:pb-3.5 focus-visible:ring-2 focus-visible:ring-ring",
         zen
           ? "btn-glow text-white"
-          : "border border-b-0 border-border bg-white text-ink-secondary hover:text-ink",
+          : "border border-b-0 border-border bg-card text-ink-secondary hover:text-ink",
       )}
     >
       {zen ? (

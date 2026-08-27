@@ -292,6 +292,126 @@
 }
 
 /*
+ * Tema scuro (Impostazioni > Aspetto).
+ *
+ * Non e' un'inversione dei colori chiari: quella da' un grigio slavato in
+ * cui il testo secondario sparisce. E' una seconda tavolozza, costruita
+ * sulla stessa famiglia fredda dell'inchiostro chiaro, cosi' i due temi si
+ * riconoscono come lo stesso prodotto.
+ *
+ * Si applica come attributo su <html>, come densita' e accento, e per lo
+ * stesso motivo: lo script nel <head> lo mette prima del primo disegno.
+ * Un tema scuro che arriva dopo l'idratazione e' un lampo bianco in faccia
+ * a chi lavora al buio — il difetto piu' odiato di questa funzione.
+ */
+[data-tema="scuro"] {
+  /* Superfici: grafite fredda, non nero. Il nero pieno fa vibrare il testo
+     e non lascia spazio alle elevazioni. */
+  --background: #14181f;
+  --canvas: #0f1319;
+  --card: #191e27;
+  --card-foreground: #e8ecf3;
+  --popover: #1c222c;
+  --popover-foreground: #e8ecf3;
+  --scrim: rgb(3 6 12 / 0.62);
+
+  /* Inchiostro: la scala chiara, ribaltata e ammorbidita. Il piu' tenue
+     resta leggibile — se sparisce non e' "discreto", e' rotto. */
+  --foreground: #e8ecf3;
+  --ink: #e8ecf3;
+  --ink-secondary: #b3bccd;
+  --ink-muted: #8b97ab;
+  --ink-faint: #64708a;
+  --border: #29313e;
+  --border-soft: #222932;
+  --input: #3a4454;
+
+  /* L'accento resta quello scelto: la marca non cambia con la luce della
+     stanza. Cambia cio' che ci sta intorno. */
+  --primary-foreground: #14181f;
+  --secondary: #232b36;
+  --secondary-foreground: #e8ecf3;
+  --muted: #1e242e;
+  --muted-foreground: #8b97ab;
+  --accent: #212833;
+  --accent-foreground: #e8ecf3;
+  --destructive: #f0616b;
+  --destructive-hover: #e04651;
+  --selected: #2a2118;
+
+  /* Semantici: piu' chiari dei corrispettivi diurni, perche' su fondo
+     scuro un colore scuro non si distingue dal fondo. I "soft" diventano
+     tinte del fondo invece che paste chiare. */
+  --success: #2fbd7e;
+  --success-soft: #16281f;
+  --success-text: #4fd398;
+  --danger-soft: #2b1a1c;
+  --danger-text: #f4838b;
+  --warning: #f0a63c;
+  --warning-soft: #2a2015;
+  --warning-text: #f2bd6a;
+  --info: #5a9bff;
+  --info-soft: #16202f;
+  --info-text: #86b6ff;
+
+  /* Stati del task: le tinte piene restano riconoscibili (sono la firma
+     visiva), i fondi tenui diventano ombre colorate. */
+  --status-backlog: #97a2b3;
+  --status-backlog-soft: #1e242e;
+  --status-backlog-text: #a8b2c2;
+  --status-todo: #5a9bff;
+  --status-todo-soft: #16202f;
+  --status-todo-text: #8ab6ff;
+  --status-progress: #8b7dff;
+  --status-progress-soft: #1e1c33;
+  --status-progress-text: #a99dff;
+  --status-review: #ff8a33;
+  --status-review-soft: #2a1d13;
+  --status-review-text: #ffab6b;
+  --status-done: #2fbd7e;
+  --status-done-soft: #16281f;
+  --status-done-text: #4fd398;
+
+  /* Sidebar */
+  --sidebar: #191e27;
+  --sidebar-foreground: #e8ecf3;
+  --sidebar-accent: #262019;
+  --sidebar-accent-foreground: var(--brand-300);
+  --sidebar-border: #222932;
+
+  color-scheme: dark;
+}
+
+/*
+ * I vetri e l'aura, al buio.
+ *
+ * Il bianco traslucido su fondo scuro fa una patina lattiginosa: lo stesso
+ * effetto va ottenuto con un chiaro appena accennato. E l'aura, che di
+ * giorno e' luce su bianco, di notte deve restare un bagliore lontano —
+ * non una macchia.
+ */
+[data-tema="scuro"] .aura-layer {
+  opacity: 0.5;
+}
+
+[data-tema="scuro"] .glass-chrome,
+[data-tema="scuro"] .glass-strong,
+[data-tema="scuro"] .glass-hero {
+  background-color: color-mix(in oklch, var(--card), transparent 12%);
+  border-color: var(--border);
+}
+
+[data-tema="scuro"] .glass-hero {
+  background-image:
+    radial-gradient(
+      560px 300px at 96% 20%,
+      color-mix(in oklch, var(--brand-500), transparent 90%),
+      transparent 62%
+    );
+}
+
+
+/*
  * Densità interfaccia (Impostazioni › Aspetto). Tailwind v4 deriva ogni
  * spaziatura da --spacing: rimappandolo si riscala l'intera UI in modo
  * coerente. «Comodo» è il default (0.25rem) e non porta attributo.

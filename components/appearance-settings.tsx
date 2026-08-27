@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Check, Palette, Rows3, Sparkles } from "lucide-react";
+import { Check, MoonStar, Palette, Rows3, Sparkles } from "lucide-react";
 
 import {
   ACCENTS,
   DENSITIES,
+  TEMI,
   usePreferences,
   type AccentKey,
 } from "@/lib/preferences";
@@ -110,7 +111,7 @@ function Switch({
       <span
         aria-hidden
         className={cn(
-          "inline-block size-5 rounded-full bg-white shadow-sm transition-transform",
+          "inline-block size-5 rounded-full bg-card shadow-sm transition-transform",
           checked ? "translate-x-5" : "translate-x-0.5",
         )}
       />
@@ -119,13 +120,63 @@ function Switch({
 }
 
 export function AppearanceSettings() {
-  const { prefs, setAccent, setDensity, setReduceMotion, setAvvisiAltrui } =
-    usePreferences();
+  const {
+    prefs,
+    setAccent,
+    setDensity,
+    setReduceMotion,
+    setAvvisiAltrui,
+    setTema,
+  } = usePreferences();
   const reduceId = React.useId();
   const avvisiId = React.useId();
 
   return (
     <div className="space-y-4">
+      <SettingCard
+        icon={MoonStar}
+        title="Tema"
+        description="Chiaro, scuro, o quello che usa il tuo computer."
+      >
+        <div
+          role="radiogroup"
+          aria-label="Tema dell'interfaccia"
+          className="grid grid-cols-3 gap-2"
+        >
+          {TEMI.map((t) => {
+            const active = prefs.tema === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setTema(t.key)}
+                className={cn(
+                  "flex flex-col items-start rounded-xl border p-3 text-left outline-none transition-colors",
+                  "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
+                  active
+                    ? "border-transparent bg-brand-50 ring-2 ring-brand-500"
+                    : "border-border hover:bg-accent/70",
+                )}
+              >
+                <span
+                  className={cn(
+                    "text-[13px] font-semibold",
+                    active ? "text-brand-700" : "text-ink",
+                  )}
+                >
+                  {t.label}
+                </span>
+                <span className="mt-0.5 text-[11px] text-ink-muted">
+                  {t.hint}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </SettingCard>
+
       <SettingCard
         icon={Palette}
         title="Colore d'accento"

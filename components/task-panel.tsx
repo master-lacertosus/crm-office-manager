@@ -142,7 +142,7 @@ export function TaskPanelHost() {
             aria-modal="true"
             aria-label={taskParam === "new" ? "Nuovo task" : "Dettaglio task"}
             className={cn(
-              "absolute flex flex-col bg-white",
+              "absolute flex flex-col bg-card",
               expanded
                 ? "inset-0 m-auto h-[min(90dvh,840px)] w-[min(1080px,95vw)] overflow-hidden rounded-3xl border border-border shadow-[0_28px_90px_rgb(15_23_42/0.24)]"
                 /* 460px erano stretti per un task con descrizione, checklist

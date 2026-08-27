@@ -121,7 +121,7 @@ function NewRequestForm() {
         aria-label="Descrizione della richiesta"
         rows={2}
         maxLength={500}
-        className="w-full resize-y rounded-lg border border-input bg-white px-3 py-2 text-sm outline-none placeholder:text-ink-faint focus-visible:ring-2 focus-visible:ring-ring"
+        className="w-full resize-y rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none placeholder:text-ink-faint focus-visible:ring-2 focus-visible:ring-ring"
       />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <label className="flex items-center gap-1.5 text-[13px] text-ink-secondary">

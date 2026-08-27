@@ -81,7 +81,7 @@ export function SavedViews() {
                 "rounded-full border py-1 pr-10 pl-3 text-[12px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 active
                   ? "border-brand-300 bg-brand-50 text-brand-700"
-                  : "border-border bg-white text-ink-secondary hover:text-ink",
+                  : "border-border bg-card text-ink-secondary hover:text-ink",
               )}
             >
               {view.name}
@@ -165,7 +165,7 @@ export function SavedViews() {
               }}
               placeholder="Nome vista…"
               autoFocus
-              className="h-7 w-36 rounded-full border border-input bg-white px-3 text-[12px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-7 w-36 rounded-full border border-input bg-card px-3 text-[12px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             <button
               onClick={save}

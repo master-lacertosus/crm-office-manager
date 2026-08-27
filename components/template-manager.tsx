@@ -244,7 +244,7 @@ function PackEditor({
   ).size;
 
   return (
-    <div className="space-y-2 rounded-xl border border-border bg-white p-3">
+    <div className="space-y-2 rounded-xl border border-border bg-card p-3">
       <div>
         <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.05em] text-ink-secondary uppercase">
           <Package className="size-3.5" />

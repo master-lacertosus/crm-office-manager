@@ -104,7 +104,7 @@ export function CommentActions({
               users.length > 0
                 ? mine
                   ? "border-brand-300 bg-brand-50"
-                  : "border-border bg-white"
+                  : "border-border bg-card"
                 : "border-transparent opacity-0 group-hover/comment:opacity-60 hover:!opacity-100 focus-visible:opacity-100",
             )}
           >

@@ -38,7 +38,7 @@ export function InviteButton() {
         role="dialog"
         aria-modal="true"
         aria-label="Invita un collega"
-        className="relative w-full max-w-md rounded-2xl border border-border bg-white p-5 shadow-[0_24px_64px_rgb(15_23_42/0.22)]"
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-[0_24px_64px_rgb(15_23_42/0.22)]"
       >
         <button
           type="button"

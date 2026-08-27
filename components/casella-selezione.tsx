@@ -59,7 +59,7 @@ export function CasellaSelezione({
         "grid size-4 shrink-0 place-items-center rounded-[5px] border outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
         scelto
           ? "border-brand-500 bg-brand-500 text-white opacity-100"
-          : "border-input bg-white text-transparent hover:border-brand-400",
+          : "border-input bg-card text-transparent hover:border-brand-400",
         !scelto && !qualcunoScelto && "opacity-0 group-hover/task:opacity-100 focus-visible:opacity-100",
         className,
       )}

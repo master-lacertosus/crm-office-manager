@@ -182,7 +182,7 @@ export function CalendarView() {
           }
         }}
         className={cn(
-          "flex cursor-grab items-center gap-1.5 rounded-lg border border-border bg-white py-1 pr-2 pl-1.5 shadow-xs outline-none transition-transform hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-ring",
+          "flex cursor-grab items-center gap-1.5 rounded-lg border border-border bg-card py-1 pr-2 pl-1.5 shadow-xs outline-none transition-transform hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-ring",
           overdue && "border-destructive/40 bg-danger-soft",
           task.status === "done" && "opacity-55",
           drag?.task.id === task.id && "opacity-30",
