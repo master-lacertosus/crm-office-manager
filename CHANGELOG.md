@@ -129,6 +129,13 @@ versioni (fase pre-1.0).
   tabelle del workspace). (#29)
 
 ### Modificato
+- **Le CTA reagiscono al passaggio del mouse**, come sul sito. Il colore si
+  scuriva già, ma di scatto: mancava la transizione, e l’unico segno che il
+  puntatore fosse sul bersaglio arrivava come un lampeggio. Ora sfondo e
+  alone si muovono in 200ms — la stessa durata di `.btn-primary` di
+  lacertosus.com, da cui è preso il comportamento. Premendo, l’alone
+  rientra: il gesto ha una fine oltre che un inizio. Nessun movimento e
+  nessun ingrandimento, come vuole il design system. (#60)
 - **Chi non è responsabile ora apre il CRM sui propri task.** L’indirizzo
   senza filtri significava «tutti» per chiunque: un dipendente apriva la
   board e si trovava il lavoro di cinque colleghi da scremare a mano, ogni
