@@ -6,6 +6,7 @@ import { NewTaskButton } from "@/components/new-task-button";
 import { RecurringPlanner } from "@/components/recurring-planner";
 import { SavedViews } from "@/components/saved-views";
 import { VistaDiPartenza } from "@/components/vista-di-partenza";
+import { ZenRiquadro } from "@/components/zen-riquadro";
 import { TasksViews, TasksViewToggle } from "@/components/tasks-views";
 import { Topbar } from "@/components/shell/topbar";
 
@@ -39,6 +40,7 @@ export default function TasksPage() {
           <BoardFilters idPrefix="sub" />
         </Suspense>
       </div>
+      <ZenRiquadro />
       <VistaDiPartenza />
       <Suspense>
         <SavedViews />
