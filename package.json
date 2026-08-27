@@ -20,7 +20,8 @@
     "verify:filtro": "node --import ./scripts/alias.mjs scripts/filtro-responsabile-verify.mjs",
     "verify:prod": "node scripts/produzione-verify.mjs",
     "verify": "node scripts/verifica-tutto.mjs",
-    "verify:multiple": "node --import ./scripts/alias.mjs scripts/azioni-multiple-verify.mjs"
+    "verify:multiple": "node --import ./scripts/alias.mjs scripts/azioni-multiple-verify.mjs",
+    "verify:tema": "node scripts/tema-scuro-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

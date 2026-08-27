@@ -734,7 +734,7 @@ function AddPhaseLane({
             }}
             placeholder="Es. In stampa"
             autoFocus
-            className="h-9 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           <div className="flex items-center gap-1.5">
             {CUSTOM_STATUS_PRESETS.map((p, i) => (

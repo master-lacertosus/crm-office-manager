@@ -27,7 +27,7 @@ export function SyncErrorBanner() {
     <div
       role="alert"
       aria-live="assertive"
-      className="fixed top-4 left-1/2 z-100 flex w-[min(560px,calc(100vw-2rem))] -translate-x-1/2 items-start gap-2.5 rounded-xl border border-danger/30 bg-white px-3.5 py-3 shadow-[0_16px_48px_rgb(15_23_42/0.2)]"
+      className="fixed top-4 left-1/2 z-100 flex w-[min(560px,calc(100vw-2rem))] -translate-x-1/2 items-start gap-2.5 rounded-xl border border-danger/30 bg-card px-3.5 py-3 shadow-[0_16px_48px_rgb(15_23_42/0.2)]"
     >
       <TriangleAlert
         className="mt-px size-4 shrink-0 text-danger"

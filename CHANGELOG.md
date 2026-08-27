@@ -10,6 +10,15 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Tema scuro** (Impostazioni › Aspetto): chiaro, scuro, o quello del
+  computer. Non è un’inversione dei colori chiari — quella dà un grigio
+  slavato in cui il testo secondario sparisce — ma una seconda tavolozza
+  costruita sulla stessa famiglia fredda. Si applica **prima del primo
+  disegno**, come densità e accento: un tema scuro che arriva dopo
+  l’idratazione è un lampo bianco in faccia a chi lavora al buio. Le 27
+  superfici che erano bianche per sempre ora passano dai token. Nuovo
+  controllo `npm run verify:tema`, che misura 21 contrasti con la formula
+  WCAG. (#61)
 - **La ricerca (Ctrl+K) trova davvero tutto.** Prima guardava solo nei
   titoli di task aperti, progetti e persone. Ora cerca anche nelle
   descrizioni, e comprende task chiusi, richieste, ferie e commenti — è

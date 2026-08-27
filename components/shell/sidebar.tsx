@@ -212,7 +212,7 @@ function UserFooter({ compact = false }: { compact?: boolean }) {
             exit="exit"
             role="menu"
             aria-label="Menu account"
-            className="absolute bottom-full left-2.5 z-50 mb-2 w-60 origin-bottom-left rounded-2xl border border-border bg-white p-1.5 shadow-[0_16px_48px_rgb(15_23_42/0.16)]"
+            className="absolute bottom-full left-2.5 z-50 mb-2 w-60 origin-bottom-left rounded-2xl border border-border bg-card p-1.5 shadow-[0_16px_48px_rgb(15_23_42/0.16)]"
           >
             <Link href="/settings/profile" onClick={() => setOpen(false)} className={item}>
               <UserRound className="size-4 text-ink-muted" strokeWidth={1.75} />

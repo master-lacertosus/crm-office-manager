@@ -130,7 +130,7 @@ export function OnboardingTour() {
             role="dialog"
             aria-modal="true"
             aria-label="Introduzione guidata"
-            className="absolute inset-x-4 top-1/2 mx-auto max-w-md -translate-y-1/2 rounded-3xl border border-border bg-white p-6 shadow-[0_28px_90px_rgb(15_23_42/0.24)] sm:inset-x-auto sm:left-1/2 sm:w-full sm:-translate-x-1/2"
+            className="absolute inset-x-4 top-1/2 mx-auto max-w-md -translate-y-1/2 rounded-3xl border border-border bg-card p-6 shadow-[0_28px_90px_rgb(15_23_42/0.24)] sm:inset-x-auto sm:left-1/2 sm:w-full sm:-translate-x-1/2"
           >
             <span className="flex size-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
               <Icon className="size-6" strokeWidth={2} />

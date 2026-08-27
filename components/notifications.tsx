@@ -160,7 +160,7 @@ export function NotificationsBell() {
                     className={cn(
                       "flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                       tab === key
-                        ? "bg-white text-ink shadow-xs"
+                        ? "bg-card text-ink shadow-xs"
                         : "text-ink-muted hover:text-ink",
                     )}
                   >

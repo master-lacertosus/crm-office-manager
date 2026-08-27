@@ -245,7 +245,7 @@ export function ChatPanel() {
       initial="hidden"
       animate="visible"
       exit="exit"
-      className="fixed bottom-0 left-1/2 z-90 flex max-h-[min(620px,calc(100dvh-3rem))] w-[min(460px,calc(100vw-1.5rem))] -translate-x-1/2 flex-col overflow-hidden rounded-t-2xl border border-b-0 border-border bg-white shadow-[0_-8px_48px_rgb(15_23_42/0.18)]"
+      className="fixed bottom-0 left-1/2 z-90 flex max-h-[min(620px,calc(100dvh-3rem))] w-[min(460px,calc(100vw-1.5rem))] -translate-x-1/2 flex-col overflow-hidden rounded-t-2xl border border-b-0 border-border bg-card shadow-[0_-8px_48px_rgb(15_23_42/0.18)]"
     >
       <div className="flex items-center gap-2 border-b border-border-soft px-3 py-2.5">
         <MessageSquare className="size-4 text-ink-muted" strokeWidth={1.75} />

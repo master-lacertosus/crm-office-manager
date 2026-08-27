@@ -100,7 +100,7 @@ export function OnboardingProfile() {
         role="dialog"
         aria-modal="true"
         aria-label="Configura il tuo profilo"
-        className="relative my-auto w-full max-w-lg rounded-2xl border border-border bg-white p-6 shadow-[0_28px_72px_rgb(15_23_42/0.24)]"
+        className="relative my-auto w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-[0_28px_72px_rgb(15_23_42/0.24)]"
       >
         <h2 className="text-[17px] font-semibold tracking-[-0.008em] text-ink">
           Benvenuto in Office OS

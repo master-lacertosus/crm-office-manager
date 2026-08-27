@@ -27,6 +27,10 @@ export type AccentKey =
 
 export type DensityKey = "compact" | "comfortable" | "spacious";
 
+/** «sistema» segue l'impostazione del computer: e' il predefinito perche'
+ *  chi ha gia' scelto scuro altrove se lo aspetta anche qui. */
+export type TemaKey = "sistema" | "chiaro" | "scuro";
+
 export interface Preferences {
   accent: AccentKey;
   density: DensityKey;
@@ -39,6 +43,7 @@ export interface Preferences {
   avvisiAltrui: boolean;
   /** La vista salvata da applicare aprendo i Task. `null` = nessuna. */
   vistaPredefinita: string | null;
+  tema: TemaKey;
 }
 
 const DEFAULTS: Preferences = {
@@ -47,6 +52,7 @@ const DEFAULTS: Preferences = {
   reduceMotion: false,
   avvisiAltrui: true,
   vistaPredefinita: null,
+  tema: "sistema",
 };
 
 /** Accenti selezionabili. Le tavolozze stanno in app/globals.css come
@@ -59,6 +65,12 @@ export const ACCENTS: { key: AccentKey; label: string; swatch: string }[] = [
   { key: "emerald", label: "Smeraldo", swatch: "#10b981" },
   { key: "rose", label: "Rosa", swatch: "#f43f5e" },
   { key: "slate", label: "Ardesia", swatch: "#64748b" },
+];
+
+export const TEMI: { key: TemaKey; label: string; hint: string }[] = [
+  { key: "sistema", label: "Come il sistema", hint: "Segue il computer" },
+  { key: "chiaro", label: "Chiaro", hint: "Sempre chiaro" },
+  { key: "scuro", label: "Scuro", hint: "Sempre scuro" },
 ];
 
 export const DENSITIES: {
@@ -90,6 +102,29 @@ function applyDensity(key: DensityKey) {
   else root.setAttribute("data-density", key);
 }
 
+/**
+ * Il tema sul documento.
+ *
+ * «sistema» si risolve qui e non in CSS: la via CSS sarebbe una
+ * `@media (prefers-color-scheme: dark)` con dentro la tavolozza scura una
+ * seconda volta — settanta variabili duplicate, che divergono al primo
+ * ritocco. Così la tavolozza resta scritta una volta sola, e l'attributo
+ * dice sempre la verità su cosa si sta vedendo.
+ */
+function temaEffettivo(tema: TemaKey): "chiaro" | "scuro" {
+  if (tema !== "sistema") return tema;
+  return typeof window !== "undefined" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "scuro"
+    : "chiaro";
+}
+
+function applyTema(tema: TemaKey) {
+  const root = document.documentElement;
+  if (temaEffettivo(tema) === "scuro") root.setAttribute("data-tema", "scuro");
+  else root.removeAttribute("data-tema");
+}
+
 function applyReduceMotion(on: boolean) {
   const root = document.documentElement;
   if (on) root.setAttribute("data-reduce-motion", "1");
@@ -103,6 +138,7 @@ interface PreferencesContextValue {
   setReduceMotion: (on: boolean) => void;
   setAvvisiAltrui: (on: boolean) => void;
   setVistaPredefinita: (id: string | null) => void;
+  setTema: (tema: TemaKey) => void;
   reset: () => void;
 }
 
@@ -138,7 +174,16 @@ export function PreferencesProvider({
     applyAccent(prefs.accent);
     applyDensity(prefs.density);
     applyReduceMotion(prefs.reduceMotion);
+    applyTema(prefs.tema);
   }, [prefs]);
+
+  React.useEffect(() => {
+    if (prefs.tema !== "sistema") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const segui = () => applyTema("sistema");
+    mq.addEventListener("change", segui);
+    return () => mq.removeEventListener("change", segui);
+  }, [prefs.tema]);
 
   const value = React.useMemo<PreferencesContextValue>(
     () => ({
@@ -151,6 +196,7 @@ export function PreferencesProvider({
         setPrefs((p) => ({ ...p, avvisiAltrui })),
       setVistaPredefinita: (vistaPredefinita) =>
         setPrefs((p) => ({ ...p, vistaPredefinita })),
+      setTema: (tema) => setPrefs((p) => ({ ...p, tema })),
       reset: () => setPrefs(DEFAULTS),
     }),
     [prefs],

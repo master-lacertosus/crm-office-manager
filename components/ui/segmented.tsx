@@ -18,7 +18,7 @@ export function Segmented({
   return (
     <div
       className={cn(
-        "flex gap-0.5 rounded-xl border border-border bg-white p-0.5 shadow-xs",
+        "flex gap-0.5 rounded-xl border border-border bg-card p-0.5 shadow-xs",
         className,
       )}
       {...props}

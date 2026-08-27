@@ -278,7 +278,7 @@ function LeaveForm() {
         aria-label="Nota per chi approva"
         rows={2}
         maxLength={300}
-        className="w-full resize-y rounded-lg border border-input bg-white px-3 py-2 text-sm outline-none placeholder:text-ink-faint focus-visible:ring-2 focus-visible:ring-ring"
+        className="w-full resize-y rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none placeholder:text-ink-faint focus-visible:ring-2 focus-visible:ring-ring"
       />
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -332,7 +332,7 @@ function PersonPill({ leave }: { leave: LeaveRequest }) {
       title={`${name} · ${meta.labelOne} ${formatRange(leave.start_date, leave.end_date)}${leave.time_range ? ` (${leave.time_range})` : ""}${pending ? " — in attesa di approvazione" : ""}`}
       className={cn(
         "flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-[10.5px]/[14px] font-semibold",
-        pending && "border border-dashed bg-white",
+        pending && "border border-dashed bg-card",
       )}
       style={
         pending
@@ -549,7 +549,7 @@ function OfficeCalendar() {
         <span className="flex items-center gap-1.5">
           <span
             aria-hidden
-            className="size-3 rounded-sm border border-dashed border-ink-muted bg-white"
+            className="size-3 rounded-sm border border-dashed border-ink-muted bg-card"
           />
           In attesa di approvazione
         </span>

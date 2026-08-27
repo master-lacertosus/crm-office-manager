@@ -85,7 +85,7 @@ export function CollaboratorsSection({ task }: { task: Task }) {
                   onClick={() => cambia(id, p?.full_name ?? "Collega", false)}
                   disabled={inCorso === id}
                   aria-label={`Togli ${p?.full_name ?? "collaboratore"}`}
-                  className="rounded-full p-0.5 text-ink-muted transition-colors hover:bg-white hover:text-danger-text"
+                  className="rounded-full p-0.5 text-ink-muted transition-colors hover:bg-card hover:text-danger-text"
                 >
                   {inCorso === id ? (
                     <LoaderCircle className="size-3.5 animate-spin" />
@@ -108,7 +108,7 @@ export function CollaboratorsSection({ task }: { task: Task }) {
                 type="button"
                 onClick={() => cambia(p.id, p.full_name, true)}
                 disabled={inCorso !== null}
-                className="flex items-center gap-1.5 rounded-full bg-white py-1 pr-2.5 pl-1 text-[13px] text-ink outline-none transition-colors hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex items-center gap-1.5 rounded-full bg-card py-1 pr-2.5 pl-1 text-[13px] text-ink outline-none transition-colors hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {inCorso === p.id ? (
                   <LoaderCircle className="size-5 animate-spin p-0.5" />
