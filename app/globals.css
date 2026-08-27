@@ -531,6 +531,28 @@
    * `color-mix` prende lo stesso colore del pulsante e lo diluisce: qualunque
    * accento si scelga, l'ombra e' la sua.
    */
+  /*
+   * L'hover della CTA, preso dal sito.
+   *
+   * Il riferimento e' `.btn-primary` di lacertosus.com: sfondo che si
+   * scurisce, bordo che segue, `transition: .2s ease-out`. Nessun
+   * movimento, nessun ingrandimento — e coincide con la regola del nostro
+   * design system, che vieta i cambi di layout all'hover (docs §Stati).
+   *
+   * Qui il colore si scuriva gia', ma di scatto: mancava la transizione,
+   * quindi l'unico segno che il puntatore fosse sul bersaglio arrivava
+   * istantaneo e sembrava un lampeggio.
+   *
+   * Si aggiunge anche l'alone: cresce di poco e si avvicina, come se il
+   * pulsante si sollevasse — ma restando fermo. E' l'unico modo di dare la
+   * sensazione del sollevamento senza spostare niente: nessun altro
+   * elemento si accorge del cambiamento, e su una board fitta di schede
+   * questo conta.
+   *
+   * 200ms come il sito, non i 120ms del resto dell'interfaccia: il
+   * riferimento chiesto e' quello, e la CTA e' l'unico elemento a cui si
+   * guarda mentre ci si decide.
+   */
   .btn-glow {
     background-color: var(--brand-500);
     box-shadow:
@@ -538,9 +560,35 @@
       inset 0 0 0 1px rgb(255 255 255 / 0.14),
       0 1px 2px rgb(15 23 42 / 0.08),
       0 4px 12px -4px color-mix(in oklch, var(--brand-500), transparent 70%);
+    transition:
+      background-color 200ms var(--ease-out),
+      box-shadow 200ms var(--ease-out);
   }
   .btn-glow:hover {
     background-color: var(--brand-550);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.3),
+      inset 0 0 0 1px rgb(255 255 255 / 0.18),
+      0 2px 4px rgb(15 23 42 / 0.1),
+      0 10px 24px -6px color-mix(in oklch, var(--brand-500), transparent 58%);
+  }
+  /* Premuto: l'alone rientra. Il pulsante «torna giu'», e il gesto ha una
+     fine oltre che un inizio. */
+  .btn-glow:active {
+    background-color: var(--brand-600);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.2),
+      inset 0 0 0 1px rgb(255 255 255 / 0.12),
+      0 1px 1px rgb(15 23 42 / 0.1),
+      0 2px 6px -3px color-mix(in oklch, var(--brand-500), transparent 68%);
+    transition-duration: 80ms;
+  }
+
+  /* Chi ha chiesto meno movimento non lo riceve nemmeno qui: il colore
+     cambia comunque, perche' e' informazione, ma senza la lentezza che lo
+     rende un'animazione. */
+  [data-reduce-motion="1"] .btn-glow {
+    transition-duration: 1ms;
   }
 
   /* La tessera di navigazione attiva usa direttamente .btn-glow:
