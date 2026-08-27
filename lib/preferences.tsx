@@ -37,6 +37,8 @@ export interface Preferences {
    *  compito ha il diritto di spegnerlo, invece di vedere comparire
    *  avvisi su task che non lo riguardano. */
   avvisiAltrui: boolean;
+  /** La vista salvata da applicare aprendo i Task. `null` = nessuna. */
+  vistaPredefinita: string | null;
 }
 
 const DEFAULTS: Preferences = {
@@ -44,6 +46,7 @@ const DEFAULTS: Preferences = {
   density: "comfortable",
   reduceMotion: false,
   avvisiAltrui: true,
+  vistaPredefinita: null,
 };
 
 /** Accenti selezionabili. Le tavolozze stanno in app/globals.css come
@@ -99,6 +102,7 @@ interface PreferencesContextValue {
   setDensity: (density: DensityKey) => void;
   setReduceMotion: (on: boolean) => void;
   setAvvisiAltrui: (on: boolean) => void;
+  setVistaPredefinita: (id: string | null) => void;
   reset: () => void;
 }
 
@@ -145,6 +149,8 @@ export function PreferencesProvider({
         setPrefs((p) => ({ ...p, reduceMotion })),
       setAvvisiAltrui: (avvisiAltrui) =>
         setPrefs((p) => ({ ...p, avvisiAltrui })),
+      setVistaPredefinita: (vistaPredefinita) =>
+        setPrefs((p) => ({ ...p, vistaPredefinita })),
       reset: () => setPrefs(DEFAULTS),
     }),
     [prefs],
