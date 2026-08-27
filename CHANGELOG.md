@@ -10,6 +10,12 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **I pezzi di un lavoro si scrivono già in creazione.** «Creazione
+  prodotto» si pensa a pezzi fin dall’inizio: prima bisognava salvare il
+  task, riaprirlo e solo allora spezzarlo. Ora titolo e incaricato si
+  aggiungono nella prima schermata, e i pezzi nascono un istante dopo il
+  padre — quando un id a cui appendersi finalmente esiste. Ereditano il suo
+  progetto, come impone il database. (#57)
 - **Una vista salvata può diventare il punto di partenza.** La stellina
   accanto al nome: da lì in poi i Task si aprono già filtrati come si
   vuole. Si applica solo se non è stato chiesto altro — un indirizzo con
