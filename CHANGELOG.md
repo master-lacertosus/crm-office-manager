@@ -138,6 +138,14 @@ versioni (fase pre-1.0).
   tabelle del workspace). (#29)
 
 ### Modificato
+- **Un task è una conversazione sola.** La descrizione apre il flusso come
+  «La richiesta», e sotto seguono commenti e cronologia già intrecciati:
+  prima si leggeva il «cosa» in cima e il «com’è andata» in fondo, senza
+  che l’una tirasse l’altra. (#63)
+- **Commentando si può spostare il task.** Chi scrive «fatto, mancano i
+  testi» sta anche dicendo dove sta il lavoro: farglielo ripetere
+  trascinando la scheda è chiedere due volte la stessa cosa. Il menu parte
+  vuoto — la maggior parte dei commenti non sposta niente. (#63)
 - **Un template a fasi ora crea un lavoro con i suoi pezzi.** Prima faceva
   N task fratelli legati da un `batch_id`: un secondo modo di dire «questo
   lavoro ha dei pezzi», accanto ai sotto-task. Due modi per la stessa idea

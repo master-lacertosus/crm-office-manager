@@ -326,7 +326,7 @@ function PanelBody({
             {task ? (
               <>
                 <LinksSection taskId={task.id} />
-                <CommentSection taskId={task.id} />
+                <CommentSection task={task} />
               </>
             ) : null}
           </TaskForm>
@@ -1302,10 +1302,16 @@ function LinksSection({ taskId }: { taskId: string }) {
 /* Commenti                                                            */
 /* ------------------------------------------------------------------ */
 
-function CommentSection({ taskId }: { taskId: string }) {
-  const { comments, events, profiles, statuses, addComment } = useAppStore();
+function CommentSection({ task }: { task: Task }) {
+  const taskId = task.id;
+  const { comments, events, profiles, statuses, addComment, updateTask } =
+    useAppStore();
   const [body, setBody] = React.useState("");
   const [sending, setSending] = React.useState(false);
+  /* Lo stato in cui portare il task insieme al commento. Vuoto = lascialo
+     dov'è: la maggior parte dei commenti non sposta niente, e un menu che
+     parte già su un valore farebbe cambiare fase per distrazione. */
+  const [nuovoStato, setNuovoStato] = React.useState("");
   const [showActivity, setShowActivity] = React.useState(true);
 
   const quoteComment = (text: string, authorName: string) => {
@@ -1370,9 +1376,23 @@ function CommentSection({ taskId }: { taskId: string }) {
     e.preventDefault();
     if (body.trim().length === 0) return;
     setSending(true);
-    await addComment(taskId, body);
-    setSending(false);
-    setBody("");
+    /* Il commento prima, lo stato dopo: chi legge la conversazione trova
+       la spiegazione e poi il movimento, che è l'ordine in cui le cose
+       accadono davvero. Il contrario mostrerebbe uno spostamento senza
+       ancora il perché.
+
+       Il finally c'è per lo stesso motivo di sempre: senza, un rifiuto
+       lascerebbe il pulsante spento e nessun modo di riprovare. */
+    try {
+      await addComment(taskId, body);
+      if (nuovoStato && nuovoStato !== task.status) {
+        await updateTask(taskId, { status: nuovoStato });
+      }
+      setBody("");
+      setNuovoStato("");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -1395,6 +1415,21 @@ function CommentSection({ taskId }: { taskId: string }) {
       </h3>
 
       <div className="mt-3 space-y-3">
+        {/* L'apertura del discorso. La descrizione è il primo messaggio del
+            task: separarla dai commenti spezzava in due una cosa sola —
+            si leggeva il «cosa» in cima e il «com'è andata» in fondo,
+            senza che l'una tirasse l'altra. Qui si legge; si modifica dal
+            campo sopra, che resta il posto in cui si scrive. */}
+        {task.description?.trim() ? (
+          <div className="rounded-xl border border-border-soft bg-muted/50 px-3 py-2.5">
+            <p className="text-[11px] font-bold tracking-[0.05em] text-ink-faint uppercase">
+              La richiesta
+            </p>
+            <p className="mt-1 text-[13px]/[19px] break-words whitespace-pre-line text-ink-secondary">
+              {task.description}
+            </p>
+          </div>
+        ) : null}
         {timeline.length === 0 ? (
           <p className="text-[13px] text-ink-muted">
             Nessun commento. Scrivi il primo.
@@ -1505,16 +1540,43 @@ function CommentSection({ taskId }: { taskId: string }) {
           placeholder="Scrivi un commento… «@» per menzionare un collega o @Admin"
           className="min-h-16"
         />
-        <Button
-          type="submit"
-          variant="secondary"
-          size="sm"
-          disabled={sending || body.trim().length === 0}
-          aria-busy={sending}
-        >
-          {sending ? <LoaderCircle className="animate-spin" /> : null}
-          Commenta
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="submit"
+            variant="secondary"
+            size="sm"
+            disabled={sending || body.trim().length === 0}
+            aria-busy={sending}
+          >
+            {sending ? <LoaderCircle className="animate-spin" /> : null}
+            Commenta
+          </Button>
+
+          {/* Chi scrive «fatto, mancano i testi» sta anche dicendo dove sta
+              il lavoro: farglielo ripetere spostando la scheda è chiedere
+              due volte la stessa cosa. Il menu parte vuoto — la maggior
+              parte dei commenti non sposta niente, e un valore già scelto
+              farebbe cambiare fase per distrazione. */}
+          <label htmlFor="comment-stato" className="sr-only">
+            Porta il task in
+          </label>
+          <NativeSelect
+            id="comment-stato"
+            className="w-40"
+            value={nuovoStato}
+            disabled={sending}
+            onChange={(e) => setNuovoStato(e.target.value)}
+          >
+            <option value="">…e lascialo dov&rsquo;è</option>
+            {statuses
+              .filter((s) => s.key !== task.status)
+              .map((s) => (
+                <option key={s.key} value={s.key}>
+                  …e passa a «{s.label}»
+                </option>
+              ))}
+          </NativeSelect>
+        </div>
       </form>
     </section>
   );
