@@ -9,6 +9,20 @@ versioni (fase pre-1.0).
 
 ## Non rilasciato
 
+### Corretto
+- **Un singhiozzo di rete non fa più perdere il lavoro.** Salvando un task
+  o una richiesta di ferie capitava, saltuariamente, di leggere «TypeError:
+  load failed — l'app è tornata com'era prima»: non era il salvataggio a
+  essere rifiutato, era la richiesta a non partire, e al primo tentativo
+  andato storto buttavamo via quello che era stato scritto. Ora una
+  richiesta che non parte viene **ritentata** (tre volte, con pause
+  crescenti) prima di arrendersi; un rifiuto del database invece non si
+  ritenta, perché un no resta un no. Il ritentativo avviene senza lasciare
+  il posto in coda, così l'ordine che protegge le chiavi esterne non
+  cambia. E se davvero la connessione manca, ora si legge «Connessione
+  assente o instabile: la modifica non è partita» invece del messaggio
+  grezzo del browser. (#67)
+
 ### Aggiunto
 - **Barra comandi: si scrive o si detta, e nascono i lavori.** Da Ctrl+K,
   quando quello che si scrive sembra un ordine («Crea una task per il

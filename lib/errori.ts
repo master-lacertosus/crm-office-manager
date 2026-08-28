@@ -14,6 +14,8 @@
  * la differenza fra capire e indovinare.
  */
 
+import { eProblemaDiRete } from "@/lib/riprova";
+
 interface ErroreConMessaggio {
   message?: unknown;
   code?: unknown;
@@ -22,6 +24,15 @@ interface ErroreConMessaggio {
 }
 
 export function messaggioErrore(errore: unknown, ripiego: string): string {
+  /* Quando è la rete a cedere il messaggio grezzo non aiuta nessuno: il
+     browser dice «Load failed» o «Failed to fetch» a seconda di quale sia,
+     e chi legge non ha modo di capire che si tratta della connessione e
+     non del suo lavoro. Qui — e solo qui — il testo originale si butta:
+     per un rifiuto del database resta invece prezioso. */
+  if (eProblemaDiRete(errore)) {
+    return "Connessione assente o instabile: la modifica non è partita. Controlla la rete e riprova.";
+  }
+
   const parti: string[] = [];
 
   if (typeof errore === "string" && errore.trim()) {

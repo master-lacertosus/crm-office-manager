@@ -7,6 +7,7 @@ import { messaggioErrore } from "@/lib/errori";
 import { extractMentionIds } from "@/lib/mentions";
 import { puoModificareTask } from "@/lib/permessi";
 import { prossimaScadenza } from "@/lib/repeat";
+import { conRitentativi } from "@/lib/riprova";
 import { CUSTOM_STATUS_PRESETS, lavoraNelWeekend } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -517,7 +518,12 @@ function useSincronizza<T extends { id: string }>(
 let codaScritture: Promise<unknown> = Promise.resolve();
 
 function inCoda<T>(operazione: () => Promise<T>): Promise<T> {
-  const risultato = codaScritture.then(operazione, operazione);
+  /* Il ritentativo sta DENTRO il turno di coda, non prima: chi aspetta
+     dietro continua ad aspettare, e l'ordine che protegge le chiavi
+     esterne resta quello. Riprovare fuori dalla coda farebbe passare
+     avanti la riga successiva — cioè il problema che la coda risolve. */
+  const conRete = () => conRitentativi(operazione);
+  const risultato = codaScritture.then(conRete, conRete);
   // La coda non deve morire su un errore: si annota e si va avanti.
   codaScritture = risultato.catch(() => undefined);
   return risultato;
