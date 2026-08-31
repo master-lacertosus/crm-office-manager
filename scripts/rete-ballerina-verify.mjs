@@ -139,6 +139,57 @@ console.log("\n# Il ritentativo\n");
   check("Una risposta persa non diventa un errore", errore === null);
 }
 
+/* --- Il telefono in ascensore ---------------------------------------- */
+console.log("\n# Quando la rete non c'è proprio\n");
+
+{
+  /* Il campo torna dopo il primo tentativo andato a vuoto: il task deve
+     salvarsi, non sparire. */
+  let tentativi = 0;
+  let attese = 0;
+  const risultato = await conRitentativi(
+    async () => {
+      tentativi++;
+      if (tentativi === 1) throw new TypeError("Load failed");
+      return "salvato";
+    },
+    {
+      ...subito,
+      rete: async () => {
+        attese++;
+        return true; /* il campo è tornato */
+      },
+    },
+  );
+  check("Il lavoro sopravvive al campo che va e torna", risultato === "salvato");
+  check("…perché si è aspettato il ritorno della rete", attese === 1, `attese: ${attese}`);
+}
+
+{
+  /* Il campo non torna: inutile insistere, e soprattutto inutile tenere
+     ferma la coda per altri due giri. */
+  let tentativi = 0;
+  try {
+    await conRitentativi(
+      async () => {
+        tentativi++;
+        throw new TypeError("Load failed");
+      },
+      { ...subito, rete: async () => false /* ancora senza rete */ },
+    );
+  } catch (e) {
+    check(
+      "Senza rete non si bruciano i tentativi a vuoto",
+      tentativi === 1,
+      `tentativi: ${tentativi}`,
+    );
+    check(
+      "…e si dice che è la connessione",
+      messaggioErrore(e, "ripiego").includes("Connessione"),
+    );
+  }
+}
+
 /* --- L'ordine regge anche riprovando --------------------------------- */
 console.log("\n# La coda, con la rete che balla\n");
 

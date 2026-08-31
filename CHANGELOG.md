@@ -10,6 +10,17 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Corretto
+- **Chi salva senza campo non perde più il lavoro.** Completa la correzione
+  precedente: se il dispositivo dichiara di non avere rete, i tre
+  tentativi non si bruciano più in un secondo scarso mentre la
+  connessione non c'è affatto. Si aspetta invece che il campo torni — fino
+  a 15 secondi — e a quel punto il salvataggio riparte da solo. È il caso
+  del telefono in ascensore o in galleria: prima il task spariva e cinque
+  secondi dopo, col campo tornato, non c'era più niente da recuperare. Se
+  la rete non torna entro il limite ci si arrende subito, senza tenere
+  ferma la coda per altri due giri a vuoto. (#68)
+
+### Corretto
 - **Un singhiozzo di rete non fa più perdere il lavoro.** Salvando un task
   o una richiesta di ferie capitava, saltuariamente, di leggere «TypeError:
   load failed — l'app è tornata com'era prima»: non era il salvataggio a
