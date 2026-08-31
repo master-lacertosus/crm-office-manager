@@ -35,6 +35,15 @@ export interface Preferences {
   accent: AccentKey;
   density: DensityKey;
   reduceMotion: boolean;
+  /** Spinge testi e bordi al massimo contrasto.
+   *
+   *  Serve a chi il CRM lo guarda su uno schermo che i colori non li rende
+   *  come dovrebbe: un pannello caldo, un proiettore, una luce che batte
+   *  storta, un portatile visto di sbieco. La tavolozza normale rispetta
+   *  gia le soglie WCAG, ma quelle soglie presuppongono uno schermo
+   *  onesto: dove non lo e, il grigio tenue delle date sparisce comunque.
+   *  Qui si rinuncia alla gerarchia dei grigi in cambio di leggibilita. */
+  contrastoAlto: boolean;
   /** Avvisare quando la board cambia per mano di qualcun altro. Resta
    *  acceso: sapere che il lavoro degli altri è arrivato è il motivo per
    *  cui la board si aggiorna da sola. Ma chi lavora concentrato su un
@@ -50,6 +59,7 @@ const DEFAULTS: Preferences = {
   accent: "orange",
   density: "comfortable",
   reduceMotion: false,
+  contrastoAlto: false,
   avvisiAltrui: true,
   vistaPredefinita: null,
   tema: "sistema",
@@ -125,6 +135,12 @@ function applyTema(tema: TemaKey) {
   else root.removeAttribute("data-tema");
 }
 
+function applyContrasto(on: boolean) {
+  const root = document.documentElement;
+  if (on) root.setAttribute("data-contrasto", "alto");
+  else root.removeAttribute("data-contrasto");
+}
+
 function applyReduceMotion(on: boolean) {
   const root = document.documentElement;
   if (on) root.setAttribute("data-reduce-motion", "1");
@@ -136,6 +152,7 @@ interface PreferencesContextValue {
   setAccent: (accent: AccentKey) => void;
   setDensity: (density: DensityKey) => void;
   setReduceMotion: (on: boolean) => void;
+  setContrastoAlto: (on: boolean) => void;
   setAvvisiAltrui: (on: boolean) => void;
   setVistaPredefinita: (id: string | null) => void;
   setTema: (tema: TemaKey) => void;
@@ -174,6 +191,7 @@ export function PreferencesProvider({
     applyAccent(prefs.accent);
     applyDensity(prefs.density);
     applyReduceMotion(prefs.reduceMotion);
+    applyContrasto(prefs.contrastoAlto);
     applyTema(prefs.tema);
   }, [prefs]);
 
@@ -192,6 +210,8 @@ export function PreferencesProvider({
       setDensity: (density) => setPrefs((p) => ({ ...p, density })),
       setReduceMotion: (reduceMotion) =>
         setPrefs((p) => ({ ...p, reduceMotion })),
+      setContrastoAlto: (contrastoAlto) =>
+        setPrefs((p) => ({ ...p, contrastoAlto })),
       setAvvisiAltrui: (avvisiAltrui) =>
         setPrefs((p) => ({ ...p, avvisiAltrui })),
       setVistaPredefinita: (vistaPredefinita) =>

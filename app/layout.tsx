@@ -54,6 +54,7 @@ var p=JSON.parse(localStorage.getItem("office-prefs")||"{}"),e=document.document
 if(p.density&&p.density!=="comfortable")e.setAttribute("data-density",p.density);
 if(p.accent&&p.accent!=="orange")e.setAttribute("data-accent",p.accent);
 if(p.reduceMotion)e.setAttribute("data-reduce-motion","1");
+if(p.contrastoAlto)e.setAttribute("data-contrasto","alto");
 var t=p.tema||"sistema";
 if(t==="sistema")t=matchMedia("(prefers-color-scheme: dark)").matches?"scuro":"chiaro";
 if(t==="scuro")e.setAttribute("data-tema","scuro");

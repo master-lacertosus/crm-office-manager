@@ -125,10 +125,12 @@ export function AppearanceSettings() {
     setAccent,
     setDensity,
     setReduceMotion,
+    setContrastoAlto,
     setAvvisiAltrui,
     setTema,
   } = usePreferences();
   const reduceId = React.useId();
+  const contrastoId = React.useId();
   const avvisiId = React.useId();
 
   return (
@@ -258,6 +260,23 @@ export function AppearanceSettings() {
             id={reduceId}
             checked={prefs.reduceMotion}
             onChange={setReduceMotion}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-4 border-t border-border-soft pt-4">
+          <label htmlFor={contrastoId} className="min-w-0">
+            <span className="block text-[13px] font-medium text-ink">
+              Contrasto alto
+            </span>
+            <span className="block text-[12px] text-ink-muted">
+              Testi e bordi al massimo. Utile su schermi che scaldano i
+              colori, con luce forte, o quando si guarda di sbieco.
+            </span>
+          </label>
+          <Switch
+            id={contrastoId}
+            checked={prefs.contrastoAlto}
+            onChange={setContrastoAlto}
           />
         </div>
 

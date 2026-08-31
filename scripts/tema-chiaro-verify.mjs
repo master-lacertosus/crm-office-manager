@@ -133,5 +133,36 @@ check(
   /\[data-tema="scuro"\][^{]*\{[^}]*color-scheme:\s*dark/s.test(CSS),
 );
 
+console.log("\n# Il contrasto alto contrasta davvero\n");
+
+/* Un interruttore che promette leggibilità e non la consegna è peggio che
+   non averlo: chi lo accende ha già un problema, e resterebbe convinto di
+   averlo risolto. Qui si pretende che ogni livello di testo arrivi almeno
+   a 7:1 — la soglia AAA — sul fondo delle schede, in entrambi i temi. */
+const alto = variabiliDi('[data-contrasto="alto"]');
+check("Il blocco del contrasto alto esiste", alto !== null);
+
+if (alto) {
+  for (const nome of ["--ink-secondary", "--ink-muted", "--ink-faint"]) {
+    const prima = contrasto(chiaro[nome], chiaro["--card"]);
+    const dopo = contrasto(alto[nome], chiaro["--card"]);
+    check(
+      `${nome}: ${prima}:1 -> ${dopo}:1`,
+      dopo >= 7 && dopo > prima,
+      dopo >= 7 ? "" : "il contrasto alto deve arrivare almeno a 7:1",
+    );
+  }
+
+  const scuro = variabiliDi('[data-tema="scuro"]');
+  const scuroAlto = variabiliDi('[data-contrasto="alto"][data-tema="scuro"]');
+  check("Vale anche sul tema scuro", scuroAlto !== null);
+  if (scuroAlto && scuro) {
+    for (const nome of ["--ink-secondary", "--ink-muted", "--ink-faint"]) {
+      const dopo = contrasto(scuroAlto[nome], scuro["--card"]);
+      check(`scuro ${nome}: ${dopo}:1`, dopo >= 7, dopo >= 7 ? "" : "sotto 7:1");
+    }
+  }
+}
+
 console.log(falliti === 0 ? "\nTUTTO VERDE" : `\n${falliti} CONTROLLI FALLITI`);
 process.exit(falliti === 0 ? 0 : 1);

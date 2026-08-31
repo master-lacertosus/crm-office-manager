@@ -9,6 +9,17 @@ versioni (fase pre-1.0).
 
 ## Non rilasciato
 
+### Aggiunto
+- **Contrasto alto** (Impostazioni › Aspetto). La tavolozza normale rispetta
+  le soglie WCAG, ma quelle soglie presuppongono uno schermo onesto: su un
+  pannello che scalda i colori, con luce forte, o guardando di sbieco, il
+  grigio tenue delle date sparisce lo stesso e non c'è token che tenga.
+  Acceso, ogni livello di testo sale sopra **7:1** (soglia AAA) e i bordi si
+  fanno vedere: si rinuncia alla gerarchia dei grigi in cambio di
+  leggibilità. Vale su entrambi i temi, si applica prima del primo disegno e
+  resta salvato sul profilo, quindi segue la persona da qualunque
+  computer. (#71)
+
 ### Corretto
 - **Il tema chiaro adesso è misurato, non dato per buono.** Il tema scuro lo
   controllavamo da tempo; il chiaro — quello che usano tutti tutto il
