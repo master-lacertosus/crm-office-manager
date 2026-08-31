@@ -27,6 +27,7 @@ const CONTROLLI = [
   ["verify:rete", "La rete che singhiozza non fa perdere il lavoro", ["run", "verify:rete"]],
   ["verify:contesto", "Un pezzo sa sempre da dove viene", ["run", "verify:contesto"]],
   ["verify:tema", "Il tema scuro si legge davvero", ["run", "verify:tema"]],
+  ["verify:chiaro", "Il tema chiaro si legge davvero", ["run", "verify:chiaro"]],
   ["verify:build", "Il sito si costruisce da zero", ["run", "verify:build"]],
 ];
 
