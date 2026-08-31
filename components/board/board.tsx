@@ -14,6 +14,7 @@ import {
 import { updateSearch } from "@/lib/shallow-nav";
 import { responsabileEffettivo } from "@/lib/filtro-responsabile";
 import { puoModificareTask } from "@/lib/permessi";
+import { confrontaPerScadenza, loSpostamentoReggera } from "@/lib/ordine";
 import { MAX_CUSTOM_STATUSES, useAppStore } from "@/lib/store";
 import {
   CUSTOM_STATUS_PRESETS,
@@ -106,7 +107,7 @@ export function Board({ projectId }: { projectId?: string }) {
         meta.key,
         visible
           .filter((t) => t.status === meta.key)
-          .sort((a, b) => a.position - b.position),
+          .sort(confrontaPerScadenza),
       );
     }
     return map;
@@ -328,14 +329,31 @@ export function Board({ projectId }: { projectId?: string }) {
               targetTasks[current.insertIndex].position) /
             2;
         }
-        const revert = moveTask(current.task.id, current.target, position);
-        if (revert) {
-          const label =
-            statuses.find((s) => s.key === current.target)?.label ??
-            current.target;
-          toast(`«${current.task.title}» → ${label}`, {
-            action: { label: "Annulla", onClick: revert },
-          });
+        /* Da quando le colonne seguono le scadenze, riordinare a mano un
+           lavoro che una scadenza ce l'ha non attacca: la data lo riporta
+           dov'era. Meglio dirlo che lasciar credere che il trascinamento
+           sia andato perso — e senza scrivere una posizione che nessuno
+           leggerà mai. */
+        if (
+          !loSpostamentoReggera(
+            current.task,
+            current.task.status,
+            current.target,
+          )
+        ) {
+          toast(
+            "Le colonne sono in ordine di scadenza: per spostarlo, cambia la data.",
+          );
+        } else {
+          const revert = moveTask(current.task.id, current.target, position);
+          if (revert) {
+            const label =
+              statuses.find((s) => s.key === current.target)?.label ??
+              current.target;
+            toast(`«${current.task.title}» → ${label}`, {
+              action: { label: "Annulla", onClick: revert },
+            });
+          }
         }
       }
       setDrag(null);

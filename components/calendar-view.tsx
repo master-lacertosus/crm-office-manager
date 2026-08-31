@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, History, Plus } from "lucide-react";
 import { dueUrgency, todayIso } from "@/lib/format";
 import { updateSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
+import { confrontaPerScadenza } from "@/lib/ordine";
 import type { Task, TaskEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { PriorityBadge } from "@/components/priority-badge";
@@ -325,7 +326,7 @@ export function CalendarView() {
         <div ref={gridRef} className="grid grid-cols-7">
           {cells.map((cell, i) => {
             const dayTasks = (byDay.get(cell.iso) ?? []).sort(
-              (a, b) => a.position - b.position,
+              confrontaPerScadenza,
             );
             const isToday = cell.iso === today;
             const isTarget = drag?.target === cell.iso;

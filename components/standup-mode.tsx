@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { CheckCheck, X } from "lucide-react";
 
 import { buildAnalytics } from "@/lib/analytics";
+import { confrontaPerScadenza } from "@/lib/ordine";
 import { addDaysIso, dueUrgency, formatDue, todayIso } from "@/lib/format";
 import { personLeaveOnDay } from "@/lib/leave";
 import { useAppStore } from "@/lib/store";
@@ -82,12 +83,7 @@ export function StandupMode({
       const mine = tasks.filter((t) => t.owner_id === profile.id);
       const openTasks = mine
         .filter((t) => t.status !== "done")
-        .sort((a, b) => {
-          if (!a.due_date && !b.due_date) return a.position - b.position;
-          if (!a.due_date) return 1;
-          if (!b.due_date) return -1;
-          return a.due_date.localeCompare(b.due_date);
-        });
+        .sort(confrontaPerScadenza);
       return {
         profile,
         openTasks,
