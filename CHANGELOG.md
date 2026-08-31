@@ -10,6 +10,25 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Corretto
+- **Il tema scuro adesso è davvero scuro.** Le superfici erano dipinte di
+  bianco a mano dentro le classi — `.card-soft { background: #ffffff }`
+  valeva per **ogni card della board**, e lo stesso facevano i quattro
+  vetri di dialoghi, campanella, barra laterale e barra superiore — più
+  tredici `bg-white/…` sparsi nei componenti. In tema chiaro erano giusti;
+  in tema scuro restavano bianchi mentre il testo diventava chiaro. Titolo
+  `#e8ecf3` su card bianca: **contrasto 1,2:1**, cioè invisibile. Ora ogni
+  superficie passa da un token che si ribalta col tema, bagliori e ombre
+  compresi (su grafite una luce interna al 90% non è un riflesso, è una
+  riga bianca). (#73)
+- **Il controllo che doveva accorgersene guardava dalla parte sbagliata.**
+  Esisteva già una prova «nessuna superficie è bianca per sempre», ma il suo
+  pattern escludeva lo slash: `bg-white/60` non è mai stato intercettato —
+  ed erano proprio quelli. Ora prende anche il bianco con opacità, controlla
+  il foglio di stile oltre ai componenti, e soprattutto pretende che **ogni
+  token di superficie del tema chiaro abbia la sua versione scura**: è
+  l'invariante che avrebbe fermato tutto questo il primo giorno. (#73)
+
+### Corretto
 - **I pezzi scritti in creazione non si perdono più.** Il riquadro «Pezzi di
   questo lavoro» teneva una riga di bozza, e il pezzo entrava nell'elenco
   solo premendo Invio o il «+». Chi invece compilava quella riga e cliccava

@@ -142,15 +142,66 @@ for (const stato of ["backlog", "todo", "progress", "review", "done"]) {
     }
     return dentro;
   };
+  /* La lookahead di prima, `(?![\w/-])`, escludeva proprio lo slash:
+     `bg-white/60` non è mai stato intercettato. Ed erano quelli — tredici
+     sparsi fra board, campanella, barre e telaio — a restare bianchi in
+     tema scuro sotto un testo diventato chiaro. Il guardiano guardava
+     dalla parte sbagliata.
+
+     Resta lecito il bianco su un fondo di marca (la pillola del menu
+     attivo sull'arancio): lì è un colore scelto, non una superficie. */
+  const bianchi = (testo) =>
+    testo
+      .split("\n")
+      .map((riga, i) => [i + 1, riga])
+      .filter(
+        ([, riga]) =>
+          /\b(bg|border)-white\b/.test(riga) &&
+          !/text-white|bg-brand|bg-primary/.test(riga),
+      );
+
   const colpevoli = [...tsx("components"), ...tsx("app")]
     .filter((f) => !f.includes("styleguide"))
-    .filter((f) => /\bbg-white(?![\w/-])/.test(readFileSync(f, "utf8")));
+    .flatMap((f) => bianchi(readFileSync(f, "utf8")).map(([n]) => `${f}:${n}`));
   check(
-    "Nessuna superficie e' bianca per sempre",
+    "Nessuna superficie e' bianca per sempre, nemmeno a mezza opacita'",
     colpevoli.length === 0,
-    colpevoli.length === 0
-      ? "tutte passano dai token"
-      : colpevoli.join(", "),
+    colpevoli.length === 0 ? "tutte passano dai token" : colpevoli.join(", "),
+  );
+
+  /* Stesso difetto, ma nel foglio di stile: `.card-soft { background:
+     #ffffff }` valeva per ogni card della board. La stampa è esclusa: la
+     carta è bianca davvero. */
+  const senzaStampa = CSS.split("@media print")[0];
+  const classiBianche = senzaStampa
+    .split("\n")
+    .map((riga, i) => [i + 1, riga])
+    .filter(([, r]) =>
+      /^\s*background(-color)?:\s*(#fff|#ffffff|white|rgb\(255 255 255)/i.test(r),
+    );
+  check(
+    "Nessuna classe di superficie dipinge di bianco a mano",
+    classiBianche.length === 0,
+    classiBianche.length === 0
+      ? "card-soft e i vetri passano dai token"
+      : `righe ${classiBianche.map(([n]) => n).join(", ")}`,
+  );
+
+  /* L'invariante che avrebbe preso tutto questo il primo giorno: ogni
+     token di superficie dichiarato nel tema chiaro dev'essere ridichiarato
+     nel tema scuro. I colori di marca no: l'arancio resta arancio. */
+  const superficie = Object.keys(chiaro).filter((n) =>
+    /^--(velo|vetro|chip|ombra-card|card|popover|background|canvas|muted|accent|secondary|border)/.test(
+      n,
+    ),
+  );
+  const dimenticati = superficie.filter((n) => !(n in scuro));
+  check(
+    "Ogni superficie del tema chiaro ha la sua versione scura",
+    dimenticati.length === 0,
+    dimenticati.length === 0
+      ? `${superficie.length} token verificati`
+      : `MANCANO: ${dimenticati.join(", ")}`,
   );
 }
 
