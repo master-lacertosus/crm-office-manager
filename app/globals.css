@@ -437,6 +437,37 @@
  * Movimento ridotto manuale (Impostazioni › Aspetto): affianca MotionConfig
  * neutralizzando anche animazioni e transizioni puramente CSS.
  */
+/*
+ * Contrasto alto (Impostazioni › Aspetto).
+ *
+ * La tavolozza normale rispetta le soglie WCAG, ma quelle soglie
+ * presuppongono uno schermo onesto. Dove non lo è — un pannello caldo, una
+ * luce che batte storta, un portatile visto di sbieco, un proiettore — il
+ * grigio tenue delle date sparisce lo stesso, e non c'è token che tenga.
+ *
+ * Qui si rinuncia alla gerarchia dei grigi in cambio di leggibilità: tutti
+ * i livelli di testo salgono verso l'inchiostro pieno e i bordi si fanno
+ * vedere. Non è il predefinito perché la gerarchia serve — ma per chi ne ha
+ * bisogno vale più di qualunque sfumatura.
+ */
+[data-contrasto="alto"] {
+  --ink-secondary: #1f2937;
+  --ink-muted: #374151;
+  --ink-faint: #4b5563;
+  --muted-foreground: #374151;
+  --border: #64748b;
+  --border-soft: #94a3b8;
+}
+
+[data-contrasto="alto"][data-tema="scuro"] {
+  --ink-secondary: #f1f5f9;
+  --ink-muted: #dbe2ec;
+  --ink-faint: #c3ccda;
+  --muted-foreground: #dbe2ec;
+  --border: #7c8798;
+  --border-soft: #5b6577;
+}
+
 [data-reduce-motion="1"] *,
 [data-reduce-motion="1"] *::before,
 [data-reduce-motion="1"] *::after {
