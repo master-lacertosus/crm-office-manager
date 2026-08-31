@@ -446,8 +446,15 @@
   opacity: 0.5;
 }
 
-[data-tema="scuro"] .glass-chrome,
-[data-tema="scuro"] .glass-strong,
+/* `.glass-chrome` e `.glass-strong` erano gia' qui, ritoccate a mano per il
+   tema scuro: e' il motivo per cui barre e dialoghi si vedevano bene mentre
+   le card della board restavano bianche — la copertura era due su cinque, e
+   sembrava che il tema funzionasse.
+   Adesso che tutte e cinque passano dai token, quel ritocco vincerebbe sul
+   token senza dirlo: si terrebbero due strade per lo stesso colore, e
+   cambiare `--vetro-forte` non avrebbe alcun effetto. Ne resta una sola.
+   `.glass-hero` tiene la sua, perche' oltre al fondo ha un alone di marca
+   che non e' una superficie come le altre. */
 [data-tema="scuro"] .glass-hero {
   background-color: color-mix(in oklch, var(--card), transparent 12%);
   border-color: var(--border);

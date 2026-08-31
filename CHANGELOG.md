@@ -10,6 +10,15 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Corretto
+- **Una sola strada per il colore delle superfici.** Barra laterale, barra
+  superiore e dialoghi avevano gia' un ritocco scritto a mano per il tema
+  scuro: e' il motivo per cui quelli si vedevano bene mentre le card della
+  board restavano bianche — la copertura era due su cinque, e sembrava che
+  il tema funzionasse. Ora che tutte passano dai token, quel ritocco
+  vincerebbe sul token senza dirlo, e cambiare il token non avrebbe alcun
+  effetto. Rimosso: resta un meccanismo solo. (#74)
+
+### Corretto
 - **Il tema scuro adesso è davvero scuro.** Le superfici erano dipinte di
   bianco a mano dentro le classi — `.card-soft { background: #ffffff }`
   valeva per **ogni card della board**, e lo stesso facevano i quattro
