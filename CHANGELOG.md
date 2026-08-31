@@ -10,6 +10,16 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Corretto
+- **La modalita standup si apre per intero.** Il pannello usciva ritagliato:
+  non era un difetto suo, ma di dove nasceva. Il pulsante vive nella barra
+  superiore, che ha il vetro smerigliato — e un antenato con
+  `backdrop-filter` diventa il riferimento di tutto cio che sotto di lui e
+  `position: fixed`. Cosi il pannello non copriva la finestra: copriva la
+  barra alta 64 pixel, e li dentro veniva tagliato. Ora si appende al
+  documento come gli altri cinque pannelli dell app, che lo facevano gia.
+  (#76)
+
+### Corretto
 - **La Board segue le scadenze, come l'Elenco.** Un lavoro urgente appena
   aggiunto compariva in cima all'Elenco e in fondo alla Board: le colonne
   ordinavano per momento di creazione, non per scadenza. La regola giusta
