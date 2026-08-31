@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { CheckCheck, X } from "lucide-react";
 
@@ -104,7 +105,14 @@ export function StandupMode({
         b.overdue - a.overdue || b.openTasks.length - a.openTasks.length,
     );
 
-  return (
+  /* Il pannello si appende al `body`, non dove sta il pulsante.
+     Il pulsante dello standup vive nella Topbar, che ha un `backdrop-filter`
+     per l'effetto vetro — e un antenato con `backdrop-filter` diventa il
+     riferimento di tutto cio' che e' `position: fixed` sotto di lui. Cosi'
+     `fixed inset-0` non copriva la finestra: copriva la barra alta 64px, e
+     lo standup usciva ritagliato. E' la stessa ragione per cui gli altri
+     cinque pannelli dell'app passano da un portale. */
+  const pannello = (
     <AnimatePresence>
       {open ? (
         <motion.div
@@ -279,4 +287,8 @@ export function StandupMode({
       ) : null}
     </AnimatePresence>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(pannello, document.body)
+    : null;
 }
