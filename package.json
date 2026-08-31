@@ -28,7 +28,8 @@
     "verify:contesto": "node --import ./scripts/alias.mjs scripts/contesto-verify.mjs",
     "verify:pezzi": "node --import ./scripts/alias.mjs scripts/pezzi-verify.mjs",
     "verify:ordine": "node --import ./scripts/alias.mjs scripts/ordine-verify.mjs",
-    "verify:overlay": "node scripts/sovrapposizioni-verify.mjs"
+    "verify:overlay": "node scripts/sovrapposizioni-verify.mjs",
+    "verify:agenda": "node --import ./scripts/alias.mjs scripts/agenda-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

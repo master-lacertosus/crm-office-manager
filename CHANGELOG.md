@@ -9,6 +9,34 @@ versioni (fase pre-1.0).
 
 ## Non rilasciato
 
+### Aggiunto
+- **Agenda** (Calendario > Agenda). Cosa c e da consegnare, giorno per
+  giorno, in un intervallo che si sceglie liberamente: avanti per
+  prepararsi, indietro per rivedere cosa e stato chiuso. Gli scaduti e non
+  chiusi restano in cima anche guardando la settimana prossima, perche
+  guardare avanti senza sapere cosa ci si trascina dietro da una tranquillita
+  falsa. Si puo includere il completato, e i lavori senza scadenza si
+  mostrano a parte invece di sparire. L intervallo vive nell indirizzo:
+  un agenda si manda a un collega e lui vede la stessa cosa. (#77)
+- **Filtro per persona nel Calendario.** Era l unica vista che mostrava
+  sempre tutti. Ora usa lo stesso filtro di Board ed Elenco, con lo stesso
+  predefinito per ruolo: un dipendente apre il proprio mese, un responsabile
+  quello del team. Vale anche per l Agenda, quindi l agenda personale non e
+  una pagina a parte: e questa, con il proprio nome. (#77)
+
+### Corretto
+- **I Report accettano le date future.** Il tetto a oggi bloccava in
+  silenzio un campo che si stava cercando di usare. Ora la data si sceglie,
+  e quando l intervallo supera oggi si legge cosa aspettarsi: quella pagina
+  misura il lavoro chiuso, e per le scadenze in arrivo rimanda all Agenda,
+  che e la vista costruita per rispondere. (#77)
+- **A parita di scadenza decide l ordine manuale.** La regola introdotta
+  ieri si fermava alla data: due lavori dello stesso giorno restavano
+  nell ordine che capitava, e per chi ha cinque consegne il venerdi quell
+  ordine cambiava a ogni ricarica. Di conseguenza trascinare torna utile
+  fra lavori dello stesso giorno, e il messaggio della board ora lo dice
+  solo quando lo spostamento davvero non reggerebbe. (#77)
+
 ### Corretto
 - **La modalita standup si apre per intero.** Il pannello usciva ritagliato:
   non era un difetto suo, ma di dove nasceva. Il pulsante vive nella barra

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { Download, Printer } from "lucide-react";
@@ -221,7 +222,12 @@ export function ReportsContent() {
             type="date"
             value={range.to}
             min={range.from}
-            max={todayIso()}
+            /* Il tetto a oggi era una difesa contro un intervallo che qui
+               non avrebbe senso: questa pagina misura `completed_at`, e
+               nel futuro non c'e' ancora niente di completato. Ma bloccare
+               in silenzio un campo che l'utente sta cercando di usare e'
+               il modo peggiore di dirlo: ora la data si sceglie, e sotto
+               si legge cosa aspettarsi. */
             onChange={(e) =>
               e.target.value &&
               setPreset("custom", { from: range.from, to: e.target.value })
@@ -230,6 +236,20 @@ export function ReportsContent() {
             className="h-8 w-36 text-[13px]"
           />
         </div>
+        {range.to > todayIso() ? (
+          <p className="w-full text-[12px] text-ink-muted">
+            Oltre oggi non c&apos;è ancora nulla di completato: questa pagina
+            misura il lavoro chiuso. Per sapere cosa scade nei prossimi
+            giorni, l&apos;
+            <Link
+              href="/calendar?view=agenda"
+              className="font-semibold text-brand-600 underline underline-offset-2"
+            >
+              Agenda
+            </Link>{" "}
+            risponde a quella domanda.
+          </p>
+        ) : null}
         <div className="ml-auto flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={exportCsv}>
             <Download data-icon="inline-start" />

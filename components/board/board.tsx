@@ -335,11 +335,10 @@ export function Board({ projectId }: { projectId?: string }) {
            sia andato perso — e senza scrivere una posizione che nessuno
            leggerà mai. */
         if (
-          !loSpostamentoReggera(
-            current.task,
-            current.task.status,
-            current.target,
-          )
+          !loSpostamentoReggera(current.task, current.task.status, current.target, {
+            prima: targetTasks[current.insertIndex - 1],
+            dopo: targetTasks[current.insertIndex],
+          })
         ) {
           toast(
             "Le colonne sono in ordine di scadenza: per spostarlo, cambia la data.",
