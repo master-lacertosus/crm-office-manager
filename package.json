@@ -23,7 +23,8 @@
     "verify:multiple": "node --import ./scripts/alias.mjs scripts/azioni-multiple-verify.mjs",
     "verify:tema": "node scripts/tema-scuro-verify.mjs",
     "verify:interpreta": "node --import ./scripts/alias.mjs scripts/interpreta-verify.mjs",
-    "verify:rete": "node --import ./scripts/alias.mjs scripts/rete-ballerina-verify.mjs"
+    "verify:rete": "node --import ./scripts/alias.mjs scripts/rete-ballerina-verify.mjs",
+    "verify:contesto": "node --import ./scripts/alias.mjs scripts/contesto-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

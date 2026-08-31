@@ -25,6 +25,7 @@ const CONTROLLI = [
   ["verify:multiple", "Le azioni multiple rispettano i permessi", ["run", "verify:multiple"]],
   ["verify:interpreta", "Il testo diventa lavoro", ["run", "verify:interpreta"]],
   ["verify:rete", "La rete che singhiozza non fa perdere il lavoro", ["run", "verify:rete"]],
+  ["verify:contesto", "Un pezzo sa sempre da dove viene", ["run", "verify:contesto"]],
   ["verify:tema", "Il tema scuro si legge davvero", ["run", "verify:tema"]],
   ["verify:build", "Il sito si costruisce da zero", ["run", "verify:build"]],
 ];

@@ -57,6 +57,7 @@ import {
   type PezzoNuovo,
 } from "@/components/pezzi-in-creazione";
 import { SceltaProgetto } from "@/components/scelta-progetto";
+import { ContestoPadre } from "@/components/contesto-padre";
 import { SottoTask } from "@/components/sotto-task";
 import { StatusLabel } from "@/components/status-pip";
 import { useToast } from "@/components/toaster";
@@ -696,6 +697,9 @@ function TaskForm({
             noValidate
             className="space-y-4"
           >
+            {/* Prima di ogni campo: chi apre il proprio pezzo deve leggere
+                cosa gli è stato chiesto, non doverlo cercare. */}
+            {task ? <ContestoPadre task={task} /> : null}
             {templatePicker}
             {titleField}
             {descriptionField}
@@ -733,6 +737,8 @@ function TaskForm({
         noValidate
         className="space-y-4 p-5"
       >
+        {/* Come sopra: la richiesta viene prima dei campi. */}
+        {task ? <ContestoPadre task={task} /> : null}
         {templatePicker}
         {titleField}
         {fieldsGrid}
