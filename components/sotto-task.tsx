@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * I pezzi di un lavoro.
@@ -37,6 +38,11 @@ export function SottoTask({ task }: { task: Task }) {
   const [titolo, setTitolo] = React.useState("");
   const [responsabile, setResponsabile] = React.useState(currentUser.id);
   const [scadenza, setScadenza] = React.useState("");
+  /* Facoltativo: il quadro d'insieme sta nel padre, e da lì si legge anche
+     aprendo il pezzo. Serve quando il singolo pezzo ha istruzioni sue —
+     un formato, un percorso, una persona da sentire — che nel brief
+     generale non stanno. */
+  const [dettagli, setDettagli] = React.useState("");
   const [creando, setCreando] = React.useState(false);
 
   // Un pezzo non ha pezzi: la sezione compare solo sui lavori principali.
@@ -55,17 +61,25 @@ export function SottoTask({ task }: { task: Task }) {
     const nome = titolo.trim();
     if (!nome || creando) return;
     setCreando(true);
-    await createTask({
-      title: nome,
-      owner_id: responsabile,
-      parent_id: task.id,
-      project_id: task.project_id,
-      due_date: scadenza || null,
-      priority: task.priority,
-    });
-    setCreando(false);
+    /* Il `finally` non è pignoleria: il pulsante è `disabled={creando}`, e
+       se qualcosa saltasse fuori qui in mezzo resterebbe spento per sempre,
+       senza dire perché. */
+    try {
+      await createTask({
+        title: nome,
+        owner_id: responsabile,
+        parent_id: task.id,
+        project_id: task.project_id,
+        due_date: scadenza || null,
+        priority: task.priority,
+        description: dettagli.trim() ? dettagli.trim() : null,
+      });
+    } finally {
+      setCreando(false);
+    }
     setTitolo("");
     setScadenza("");
+    setDettagli("");
     const chi = profiles.find((p) => p.id === responsabile);
     toast(
       responsabile === currentUser.id
@@ -210,6 +224,18 @@ export function SottoTask({ task }: { task: Task }) {
             value={scadenza}
             onChange={(e) => setScadenza(e.target.value)}
             className="h-9 w-36 shrink-0"
+          />
+          <Label htmlFor="sotto-dettagli" className="sr-only">
+            Dettagli del pezzo (facoltativi)
+          </Label>
+          <Textarea
+            id="sotto-dettagli"
+            value={dettagli}
+            onChange={(e) => setDettagli(e.target.value)}
+            placeholder="Dettagli per chi lo esegue (facoltativo)"
+            rows={2}
+            className="min-h-0 w-full"
+            maxLength={2000}
           />
           <Button
             type="submit"

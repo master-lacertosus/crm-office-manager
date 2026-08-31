@@ -10,6 +10,26 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Corretto
+- **Un pezzo di lavoro dice sempre da dove viene.** Un lavoro grande si
+  spezza in pezzi affidati a persone diverse, e i pezzi nascevano col solo
+  titolo: chi apriva il proprio si trovava davanti «Check video prodotto
+  disponibili» e nient'altro, senza traccia della richiesta che lo
+  spiegava. Il brief c'era, salvo e intero sul lavoro principale, ma era
+  irraggiungibile — e siccome il lavoro principale è spesso di un collega,
+  da quando ognuno apre il CRM sui propri lavori non compariva nemmeno in
+  board. Ora aprendo un pezzo si vede il lavoro da cui nasce, cliccabile,
+  con la sua richiesta per intero sopra ogni altro campo. Il testo non
+  viene copiato: resta uno solo, e se il lavoro principale lo corregge lo
+  leggono tutti aggiornato. (#69)
+
+### Aggiunto
+- **I pezzi si possono creare con dei dettagli.** Il riquadro «Pezzi del
+  lavoro» accettava solo titolo, responsabile e data: ora c'è anche un
+  campo facoltativo per le istruzioni che valgono solo per quel pezzo — un
+  formato, un percorso, una persona da sentire — che nel brief generale non
+  starebbero. (#69)
+
+### Corretto
 - **Chi salva senza campo non perde più il lavoro.** Completa la correzione
   precedente: se il dispositivo dichiara di non avere rete, i tre
   tentativi non si bruciano più in un secondo scarso mentre la
