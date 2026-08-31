@@ -9,6 +9,20 @@ versioni (fase pre-1.0).
 
 ## Non rilasciato
 
+### Corretto
+- **I pezzi scritti in creazione non si perdono più.** Il riquadro «Pezzi di
+  questo lavoro» teneva una riga di bozza, e il pezzo entrava nell'elenco
+  solo premendo Invio o il «+». Chi invece compilava quella riga e cliccava
+  **«Crea task»** — cioè il gesto che conclude tutto il resto del modulo —
+  se lo vedeva scartare senza un avviso, e doveva reinserirlo dopo. Quanto
+  fosse comune lo dice il database: **in tutta la vita del prodotto nessun
+  pezzo era mai nato insieme al suo lavoro**, mentre nove erano stati
+  aggiunti a mano in un secondo momento. Ora salvando si prende anche
+  quello che è rimasto in riga di scrittura, con chi era stato scelto nel
+  menu — e se il menu non è stato toccato, con il responsabile predefinito
+  invece che con nessuno. Riscrivere un pezzo già inserito non lo duplica.
+  (#72)
+
 ### Aggiunto
 - **Contrasto alto** (Impostazioni › Aspetto). La tavolozza normale rispetta
   le soglie WCAG, ma quelle soglie presuppongono uno schermo onesto: su un

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Plus, Split, X } from "lucide-react";
 
+import type { BozzaPezzo, PezzoNuovo } from "@/lib/pezzi";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,28 +27,35 @@ import { NativeSelect } from "@/components/ui/native-select";
  * riempirla di campi la trasformerebbe in un modulo da compilare.
  */
 
-export interface PezzoNuovo {
-  /** Chiave locale: serve solo a React finché non esiste una riga vera. */
-  chiave: string;
-  titolo: string;
-  owner_id: string;
-}
+/* I tipi e la regola di raccolta vivono in `lib/pezzi`: il salvataggio deve
+   poterli usare senza dipendere da questo componente. */
+export type { PezzoNuovo, BozzaPezzo } from "@/lib/pezzi";
 
 export function PezziInCreazione({
   pezzi,
   onChange,
+  /* La riga in compilazione vive nel modulo, non qui dentro: al
+     salvataggio dev'essere raggiungibile, altrimenti quello che ci sta
+     scritto si perde senza dirlo a nessuno. */
+  bozza,
+  onBozzaChange,
   /** Il responsabile del lavoro padre: decide chi si puo' incaricare. */
   ownerPadre,
   puoAssegnareAdAltri,
 }: {
   pezzi: PezzoNuovo[];
   onChange: (pezzi: PezzoNuovo[]) => void;
+  bozza: BozzaPezzo;
+  onBozzaChange: (bozza: BozzaPezzo) => void;
   ownerPadre: string;
   puoAssegnareAdAltri: boolean;
 }) {
   const { profiles, currentUser } = useAppStore();
-  const [titolo, setTitolo] = React.useState("");
-  const [incaricato, setIncaricato] = React.useState(currentUser.id);
+  const titolo = bozza.titolo;
+  const setTitolo = (t: string) => onBozzaChange({ ...bozza, titolo: t });
+  const incaricato = bozza.owner_id || currentUser.id;
+  const setIncaricato = (id: string) =>
+    onBozzaChange({ ...bozza, owner_id: id });
 
   /* Chi guida il lavoro puo' affidarne i pezzi, come un responsabile.
      E' la stessa regola di `tasks_insert_own_or_delegato` (M10): offrire
@@ -69,7 +77,9 @@ export function PezziInCreazione({
         owner_id: puoIncaricareAltri ? incaricato : currentUser.id,
       },
     ]);
-    setTitolo("");
+    /* Si azzera il titolo ma non l'incaricato: chi affida tre pezzi alla
+       stessa persona non deve risceglierla ogni volta. */
+    onBozzaChange({ titolo: "", owner_id: incaricato });
   };
 
   return (
