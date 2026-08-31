@@ -72,6 +72,46 @@ function eGiaFatto(errore: unknown): boolean {
 
 const attesa = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Il dispositivo dichiara di non avere rete. */
+function senzaRete(): boolean {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
+/**
+ * Aspetta che la rete torni — ma non all'infinito.
+ *
+ * Senza questo, chi salva in ascensore o in una galleria brucia i tre
+ * tentativi in poco più di un secondo, mentre la rete non c'è affatto: il
+ * lavoro viene buttato via, e cinque secondi dopo — col campo tornato —
+ * non c'è più niente da recuperare. Aspettare il momento in cui la
+ * connessione ritorna è l'unica cosa che salva davvero quel task.
+ *
+ * La coda resta ferma nel frattempo, ed è giusto così: senza rete anche
+ * le scritture dietro fallirebbero: meglio che aspettino e passino tutte
+ * in ordine. Ma con un limite, perché una coda che non riparte è peggio
+ * di un errore onesto.
+ *
+ * Restituisce `true` se la rete è tornata, `false` se si è esaurita
+ * l'attesa: in quel caso insistere non ha senso.
+ */
+function aspettaRete(limite = 15_000): Promise<boolean> {
+  if (!senzaRete()) return Promise.resolve(true);
+
+  return new Promise((risolvi) => {
+    let concluso = false;
+    const chiudi = (tornata: boolean) => {
+      if (concluso) return;
+      concluso = true;
+      window.removeEventListener("online", ritorno);
+      clearTimeout(scadenza);
+      risolvi(tornata);
+    };
+    const ritorno = () => chiudi(true);
+    const scadenza = setTimeout(() => chiudi(false), limite);
+    window.addEventListener("online", ritorno);
+  });
+}
+
 /**
  * Esegue l'operazione, riprovando solo se è la rete ad aver ceduto.
  *
@@ -85,11 +125,14 @@ export async function conRitentativi<T>(
     tentativi = 3,
     pause = [300, 900],
     dormi = attesa,
+    rete = aspettaRete,
   }: {
     tentativi?: number;
     pause?: number[];
     /** Sostituibile nelle prove, per non aspettare davvero. */
     dormi?: (ms: number) => Promise<unknown>;
+    /** Sostituibile nelle prove, per simulare il campo che va e viene. */
+    rete?: () => Promise<boolean>;
   } = {},
 ): Promise<T> {
   let ultimo: unknown;
@@ -107,6 +150,13 @@ export async function conRitentativi<T>(
          momento in cui l'utente lo scopre. */
       if (!eProblemaDiRete(e)) throw e;
       if (i === tentativi - 1) break;
+
+      /* Se il dispositivo dice di non avere rete, ripartire fra 300ms
+         significa sprecare i tentativi rimasti in un secondo scarso. Si
+         aspetta invece che il campo torni: è il caso del telefono in
+         ascensore, ed è quello in cui il lavoro si salva davvero. */
+      if (!(await rete())) break;
+
       await dormi(pause[Math.min(i, pause.length - 1)]);
     }
   }
