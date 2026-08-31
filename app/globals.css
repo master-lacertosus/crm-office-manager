@@ -35,6 +35,11 @@
   --color-ring: var(--ring);
   --color-selected: var(--selected);
   --color-scrim: var(--scrim);
+  /* Il velo: la superficie che si solleva sul fondo (passaggi del mouse,
+     riempimenti traslucidi). Prima era `bg-white/60` sparso nei componenti,
+     e restava bianco anche in tema scuro. Come token si ribalta col tema, e
+     i gradi di opacità continuano a funzionare: `bg-velo/60`. */
+  --color-velo: var(--velo);
 
   --color-ink: var(--ink);
   --color-ink-secondary: var(--ink-secondary);
@@ -131,6 +136,25 @@
      che i colori se li sceglie da sé. Il tema scuro la sua l'aveva già; il
      chiaro, che è quello che usano tutti tutto il giorno, no. */
   color-scheme: light;
+
+  /* Superfici sollevate e vetri.
+     Erano scritte a mano dentro le classi — `.card-soft { background:
+     #ffffff }` e i vari `.glass` — e quindi restavano bianche anche in
+     tema scuro, sotto un testo diventato chiaro: la board spariva. Ora
+     sono token, e il tema scuro le ridefinisce come tutto il resto. */
+  --velo: #ffffff;
+  --vetro: rgb(255 255 255 / 0.6);
+  --vetro-bordo: rgb(255 255 255 / 0.72);
+  --vetro-forte: rgb(255 255 255 / 0.82);
+  --vetro-forte-bordo: rgb(255 255 255 / 0.85);
+  --vetro-telaio: rgb(255 255 255 / 0.68);
+  --vetro-luce: rgb(255 255 255 / 0.9);
+  --vetro-luce-piena: rgb(255 255 255 / 0.95);
+  --chip-da: #ffffff;
+  --chip-a: #f7f9fc;
+  --chip-bordo: rgb(226 232 240 / 0.9);
+  --ombra-card: rgb(15 23 42 / 0.06);
+  --ombra-card-vicina: rgb(15 23 42 / 0.02);
 
   --background: #ffffff;
   --canvas: #f6f8fc;
@@ -317,6 +341,24 @@
 [data-tema="scuro"] {
   /* Superfici: grafite fredda, non nero. Il nero pieno fa vibrare il testo
      e non lascia spazio alle elevazioni. */
+  /* Le stesse superfici, ma di grafite. I bagliori interni (`--vetro-luce`)
+     scendono da 0.9 a un soffio: su fondo scuro una luce forte non e' un
+     riflesso, e' una riga bianca. Le ombre invece si fanno piu' cupe,
+     perche' un'ombra tenue su grafite non separa niente. */
+  --velo: #39414f;
+  --vetro: rgb(30 36 46 / 0.66);
+  --vetro-bordo: rgb(255 255 255 / 0.1);
+  --vetro-forte: rgb(28 34 44 / 0.88);
+  --vetro-forte-bordo: rgb(255 255 255 / 0.12);
+  --vetro-telaio: rgb(20 24 31 / 0.74);
+  --vetro-luce: rgb(255 255 255 / 0.05);
+  --vetro-luce-piena: rgb(255 255 255 / 0.07);
+  --chip-da: #232a35;
+  --chip-a: #1c222c;
+  --chip-bordo: rgb(255 255 255 / 0.12);
+  --ombra-card: rgb(0 0 0 / 0.45);
+  --ombra-card-vicina: rgb(0 0 0 / 0.25);
+
   --background: #14181f;
   --canvas: #0f1319;
   --card: #191e27;
@@ -526,55 +568,55 @@
   /* Card solida premium (revisione mockup): bianco pieno, raggio ampio,
      ombra morbidissima. Il vetro resta per gli overlay. */
   .card-soft {
-    background: #ffffff;
+    background: var(--card);
     border: 1px solid var(--border);
     border-radius: 20px;
     box-shadow:
-      0 1px 2px rgb(15 23 42 / 0.02),
-      0 10px 30px rgb(15 23 42 / 0.06);
+      0 1px 2px var(--ombra-card-vicina),
+      0 10px 30px var(--ombra-card);
   }
 
   .glass {
-    background: rgb(255 255 255 / 0.6);
+    background: var(--vetro);
     backdrop-filter: blur(22px) saturate(1.5);
     -webkit-backdrop-filter: blur(22px) saturate(1.5);
-    border: 1px solid rgb(255 255 255 / 0.72);
+    border: 1px solid var(--vetro-bordo);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.85),
-      0 1px 2px rgb(23 24 28 / 0.05),
-      0 8px 28px rgb(23 24 28 / 0.06);
+      inset 0 1px 0 var(--vetro-luce),
+      0 1px 2px var(--ombra-card-vicina),
+      0 8px 28px var(--ombra-card);
   }
 
   /* Overlay di vetro (dialoghi, palette, campanella, drawer): denso,
      testo sempre leggibile (opacità ≥ 78%). */
   .glass-strong {
-    background: rgb(255 255 255 / 0.82);
+    background: var(--vetro-forte);
     backdrop-filter: blur(32px) saturate(1.7);
     -webkit-backdrop-filter: blur(32px) saturate(1.7);
-    border: 1px solid rgb(255 255 255 / 0.85);
+    border: 1px solid var(--vetro-forte-bordo);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.95),
-      inset 0 -1px 0 rgb(15 23 42 / 0.03),
-      0 2px 6px rgb(23 24 28 / 0.06),
-      0 20px 56px rgb(23 24 28 / 0.14);
+      inset 0 1px 0 var(--vetro-luce-piena),
+      inset 0 -1px 0 var(--ombra-card-vicina),
+      0 2px 6px var(--ombra-card-vicina),
+      0 20px 56px var(--ombra-card);
   }
 
   /* Telaio di vetro (sidebar, topbar): l'aurora traspare, il contenuto
      resta nitido. Niente ombra esterna: sono superfici a filo. */
   .glass-chrome {
-    background: rgb(255 255 255 / 0.68);
+    background: var(--vetro-telaio);
     backdrop-filter: blur(20px) saturate(1.5);
     -webkit-backdrop-filter: blur(20px) saturate(1.5);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9);
+    box-shadow: inset 0 1px 0 var(--vetro-luce);
   }
 
   /* Chip di vetro per controlli piccoli (toggle, contatori, pillole). */
   .glass-chip {
-    background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
-    border: 1px solid rgb(226 232 240 / 0.9);
+    background: linear-gradient(180deg, var(--chip-da) 0%, var(--chip-a) 100%);
+    border: 1px solid var(--chip-bordo);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.95),
-      0 1px 2px rgb(15 23 42 / 0.05);
+      inset 0 1px 0 var(--vetro-luce-piena),
+      0 1px 2px var(--ombra-card-vicina);
   }
 
   /* Aure che respirano: due blob extra in lentissimo movimento

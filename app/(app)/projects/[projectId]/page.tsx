@@ -64,7 +64,7 @@ export default async function ProjectPage({
         }
       />
       {/* Sotto-barra mobile/tablet: scorre in orizzontale, non sfora la pagina. */}
-      <div className="flex min-w-0 items-center gap-2 overflow-x-auto border-b border-white/60 px-4 py-2 sm:px-6 xl:hidden">
+      <div className="flex min-w-0 items-center gap-2 overflow-x-auto border-b border-velo/60 px-4 py-2 sm:px-6 xl:hidden">
         <Suspense>
           <ProjectViewControls idPrefix="sub" />
         </Suspense>

@@ -583,7 +583,7 @@ function Column({
           aria-expanded={false}
           aria-label={`Espandi fase ${meta.label}`}
           title={`Espandi «${meta.label}»`}
-          className="flex flex-1 flex-col items-center gap-2.5 rounded-xl pt-2.5 pb-2 outline-none transition-colors hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex flex-1 flex-col items-center gap-2.5 rounded-xl pt-2.5 pb-2 outline-none transition-colors hover:bg-velo/60 focus-visible:ring-2 focus-visible:ring-ring"
         >
           <StatusPip status={meta.key} className="size-3.5" />
           <span
@@ -670,14 +670,14 @@ function Column({
           aria-expanded
           aria-label={`Comprimi fase ${meta.label}`}
           title={`Comprimi «${meta.label}»`}
-          className="ml-auto rounded-md p-1 text-ink-faint outline-none transition-colors hover:bg-white/60 hover:text-ink focus-visible:ring-2 focus-visible:ring-ring"
+          className="ml-auto rounded-md p-1 text-ink-faint outline-none transition-colors hover:bg-velo/60 hover:text-ink focus-visible:ring-2 focus-visible:ring-ring"
         >
           <ChevronsRightLeft aria-hidden className="size-3.5" />
         </button>
       </header>
       <div className="flex flex-1 flex-col gap-2">
         {items.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border bg-white/40 px-3 py-6 text-center text-[13px] text-ink-faint">
+          <p className="rounded-xl border border-dashed border-border bg-velo/40 px-3 py-6 text-center text-[13px] text-ink-faint">
             Nessun task
           </p>
         ) : (

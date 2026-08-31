@@ -147,7 +147,7 @@ export function NotificationsBell() {
             <div
               role="tablist"
               aria-label="Filtra avvisi"
-              className="mb-1.5 flex gap-0.5 rounded-lg bg-white/60 p-0.5"
+              className="mb-1.5 flex gap-0.5 rounded-lg bg-velo/60 p-0.5"
             >
               {TABS.map(({ key, label }) => {
                 const unread = countFor(key);

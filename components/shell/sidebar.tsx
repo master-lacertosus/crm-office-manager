@@ -135,7 +135,7 @@ function NavLink({
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         active
           ? "btn-glow font-semibold text-white"
-          : "text-ink-secondary hover:bg-white/70 hover:text-ink",
+          : "text-ink-secondary hover:bg-velo/70 hover:text-ink",
         labelVisibility === "lg" && "md:justify-center lg:justify-start",
       )}
     >
@@ -336,7 +336,7 @@ export function Sidebar() {
   const [zen] = useZen();
   const voci = vociVisibili(zen);
   return (
-    <aside className="glass-chrome sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-white/60 md:flex md:w-16 lg:top-4 lg:h-[calc(100dvh-2rem)] lg:w-60 print:hidden">
+    <aside className="glass-chrome sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-velo/60 md:flex md:w-16 lg:top-4 lg:h-[calc(100dvh-2rem)] lg:w-60 print:hidden">
       <Wordmark compact />
       <nav
         aria-label="Navigazione principale"

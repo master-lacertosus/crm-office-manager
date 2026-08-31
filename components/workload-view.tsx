@@ -84,7 +84,7 @@ export function WorkloadView() {
             {/* barra di carico relativa al più carico */}
             <div
               aria-hidden
-              className="h-1.5 overflow-hidden rounded-full bg-white/70"
+              className="h-1.5 overflow-hidden rounded-full bg-velo/70"
             >
               <div
                 className={cn(
@@ -109,7 +109,7 @@ export function WorkloadView() {
 
           <div className="flex flex-1 flex-col gap-1.5">
             {mine.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-border bg-white/40 px-3 py-5 text-center text-[12px] text-ink-faint">
+              <p className="rounded-xl border border-dashed border-border bg-velo/40 px-3 py-5 text-center text-[12px] text-ink-faint">
                 Nessun task aperto
               </p>
             ) : (

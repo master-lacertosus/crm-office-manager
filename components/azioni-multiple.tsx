@@ -115,7 +115,7 @@ export function AzioniMultiple() {
     <div
       role="region"
       aria-label={`Azioni su ${scelti.length} task selezionati`}
-      className="fixed inset-x-0 bottom-4 z-70 mx-auto flex w-fit max-w-[calc(100vw-2rem)] flex-wrap items-center gap-2 rounded-2xl border border-border bg-white/95 px-3 py-2 shadow-[0_16px_48px_rgb(15_23_42/0.18)] backdrop-blur-md"
+      className="fixed inset-x-0 bottom-4 z-70 mx-auto flex w-fit max-w-[calc(100vw-2rem)] flex-wrap items-center gap-2 rounded-2xl border border-border bg-velo/95 px-3 py-2 shadow-[0_16px_48px_rgb(15_23_42/0.18)] backdrop-blur-md"
     >
       <span className="px-1 text-[13px] font-semibold text-ink">
         {scelti.length} selezionat{scelti.length === 1 ? "o" : "i"}
