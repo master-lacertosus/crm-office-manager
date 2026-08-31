@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { addDaysIso, dueUrgency, todayIso } from "@/lib/format";
 import { useAppStore } from "@/lib/store";
+import { confrontaPerScadenza } from "@/lib/ordine";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
@@ -34,12 +35,7 @@ export function WorkloadView() {
     .map((profile) => {
       const mine = open
         .filter((t) => t.owner_id === profile.id)
-        .sort((a, b) => {
-          if (!a.due_date && !b.due_date) return a.position - b.position;
-          if (!a.due_date) return 1;
-          if (!b.due_date) return -1;
-          return a.due_date.localeCompare(b.due_date);
-        });
+        .sort(confrontaPerScadenza);
       return {
         profile,
         tasks: mine,

@@ -10,6 +10,23 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Corretto
+- **La Board segue le scadenze, come l'Elenco.** Un lavoro urgente appena
+  aggiunto compariva in cima all'Elenco e in fondo alla Board: le colonne
+  ordinavano per momento di creazione, non per scadenza. La regola giusta
+  esisteva, ma in un punto solo — e quattro viste (board, frecce del
+  pannello, calendario, dashboard) ne ignoravano l'esistenza, mentre altre
+  tre se l'erano riscritta a mano. Sei copie della stessa idea, libere di
+  divergere. Ora la regola sta in un posto solo e vale per tutte: prima chi
+  ha una scadenza, dalla piu vicina; poi chi non ne ha, nell'ordine deciso
+  a mano. (#75)
+- **Trascinare dice la verita.** Riordinare a mano dentro una colonna un
+  lavoro che ha una scadenza non puo attaccare, perche la data lo riporta
+  al suo posto: ora lo si legge, invece di credere che il trascinamento sia
+  andato perso. Spostare fra colonne — cioe cambiare stato — funziona come
+  sempre, e i sotto-task restano in ordine manuale di proposito: sono i
+  passi di un lavoro, nell ordine in cui li ha pensati chi lo guida. (#75)
+
+### Corretto
 - **Una sola strada per il colore delle superfici.** Barra laterale, barra
   superiore e dialoghi avevano gia' un ritocco scritto a mano per il tema
   scuro: e' il motivo per cui quelli si vedevano bene mentre le card della

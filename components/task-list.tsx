@@ -5,6 +5,7 @@ import { ChevronRight, Repeat } from "lucide-react";
 
 import { responsabileEffettivo } from "@/lib/filtro-responsabile";
 import { useAppStore } from "@/lib/store";
+import { confrontaPerScadenza } from "@/lib/ordine";
 import type { Task } from "@/lib/types";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { ChecklistChip } from "@/components/board/task-card";
@@ -93,12 +94,7 @@ export function TaskList() {
       {statuses.map((meta) => {
         const rows = visible
           .filter((t) => t.status === meta.key)
-          .sort((a, b) => {
-            if (!a.due_date && !b.due_date) return a.position - b.position;
-            if (!a.due_date) return 1;
-            if (!b.due_date) return -1;
-            return a.due_date.localeCompare(b.due_date);
-          });
+          .sort(confrontaPerScadenza);
         if (rows.length === 0) return null;
         return (
           <section key={meta.key} aria-label={meta.label}>

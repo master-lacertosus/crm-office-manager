@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { buildAnalytics } from "@/lib/analytics";
+import { confrontaPerScadenza } from "@/lib/ordine";
 import { addDaysIso, timeAgo, todayIso } from "@/lib/format";
 import { personLeaveOnDay } from "@/lib/leave";
 import { useAppStore } from "@/lib/store";
@@ -41,13 +42,6 @@ import {
   type DashboardBlockId,
   type DashboardBlockSize,
 } from "@/lib/dashboard-layout";
-
-function byDue(a: Task, b: Task): number {
-  if (!a.due_date && !b.due_date) return a.position - b.position;
-  if (!a.due_date) return 1;
-  if (!b.due_date) return -1;
-  return a.due_date.localeCompare(b.due_date);
-}
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -232,19 +226,19 @@ export function DashboardContent() {
   const open = tasks.filter((t) => t.status !== "done");
   const overdue = open
     .filter((t) => t.due_date && t.due_date < today)
-    .sort(byDue);
+    .sort(confrontaPerScadenza);
   const thisWeek = open
     .filter((t) => t.due_date && t.due_date >= today && t.due_date <= weekEnd)
-    .sort(byDue);
+    .sort(confrontaPerScadenza);
   const mineAll = open.filter(
     (t) => t.owner_id === currentUser.id && !snoozes[t.id],
   );
   // Il lavoro attivo prima; il backlog (non ancora impegnato) in coda,
   // sotto la sua etichetta — così il blocco non mente mai.
-  const mine = mineAll.filter((t) => t.status !== "backlog").sort(byDue);
+  const mine = mineAll.filter((t) => t.status !== "backlog").sort(confrontaPerScadenza);
   const mineBacklog = mineAll
     .filter((t) => t.status === "backlog")
-    .sort((a, b) => a.position - b.position);
+    .sort(confrontaPerScadenza);
   // Efficienza SETTIMANALE: chiusi negli ultimi 7 giorni sul totale
   // (chiusi 7g + aperti ora) — non più lo storico intero, che gonfiava.
   const mineDone = tasks.filter(

@@ -37,6 +37,7 @@ import {
 } from "@/components/comment-bits";
 import { responsabileEffettivo } from "@/lib/filtro-responsabile";
 import { messaggioErrore } from "@/lib/errori";
+import { confrontaPerScadenza } from "@/lib/ordine";
 import { panel, scrim } from "@/lib/motion";
 import {
   puoAssegnareAdAltri,
@@ -213,7 +214,7 @@ function PanelBody({
       .flatMap((s) =>
         visible
           .filter((t) => t.status === s.key)
-          .sort((a, b) => a.position - b.position),
+          .sort(confrontaPerScadenza),
       )
       .map((t) => t.id);
   }, [tasks, statuses, ownerFilter, projectFilter]);
