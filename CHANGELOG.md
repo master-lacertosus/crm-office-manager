@@ -10,6 +10,23 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Corretto
+- **Il tema chiaro adesso è misurato, non dato per buono.** Il tema scuro lo
+  controllavamo da tempo; il chiaro — quello che usano tutti tutto il
+  giorno — non l'aveva mai misurato nessuno. Cinque contrasti erano sotto le
+  soglie WCAG, e il peggiore era proprio quello delle **date e dei conteggi
+  sulle schede: 2,44:1**, i primi a sparire su uno schermo caldo o poco
+  contrastato. Ora sono tutti sopra soglia, con un margine: 3,55:1 le date,
+  4,7:1 il rosso degli errori, le zone smorzate e lo stato «backlog». I
+  colori sono stati scuriti del minimo necessario mantenendo la tinta, non
+  scelti a occhio. (#70)
+- **La pagina dichiara al browser che i colori se li sceglie da sé.** Il tema
+  chiaro non dichiarava `color-scheme`, così i controlli nativi — tendine,
+  campi data, barre di scorrimento — venivano disegnati con la combinazione
+  del sistema: su un PC in modalità scura, widget neri in mezzo a una pagina
+  chiara. È anche la dichiarazione che l'auto-dark del browser legge per
+  decidere se lasciar stare una pagina che si gestisce da sola. (#70)
+
+### Corretto
 - **Un pezzo di lavoro dice sempre da dove viene.** Un lavoro grande si
   spezza in pezzi affidati a persone diverse, e i pezzi nascevano col solo
   titolo: chi apriva il proprio si trovava davanti «Check video prodotto

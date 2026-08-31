@@ -122,6 +122,16 @@
   --radius: 0.5rem;
 
   /* Superfici — revisione mockup: fondo freddo, card bianche solide */
+  /* Si dichiara di che pasta è questa pagina.
+     Senza, il browser la tratta come «non dichiarata» e disegna i controlli
+     nativi — tendine, campi data, barre di scorrimento — con la
+     combinazione del sistema: su un PC in modalità scura vengono fuori
+     widget neri in mezzo a una pagina chiara. È anche la dichiarazione che
+     l'auto-dark del browser legge per decidere se lasciar stare una pagina
+     che i colori se li sceglie da sé. Il tema scuro la sua l'aveva già; il
+     chiaro, che è quello che usano tutti tutto il giorno, no. */
+  color-scheme: light;
+
   --background: #ffffff;
   --canvas: #f6f8fc;
   --card: #ffffff;
@@ -135,7 +145,7 @@
   --ink: #111827;
   --ink-secondary: #475569;
   --ink-muted: #64748b;
-  --ink-faint: #9aa7b8;
+  --ink-faint: #7e8997;
   --border: #e8edf3;
   --border-soft: #eef2f7;
   --input: #cbd5e1;
@@ -161,7 +171,7 @@
   --secondary: #eef2f7;
   --secondary-foreground: #111827;
   --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted-foreground: #5f6e84;
   --accent: #f3f6fa;
   --accent-foreground: #111827;
   --destructive: #ef4444;
@@ -175,7 +185,7 @@
   --success-soft: #e7f6ef;
   --success-text: #0e7a4a;
   --danger-soft: #feecec;
-  --danger-text: #d92d20;
+  --danger-text: #cc2a1e;
   --warning: #f59e0b;
   --warning-soft: #fdf1dc;
   --warning-text: #92600a;
@@ -187,7 +197,7 @@
      presenti; per i GRAFICI resta la palette validata CVD in analytics.ts) */
   --status-backlog: #8a94a3;
   --status-backlog-soft: #f1f4f8;
-  --status-backlog-text: #64748b;
+  --status-backlog-text: #5f6e84;
   --status-todo: #3b82f6;
   --status-todo-soft: #ebf2fe;
   --status-todo-text: #1d4ed8;
