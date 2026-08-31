@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, History, Plus } from "lucide-react";
 
 import { dueUrgency, todayIso } from "@/lib/format";
 import { updateSearch } from "@/lib/shallow-nav";
+import { responsabileEffettivo } from "@/lib/filtro-responsabile";
 import { useAppStore } from "@/lib/store";
 import { confrontaPerScadenza } from "@/lib/ordine";
 import type { Task, TaskEvent } from "@/lib/types";
@@ -56,7 +58,26 @@ interface DragState {
  * (crea un task già datato). Le scadenze si spostano trascinando.
  */
 export function CalendarView() {
-  const { tasks, events, rescheduleTask, statuses } = useAppStore();
+  const { tasks: tuttiITask, events, rescheduleTask, statuses, currentUser } =
+    useAppStore();
+  const searchParams = useSearchParams();
+
+  /* Lo stesso filtro di Board ed Elenco, letto dallo stesso `?owner=`: il
+     calendario era l'unica vista che mostrava sempre tutti, e per sapere
+     cosa aveva in mano un collega bisognava tornare indietro. Il
+     predefinito segue il ruolo, quindi un dipendente apre il proprio mese
+     e un responsabile quello del team. */
+  const owner = responsabileEffettivo(searchParams.get("owner"), currentUser);
+  const progetto = searchParams.get("project");
+  const tasks = React.useMemo(
+    () =>
+      tuttiITask.filter(
+        (t) =>
+          (!owner || t.owner_id === owner) &&
+          (!progetto || t.project_id === progetto),
+      ),
+    [tuttiITask, owner, progetto],
+  );
   const metaByKey = new Map(statuses.map((m) => [m.key, m]));
   const statusColor = (key: string) =>
     metaByKey.get(key)?.color ?? "#64748B";

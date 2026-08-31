@@ -94,8 +94,41 @@ check(
   loSpostamentoReggera(t("a", null, 1), "todo", "todo"),
 );
 check(
-  "Riordinare a mano un lavoro CON scadenza non attacca — e va detto",
-  !loSpostamentoReggera(t("a", "2026-09-01", 1), "todo", "todo"),
+  "Riordinare fra lavori dello STESSO giorno attacca",
+  loSpostamentoReggera(t("a", "2026-09-01", 5), "todo", "todo", {
+    prima: t("b", "2026-09-01", 1),
+    dopo: t("c", "2026-09-01", 9),
+  }),
+);
+check(
+  "Scavalcare una scadenza piu' vicina non attacca — e va detto",
+  !loSpostamentoReggera(t("a", "2026-09-10", 5), "todo", "todo", {
+    prima: t("b", "2026-09-01", 1),
+    dopo: t("c", "2026-09-02", 9),
+  }),
+);
+check(
+  "Infilarsi prima di chi scade prima non attacca",
+  !loSpostamentoReggera(t("a", "2026-09-10", 5), "todo", "todo", {
+    dopo: t("c", "2026-09-02", 9),
+  }),
+);
+
+console.log("\n# A parita' di scadenza decide l'ordine manuale\n");
+
+check(
+  "Stesso giorno: viene prima chi sta piu' in alto",
+  confrontaPerScadenza(t("a", "2026-09-01", 9), t("b", "2026-09-01", 1)) > 0,
+);
+check(
+  "…e l'ordine non cambia da solo fra una ricarica e l'altra",
+  ordinaPerScadenza([
+    t("terzo", "2026-09-01", 3),
+    t("primo", "2026-09-01", 1),
+    t("secondo", "2026-09-01", 2),
+  ])
+    .map((x) => x.titolo)
+    .join(",") === "primo,secondo,terzo",
 );
 
 console.log("\n# Una regola sola, non sei copie\n");

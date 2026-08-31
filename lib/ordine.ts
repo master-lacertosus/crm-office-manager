@@ -32,7 +32,15 @@ export function confrontaPerScadenza(
   if (!b.due_date) return -1;
   /* Le date sono ISO (2026-09-01): il confronto come testo è già
      cronologico, e non costruisce un oggetto Date per ogni paragone. */
-  return a.due_date.localeCompare(b.due_date);
+  const perData = a.due_date.localeCompare(b.due_date);
+  if (perData !== 0) return perData;
+
+  /* Stessa scadenza: decide l'ordine manuale. Senza questo ritorno lo zero
+     e l'ordine fra pari resta quello che capita — e per chi ha cinque
+     consegne lo stesso giorno «quello che capita» cambia sotto gli occhi
+     a ogni ricarica. È anche ciò che rende di nuovo utile trascinare: fra
+     lavori dello stesso giorno il posto scelto regge. */
+  return a.position - b.position;
 }
 
 /** L'elenco ordinato, senza toccare quello di partenza. */
@@ -53,7 +61,25 @@ export function loSpostamentoReggera(
   task: Pick<Task, "due_date">,
   statoDiPartenza: string,
   statoDiArrivo: string,
+  /* I due lavori fra cui atterra. Assenti agli estremi della colonna. */
+  vicini: {
+    prima?: Pick<Task, "due_date"> | null;
+    dopo?: Pick<Task, "due_date"> | null;
+  } = {},
 ): boolean {
+  /* Cambiare colonna e' cambiare stato: quello vale sempre. */
   if (statoDiPartenza !== statoDiArrivo) return true;
-  return !task.due_date;
+
+  /* Chi non ha una scadenza si ordina a mano, punto. */
+  if (!task.due_date) return true;
+
+  /* Con una scadenza, il posto scelto regge solo se non contraddice le
+     date dei vicini — cioe' fra lavori dello stesso giorno, dove a
+     decidere e' proprio l'ordine manuale. Le date si confrontano da sole:
+     la posizione e' l'incognita che stiamo per assegnare. */
+  const rango = (t: Pick<Task, "due_date">) => t.due_date ?? "9999-12-31";
+  const mio = rango(task);
+  const primaOk = !vicini.prima || rango(vicini.prima) <= mio;
+  const dopoOk = !vicini.dopo || rango(vicini.dopo) >= mio;
+  return primaOk && dopoOk;
 }
