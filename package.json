@@ -25,7 +25,8 @@
     "verify:chiaro": "node scripts/tema-chiaro-verify.mjs",
     "verify:interpreta": "node --import ./scripts/alias.mjs scripts/interpreta-verify.mjs",
     "verify:rete": "node --import ./scripts/alias.mjs scripts/rete-ballerina-verify.mjs",
-    "verify:contesto": "node --import ./scripts/alias.mjs scripts/contesto-verify.mjs"
+    "verify:contesto": "node --import ./scripts/alias.mjs scripts/contesto-verify.mjs",
+    "verify:pezzi": "node --import ./scripts/alias.mjs scripts/pezzi-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

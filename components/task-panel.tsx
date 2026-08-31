@@ -52,10 +52,13 @@ import { CollaboratorsSection } from "@/components/collaborators-section";
 import { DueChip } from "@/components/due-chip";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { PriorityBadge } from "@/components/priority-badge";
+import { PezziInCreazione } from "@/components/pezzi-in-creazione";
 import {
-  PezziInCreazione,
+  BOZZA_VUOTA,
+  pezziDaSalvare,
+  type BozzaPezzo,
   type PezzoNuovo,
-} from "@/components/pezzi-in-creazione";
+} from "@/lib/pezzi";
 import { SceltaProgetto } from "@/components/scelta-progetto";
 import { ContestoPadre } from "@/components/contesto-padre";
 import { SottoTask } from "@/components/sotto-task";
@@ -398,6 +401,11 @@ function TaskForm({
   /* I pezzi si raccolgono qui e nascono dopo il padre: in creazione non
      esiste ancora un id da mettere in `parent_id`. */
   const [pezzi, setPezzi] = React.useState<PezzoNuovo[]>([]);
+  /* La riga in compilazione sta qui e non dentro il riquadro: al
+     salvataggio dev'essere raggiungibile. Chi scrive un pezzo e poi clicca
+     «Crea task» — invece di premere Invio o «+» — sta comunque dicendo che
+     quel pezzo lo vuole. */
+  const [bozzaPezzo, setBozzaPezzo] = React.useState<BozzaPezzo>(BOZZA_VUOTA);
 
   /* Un task lo lavora chi ne risponde. Sugli altri si legge e si commenta:
      mostrare campi che il database rifiuterebbe sarebbe una promessa falsa.
@@ -435,6 +443,17 @@ function TaskForm({
     }
     setError(null);
     setSaving(true);
+    /* Si raccoglie prima di scrivere: cosi' il conteggio nel messaggio e i
+       pezzi creati raccontano la stessa cosa. */
+    const daCreare = pezziDaSalvare(
+      pezzi,
+      bozzaPezzo,
+      crypto.randomUUID(),
+      /* Chi non puo' affidare ad altri tiene il pezzo per se': e' la stessa
+         regola che il riquadro applica al «+», e la stessa che la policy
+         `tasks_insert_own_or_delegato` impone lato database. */
+      puoRiassegnare || ownerId === currentUser.id ? ownerId : currentUser.id,
+    );
     const patch = {
       title: title.trim(),
       description: description.trim() ? description.trim() : null,
@@ -472,7 +491,10 @@ function TaskForm({
            diverso dal lavoro a cui appartiene farebbe raccontare a board e
            report due storie diverse (ed è ciò che il trigger di M10
            impone comunque, lato database). */
-        for (const pezzo of pezzi) {
+        /* Anche il pezzo rimasto in riga di scrittura: e' il motivo per cui
+           in tutta la vita del prodotto nessun pezzo era mai nato insieme
+           al suo lavoro. */
+        for (const pezzo of daCreare) {
           await createTask({
             title: pezzo.titolo,
             owner_id: pezzo.owner_id,
@@ -482,8 +504,8 @@ function TaskForm({
           });
         }
         toast(
-          pezzi.length > 0
-            ? `«${created.title}» creato con ${pezzi.length} ${pezzi.length === 1 ? "pezzo" : "pezzi"}`
+          daCreare.length > 0
+            ? `«${created.title}» creato con ${daCreare.length} ${daCreare.length === 1 ? "pezzo" : "pezzi"}`
             : `«${created.title}» creato`,
         );
         justCreatedId = created.id;
@@ -707,6 +729,8 @@ function TaskForm({
               <PezziInCreazione
                 pezzi={pezzi}
                 onChange={setPezzi}
+                bozza={bozzaPezzo}
+                onBozzaChange={setBozzaPezzo}
                 ownerPadre={ownerId}
                 puoAssegnareAdAltri={puoRiassegnare}
               />
@@ -747,6 +771,8 @@ function TaskForm({
           <PezziInCreazione
             pezzi={pezzi}
             onChange={setPezzi}
+            bozza={bozzaPezzo}
+            onBozzaChange={setBozzaPezzo}
             ownerPadre={ownerId}
             puoAssegnareAdAltri={puoRiassegnare}
           />
