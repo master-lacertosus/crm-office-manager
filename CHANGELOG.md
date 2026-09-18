@@ -10,6 +10,19 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Il lavoro assegnato non arriva piu' in silenzio.** Una task poteva
+  comparire nella board di un collega senza dirgli niente: chi assegnava lo
+  dava per detto, chi riceveva se ne accorgeva solo passando di li'. Ora chi
+  riceve un lavoro lo vede scritto — una striscia in cima a qualsiasi pagina
+  («Hai 3 nuove task assegnate», con i titoli e il tasto per aprirle), un tab
+  «Assegnate» nella campanella e il contatore sulla voce Task. Vale anche per
+  le riassegnazioni: una task che ti passano e' lavoro che arriva come una
+  appena scritta. Chiudere la striscia vuol dire «per ora basta», non «letto»:
+  il numero resta nella campanella, e se arriva un lavoro nuovo la striscia
+  torna. Richiede la **migrazione M14** sul database (vedi sotto).
+  **Richiede un passaggio su Supabase**: incollare
+  `supabase/migrations/20260918120000_m14_assegnazioni.sql` nell'SQL Editor.
+  Finche' non lo si fa, l'app funziona esattamente come prima.
 - **Agenda** (Calendario > Agenda). Cosa c e da consegnare, giorno per
   giorno, in un intervallo che si sceglie liberamente: avanti per
   prepararsi, indietro per rivedere cosa e stato chiuso. Gli scaduti e non
@@ -25,6 +38,10 @@ versioni (fase pre-1.0).
   una pagina a parte: e questa, con il proprio nome. (#77)
 
 ### Corretto
+- **Il contatore sulla voce Task era sempre spento.** Cercava lo stato
+  `progress`, che non esiste: la chiave e' `in_progress`. Il filtro non
+  trovava mai niente e la pastiglia non e' mai comparsa a nessuno — un
+  difetto invisibile, perche' un numero che non c'e' sembra un numero a zero.
 - **I Report accettano le date future.** Il tetto a oggi bloccava in
   silenzio un campo che si stava cercando di usare. Ora la data si sceglie,
   e quando l intervallo supera oggi si legge cosa aspettarsi: quella pagina

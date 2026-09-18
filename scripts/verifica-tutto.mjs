@@ -30,6 +30,7 @@ const CONTROLLI = [
   ["verify:ordine", "Board ed Elenco raccontano lo stesso ordine", ["run", "verify:ordine"]],
   ["verify:overlay", "I pannelli a schermo intero si appendono al body", ["run", "verify:overlay"]],
   ["verify:agenda", "L'agenda risponde alla domanda giusta", ["run", "verify:agenda"]],
+  ["verify:assegnazioni", "Il lavoro assegnato non arriva in silenzio", ["run", "verify:assegnazioni"]],
   ["verify:tema", "Il tema scuro si legge davvero", ["run", "verify:tema"]],
   ["verify:chiaro", "Il tema chiaro si legge davvero", ["run", "verify:chiaro"]],
   ["verify:build", "Il sito si costruisce da zero", ["run", "verify:build"]],

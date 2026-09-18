@@ -291,7 +291,13 @@ export interface ProjectComment {
 export const REACTION_EMOJIS = ["👍", "✅", "⚠️"] as const;
 
 /** Natura dell'avviso: alimenta i tab della campanella. */
-export type NotificationKind = "mention" | "sollecito" | "sistema";
+export type NotificationKind =
+  | "mention"
+  | "sollecito"
+  /** Ti è arrivato un lavoro (M14). Lo scrive il database, mai il browser:
+   *  è l'unico modo perché valga per ogni strada che assegna una task. */
+  | "assegnazione"
+  | "sistema";
 
 /** Avviso interno: un responsabile lo invia a un singolo membro. */
 export interface AppNotification {
