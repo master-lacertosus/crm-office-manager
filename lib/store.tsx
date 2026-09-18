@@ -378,8 +378,10 @@ interface AppStore {
     id: string,
     opts: { owner_id: string; due_date?: string | null; project_id?: string | null },
   ) => Promise<Task | null>;
-  /** Rifiuta (solo admin) con motivo; il richiedente riceve l'avviso. */
-  rejectRequest: (id: string, reason: string) => Promise<void>;
+  /** Rifiuta (solo admin) con motivo; il richiedente riceve l'avviso.
+   *  Restituisce `false` se il rifiuto non e' stato registrato: chi chiama non
+   *  deve annunciare come fatto qualcosa che il database ha respinto. */
+  rejectRequest: (id: string, reason: string) => Promise<boolean>;
   /** Ferie e permessi: richieste con approvazione dei responsabili. */
   leaves: LeaveRequest[];
   createLeave: (input: {
@@ -393,11 +395,13 @@ interface AppStore {
   withdrawLeave: (id: string) => (() => void) | null;
   /** Decisione (solo admin) con motivazione: avvisa richiedente e gli
    *  altri responsabili. Il motivo è obbligatorio per il rifiuto. */
+  /** Restituisce `false` se la decisione non e' stata registrata: chi chiama
+   *  non deve annunciare come fatto qualcosa che il database ha respinto. */
   decideLeave: (
     id: string,
     decision: "approved" | "rejected",
     note: string,
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   /** Chiusure aziendali (solo admin): compaiono sul calendario di tutti. */
   closures: CompanyClosure[];
   addClosure: (input: {
@@ -2594,8 +2598,18 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     async rejectRequest(id, reason) {
       const req = requests.find((r) => r.id === id);
-      if (!req || req.status !== "pending") return;
+      if (!req || req.status !== "pending") return false;
       const trimmed = reason.trim();
+      /* Il vincolo `request_rejection_needs_reason` (M2) esige una motivazione:
+         senza, il database respinge e chi ha premuto vede un errore tecnico
+         al posto di "scrivi il motivo". Ci si ferma prima, con la stessa
+         regola del database invece di una diversa. */
+      if (!trimmed) {
+        setSyncError(
+          "Un rifiuto va motivato: il richiedente deve sapere perche'.",
+        );
+        return false;
+      }
       const nowIso = new Date().toISOString();
       setRequests((prev) =>
         prev.map((r) =>
@@ -2621,10 +2635,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         });
       } catch (e) {
         setRequests((prev) => prev.map((r) => (r.id === id ? req : r)));
-        setSyncError(
-          messaggioErrore(e, "Rifiuto non registrato."),
-        );
-        return;
+        setSyncError(messaggioErrore(e, "Rifiuto non registrato."));
+        return false;
       }
 
       if (req.requester_id !== currentUser.id) {
@@ -2634,7 +2646,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             id: crypto.randomUUID(),
             to_user_id: req.requester_id,
             from_user_id: currentUser.id,
-            message: `❌ Richiesta rifiutata: «${req.title}»${trimmed ? ` — ${trimmed}` : ""}`,
+            /* `trimmed` non è più mai vuoto (ci si ferma prima), quindi il
+               motivo c'è sempre: chi riceve un no sa perché. */
+            message: `❌ Richiesta rifiutata: «${req.title}» — ${trimmed}`,
             task_id: null,
             kind: "sistema" as const,
             created_at: nowIso,
@@ -2642,6 +2656,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           },
         ]);
       }
+      return true;
     },
 
     leaves,
@@ -2717,8 +2732,15 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     async decideLeave(id, decision, note) {
       const leave = leaves.find((l) => l.id === id);
-      if (!leave || leave.status !== "pending") return;
+      if (!leave || leave.status !== "pending") return false;
       const trimmed = note.trim();
+      /* Come per le richieste: il vincolo `leave_rejection_needs_note` (M2)
+         esige una motivazione, e ci si ferma prima invece di farsi respingere
+         con il nome di un vincolo SQL in faccia. */
+      if (decision === "rejected" && !trimmed) {
+        setSyncError("Un rifiuto va motivato: il richiedente deve saperlo.");
+        return false;
+      }
       const nowIso = new Date().toISOString();
       setLeaves((prev) =>
         prev.map((l) =>
@@ -2744,7 +2766,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         setLeaves((prev) => prev.map((l) => (l.id === id ? leave : l)));
         setSyncError(messaggioErrore(e, "Decisione non registrata."));
-        return;
+        return false;
       }
 
       const isFerie = leave.type === "ferie";
@@ -2799,6 +2821,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           read_at: null,
         })),
       ]);
+      return true;
     },
 
     closures,
