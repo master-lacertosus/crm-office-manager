@@ -10,6 +10,22 @@ export function todayIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/**
+ * Il giorno LOCALE di un istante (`2026-09-18T23:40:00Z` → `2026-09-19` a
+ * Roma d'estate).
+ *
+ * Serve perché i timestamp del database sono in UTC e tagliarli con
+ * `.slice(0, 10)` dà il giorno di Greenwich: un lavoro chiuso a Roma dopo
+ * le 22:00 (le 23:00 d'inverno) finirebbe nella casella del giorno prima, e
+ * il calendario racconterebbe una giornata che non è mai esistita. Le
+ * scadenze sono già date locali senza orario, quindi il confronto deve
+ * avvenire nello stesso fuso di chi guarda.
+ */
+export function giornoLocale(isoDateTime: string): string {
+  const d = new Date(isoDateTime);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export function addDaysIso(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);

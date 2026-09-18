@@ -1,7 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Check, MoonStar, Palette, Rows3, Sparkles } from "lucide-react";
+import {
+  Check,
+  MoonStar,
+  Palette,
+  Rows3,
+  Sparkles,
+  BellRing,
+} from "lucide-react";
 
 import {
   ACCENTS,
@@ -269,8 +276,8 @@ export function AppearanceSettings() {
               Contrasto alto
             </span>
             <span className="block text-[12px] text-ink-muted">
-              Testi e bordi al massimo. Utile su schermi che scaldano i
-              colori, con luce forte, o quando si guarda di sbieco.
+              Testi e bordi al massimo. Utile su schermi che scaldano i colori,
+              con luce forte, o quando si guarda di sbieco.
             </span>
           </label>
           <Switch
@@ -279,15 +286,29 @@ export function AppearanceSettings() {
             onChange={setContrastoAlto}
           />
         </div>
+      </SettingCard>
 
-        <div className="flex items-center justify-between gap-4 border-t border-border-soft pt-4">
+      {/* Card propria, e non piu' la terza voce dentro «Movimento».
+          L'interruttore c'era gia' e funzionava, ma era archiviato sotto il
+          concetto sbagliato — «Movimento» parla di animazioni e contrasto,
+          cioe' di accessibilita' — e in fondo alla pagina. Chi cercava
+          «come spengo questi avvisi» non aveva motivo di aprire quella
+          scheda, e la funzione esisteva senza esistere. */}
+      <SettingCard
+        icon={BellRing}
+        title="Avvisi"
+        description="Quanto l'app può interromperti mentre lavori."
+      >
+        <div className="flex items-center justify-between gap-4">
           <label htmlFor={avvisiId} className="min-w-0">
             <span className="block text-[13px] font-medium text-ink">
               Avvisami quando lavora qualcun altro
             </span>
             <span className="block text-[12px] text-ink-muted">
-              La board si aggiorna da sola in ogni caso: qui si sceglie solo
-              se farsi interrompere da un avviso.
+              Sono i messaggi che compaiono in basso a destra quando un collega
+              muove un task che non ti riguarda. Spegnendoli la board continua
+              ad aggiornarsi da sola: sparisce l&rsquo;interruzione, non il
+              dato. Gli avvisi sul lavoro tuo restano.
             </span>
           </label>
           <Switch

@@ -1,7 +1,10 @@
+import { Suspense } from "react";
+
 import { AggiornamentiLive } from "@/components/shell/aggiornamenti-live";
 import { AppShell } from "@/components/shell/app-shell";
 import { LazyOverlays } from "@/components/shell/lazy-overlays";
 import { InterruttoreZen } from "@/components/shell/modalita-zen";
+import { MemoriaDiDoveEri } from "@/components/shell/memoria-di-dove-eri";
 import { Scorciatoie } from "@/components/shell/scorciatoie";
 import { AzioniMultiple } from "@/components/azioni-multiple";
 import { SelezioneProvider } from "@/lib/selezione";
@@ -27,6 +30,11 @@ export default function AppLayout({
             <AppShell>
             {children}
             <AggiornamentiLive />
+            {/* Legge l'indirizzo: va sospeso, o toglie la generazione
+                statica a ogni pagina del guscio. */}
+            <Suspense>
+              <MemoriaDiDoveEri />
+            </Suspense>
             <Scorciatoie />
             <InterruttoreZen />
             <AzioniMultiple />

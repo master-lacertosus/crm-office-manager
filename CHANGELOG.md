@@ -10,6 +10,47 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Un campo «Cerca» nella barra di ogni pagina.** La ricerca globale
+  esisteva gia' ed era piu' completa di quanto chiunque immaginasse — trova
+  task aperti e chiusi, sotto-task, progetti, persone, richieste, ferie, e
+  cerca anche DENTRO descrizioni, note, motivi di rifiuto e corpo dei
+  commenti — ma si apriva solo con Ctrl+K. Una funzione che si raggiunge
+  con una scorciatoia che nessuno ti ha detto, per chi la usa, non esiste.
+  Ora c'e' una porta visibile, e accanto la scorciatoia, cosi' la volta dopo
+  si usa quella.
+- **Le lettere delle scorciatoie si vedono sulla barra laterale.**
+  Accanto a Task e Progetti, dove si clicca: si legge la lettera mentre si
+  fa il gesto lento, e la volta dopo si usa la tastiera. Prima l'unico posto
+  che le elencava era Impostazioni > Info.
+- **Il pannello laterale del task e' piu' largo, e su un monitor grande
+  molto di piu'.** 460/560/680px diventano 520/660/820px, e sopra i 1536px
+  arriva a 980px: la scala si fermava a 1280, quindi un 1920 dava gli stessi
+  680px di un portatile e i 1240px avanzati restavano velo sfocato. Nessuna
+  larghezza attuale peggiora.
+
+### Cambiato
+- **«N» apre i Task, come «T».** Prima creava un task al volo. La creazione
+  rapida non si perde: e' passata su **C**, che e' anche la lettera giusta.
+- **L'attivita' svolta nel calendario e' accesa di partenza.** C'era gia',
+  ma si spegneva a ogni apertura della pagina, ignorava il filtro per
+  responsabile (la cella contava lavori che la stessa griglia stava
+  nascondendo), contava solo i cambi di fase — una giornata passata a
+  riassegnare e spostare consegne risultava vuota — e teneva il dettaglio
+  dentro un tooltip, cioe' invisibile su un telefono. Ora la scelta vive
+  nell'indirizzo come ogni altro filtro, quindi si ricorda e si puo' mandare
+  a un collega.
+- **Una cosa sola ha un nome solo: sotto-task.** L'interfaccia chiamava la
+  stessa cosa in tre modi — «Lavori» sul task esistente, «Pezzi» nella
+  creazione, «sotto-task» nei file e nelle conversazioni dell'ufficio. Il
+  riquadro per crearli durante la scrittura di un task c'era, era sempre
+  montato e non si nascondeva mai, eppure non lo trovava nessuno: non si
+  cerca una cosa di cui non si conosce il nome. Ora dice anche che si
+  possono gia' assegnare, che era meta' della richiesta.
+- **L'interruttore degli avvisi ha una scheda sua.** Era la terza voce
+  dentro «Movimento», che parla di animazioni e contrasto, in fondo alla
+  pagina: chi cercava «come spengo questi messaggi in basso a destra» non
+  aveva motivo di aprire quella scheda. Ora sta sotto «Avvisi» e dice dove
+  compaiono, cosi' si riconoscono.
 - **Le viste salvate diventano viste vere.** Fino a ieri una vista teneva
   responsabile, progetto e tipo di vista: tre cose. Ora ne tiene sei, con
   priorita', fase, scadenza (in ritardo / oggi / entro 7 giorni / senza
@@ -77,6 +118,18 @@ versioni (fase pre-1.0).
   una pagina a parte: e questa, con il proprio nome. (#77)
 
 ### Corretto
+- **I filtri sopravvivono a come esci dalla pagina, e a un ricaricamento.**
+  La memoria dei filtri esisteva e la sua logica era giusta, ma la
+  chiamava un punto solo: il clic su una voce della barra laterale. Tutto
+  il resto usciva in silenzio — la palette, le scorciatoie T e P, un link
+  dentro una scheda, il tasto indietro, un avviso della campanella. E
+  viveva in una Map di modulo, quindi bastava un F5 e spariva tutto. Ora si
+  guarda l'indirizzo invece dei gesti (un punto solo, e vale anche per la
+  prossima strada di navigazione che nessuno ha ancora scritto) e si
+  appoggia a `sessionStorage`: sopravvive al ricaricamento, muore chiudendo
+  la scheda. Corretto anche il difetto che rendeva inutile tutto il resto:
+  i link si ridisegnavano PRIMA che i filtri venissero annotati, e
+  restavano indietro di un passo per l'intera visita.
 - **Il contatore sulla voce Task era sempre spento.** Cercava lo stato
   `progress`, che non esiste: la chiave e' `in_progress`. Il filtro non
   trovava mai niente e la pastiglia non e' mai comparsa a nessuno — un

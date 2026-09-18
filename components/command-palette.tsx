@@ -53,6 +53,22 @@ interface Item {
  * Command palette (⌘K / Ctrl+K): azioni, navigazione, task, progetti e
  * persone. Frecce + Invio, Esc chiude.
  */
+/**
+ * Il nome dell'evento con cui si chiede l'apertura della ricerca.
+ *
+ * La palette tiene il proprio `open` in casa e sta in fondo all'albero,
+ * mentre il campo che la apre vive nella barra superiore di ogni pagina:
+ * due rami lontani. Un evento sulla finestra li mette in contatto senza
+ * inventare un contesto nuovo per un booleano — ed è la stessa strada che
+ * l'app già usa altrove per parlare fra pezzi distanti.
+ */
+const EVENTO_APRI = "ricerca:apri";
+
+/** Apre la ricerca globale da qualunque punto dell'app. */
+export function apriRicerca(): void {
+  window.dispatchEvent(new Event(EVENTO_APRI));
+}
+
 export function CommandPalette() {
   const router = useRouter();
   const { tasks, projects, profiles, requests, leaves, comments, currentUser } =
@@ -66,17 +82,30 @@ export function CommandPalette() {
   const listRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
+    const pulisci = () => {
+      setQuery("");
+      setActive(0);
+      setScrivendo(false);
+    };
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setOpen((v) => !v);
-        setQuery("");
-        setActive(0);
-        setScrivendo(false);
+        pulisci();
       }
     };
+    /* Chi non conosce Ctrl+K arriva dal campo «Cerca» della barra: stessa
+       ricerca, stesso pannello, un modo in più per raggiungerlo. */
+    const onApri = () => {
+      setOpen(true);
+      pulisci();
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener(EVENTO_APRI, onApri);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener(EVENTO_APRI, onApri);
+    };
   }, []);
 
   const go = React.useCallback(
