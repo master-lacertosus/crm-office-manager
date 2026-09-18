@@ -22,7 +22,15 @@
 /** Solo i parametri che descrivono COSA si guarda. `task` e `tv` no: sono
  *  il pannello aperto in quel momento, e riaprirlo tornando da un'altra
  *  pagina sarebbe una sorpresa, non una comodità. */
-const DA_RICORDARE = ["owner", "project", "view", "stato", "q"] as const;
+const DA_RICORDARE = [
+  "owner",
+  "project",
+  "view",
+  "stato",
+  "q",
+  "priority",
+  "scadenza",
+] as const;
 
 const memoria = new Map<string, string>();
 

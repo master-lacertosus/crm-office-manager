@@ -10,6 +10,45 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Le viste salvate diventano viste vere.** Fino a ieri una vista teneva
+  responsabile, progetto e tipo di vista: tre cose. Ora ne tiene sei, con
+  priorita', fase, scadenza (in ritardo / oggi / entro 7 giorni / senza
+  data) e ricerca nel titolo e nella descrizione. Cosi' "I miei urgenti in
+  ritardo" o "Tutto cio' che e' fermo in Problema" si salvano e si
+  riaprono con un clic. I criteri nuovi stanno dietro il pulsante
+  **Filtri**, che porta il numero di quelli accesi: un filtro che nasconde
+  meta' della board senza mostrarsi e' il modo piu' veloce per far credere
+  che i dati siano spariti. La regola di filtro, che viveva in quattro
+  copie (board, elenco, calendario, agenda), ora sta in un posto solo.
+- **Una vista si puo' scegliere come punto di partenza mentre la salvi.**
+  C'era gia' la possibilita', ma dietro una stellina invisibile finche' non
+  ci passavi sopra col mouse. Ora e' una spunta nel momento in cui dai il
+  nome alla vista, e sul chip la stellina si vede sempre.
+- **Contatore delle task in corso nella barra laterale.** Il numero sulla
+  voce Task dice quante ne hai in corso in questo momento. Il lavoro appena
+  assegnato non entra in quel numero: e' un pallino accanto, perche' sono
+  due domande diverse e un contatore che cambia significato da solo e'
+  peggio di due segni distinti.
+
+### Corretto
+- **I comandi di una vista salvata si vedono e si premono.** Stellina e
+  crocetta comparivano solo al passaggio del mouse, misuravano 12x12 pixel
+  -- meta' del minimo raccomandato -- e stavano a quattro pixel l'una
+  dall'altra. Il risultato: l'unico comando che si riusciva a trovare era
+  quello distruttivo, ed era anche il piu' facile da premere per sbaglio.
+  Ora c'e' un pulsante da 28x28 sempre visibile che apre un menu con i
+  comandi scritti a parole; l'eliminazione sta in fondo, staccata, e chiede
+  conferma.
+- **Togliere una vista attiva e' un comando, non un segreto.** Si poteva
+  gia' fare -- ricliccando il chip -- ma non lo diceva nessuno, e chi
+  voleva tornare a vedere tutto finiva per cancellare la vista. Ora
+  "Togli questa vista" e' scritto nel menu, e il chip lo annuncia
+  passandoci sopra.
+- **La modalita' standup ha la cornice del resto dell'app.** Andava a filo
+  di finestra mentre tutto il CRM galleggia in un riquadro arrotondato con
+  quattro unita' di margine: aprendola sembrava di cambiare pagina invece
+  che di aprire un pannello. Ora ricalca la stessa geometria della shell.
+
 - **Il lavoro assegnato non arriva piu' in silenzio.** Una task poteva
   comparire nella board di un collega senza dirgli niente: chi assegnava lo
   dava per detto, chi riceveva se ne accorgeva solo passando di li'. Ora chi

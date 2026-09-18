@@ -30,7 +30,8 @@
     "verify:ordine": "node --import ./scripts/alias.mjs scripts/ordine-verify.mjs",
     "verify:overlay": "node scripts/sovrapposizioni-verify.mjs",
     "verify:agenda": "node --import ./scripts/alias.mjs scripts/agenda-verify.mjs",
-    "verify:assegnazioni": "node --import ./scripts/alias.mjs scripts/assegnazioni-verify.mjs"
+    "verify:assegnazioni": "node --import ./scripts/alias.mjs scripts/assegnazioni-verify.mjs",
+    "verify:filtriavanzati": "node --import ./scripts/alias.mjs scripts/filtri-avanzati-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

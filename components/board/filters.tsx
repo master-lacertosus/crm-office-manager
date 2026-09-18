@@ -5,10 +5,17 @@ import { useSearchParams } from "next/navigation";
 import { updateSearch } from "@/lib/shallow-nav";
 import { responsabileEffettivo, TUTTI } from "@/lib/filtro-responsabile";
 import { useAppStore } from "@/lib/store";
+import { FiltriAvanzati } from "@/components/board/filtri-avanzati";
 import { NativeSelect } from "@/components/ui/native-select";
 
 /**
- * Filtri della board, persistiti nell'URL (?owner=&project=).
+ * Filtri della board, persistiti nell'URL.
+ *
+ * Qui stanno i due che si usano di continuo — responsabile e progetto —
+ * sempre in vista. Gli altri quattro (priorità, fase, scadenza, ricerca)
+ * vivono dietro «Filtri»: sei menu in fila non entrano nell'intestazione, e
+ * mettercene sei vorrebbe dire far sparire il titolo della pagina.
+ *
  * `lockProject`: nella pagina progetto il filtro progetto è implicito.
  */
 export function BoardFilters({
@@ -81,6 +88,8 @@ export function BoardFilters({
           </NativeSelect>
         </>
       ) : null}
+
+      <FiltriAvanzati idPrefix={idPrefix} />
     </div>
   );
 }

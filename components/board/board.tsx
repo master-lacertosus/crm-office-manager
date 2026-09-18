@@ -11,8 +11,8 @@ import {
   X,
 } from "lucide-react";
 
+import { applicaFiltri, leggiFiltri } from "@/lib/filtri";
 import { updateSearch } from "@/lib/shallow-nav";
-import { responsabileEffettivo } from "@/lib/filtro-responsabile";
 import { puoModificareTask } from "@/lib/permessi";
 import { confrontaPerScadenza, loSpostamentoReggera } from "@/lib/ordine";
 import { MAX_CUSTOM_STATUSES, useAppStore } from "@/lib/store";
@@ -86,21 +86,18 @@ export function Board({ projectId }: { projectId?: string }) {
   const searchParams = useSearchParams();
   const toast = useToast();
 
-  /* Il predefinito segue il ruolo: chi non sorveglia il lavoro degli
-     altri vede il proprio. Vedi lib/filtro-responsabile.ts. */
-  const ownerFilter = responsabileEffettivo(
-    searchParams.get("owner"),
-    currentUser,
-  );
-  const projectFilter = projectId ?? searchParams.get("project");
+  /* Un filtro solo per tutte le viste (lib/filtri.ts): il predefinito del
+     responsabile segue il ruolo, e i criteri avanzati valgono qui come
+     altrove senza che la board debba conoscerli.
+     Nella pagina progetto il progetto è imposto e vince sull'indirizzo:
+     lì «tutti i progetti» non è una scelta disponibile. */
+  const filtri = React.useMemo(() => {
+    const letti = leggiFiltri(new URLSearchParams(searchParams), currentUser);
+    return projectId ? { ...letti, project: projectId } : letti;
+  }, [searchParams, currentUser, projectId]);
 
   const byStatus = React.useMemo(() => {
-    const visible = tasks.filter((task) => {
-      if (task.archived_at) return false;
-      if (ownerFilter && task.owner_id !== ownerFilter) return false;
-      if (projectFilter && task.project_id !== projectFilter) return false;
-      return true;
-    });
+    const visible = applicaFiltri(tasks, filtri);
     const map = new Map<string, Task[]>();
     for (const meta of statuses) {
       map.set(
@@ -111,7 +108,7 @@ export function Board({ projectId }: { projectId?: string }) {
       );
     }
     return map;
-  }, [tasks, ownerFilter, projectFilter, statuses]);
+  }, [tasks, filtri, statuses]);
 
   const { collapsed, toggle: toggleCollapsed } = useCollapsedPhases();
   const collapsedRef = React.useRef(collapsed);
