@@ -112,6 +112,13 @@ console.log("\n# Uno per volta, e con la porta aperta\n");
 /* ------------------------------------------------------------------ */
 
 check(
+  "La funzione che le policy chiamano nasce PRIMA delle policy",
+  m19.indexOf("create or replace function public.sondaggio_e_aperto") <
+    m19.indexOf("create policy sondaggio_schede_insert_propria"),
+  "PostgreSQL risolve il nome nel momento in cui crea la policy: definita dopo, la migrazione si ferma a meta' con «function public.sondaggio_e_aperto(uuid) does not exist» -- ed e' successo davvero, incollando M19 la prima volta",
+);
+
+check(
   "Il blocco sta nel database, non in React",
   /create unique index if not exists sondaggi_uno_attivo_idx[\s\S]{0,120}where chiuso_at is null/.test(
     m19,

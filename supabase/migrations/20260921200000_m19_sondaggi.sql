@@ -177,16 +177,53 @@ comment on table public.sondaggio_firme is
   'M19: il registro. Dice CHE una persona ha votato, mai che cosa. Serve a sapere chi manca, che con sei persone e'' la domanda vera.';
 
 -- -----------------------------------------------------------------------------
--- 5. Row Level Security
+-- 5. "Questo sondaggio e' aperto?"
+--
+-- In una funzione e non scritta dentro la policy: una policy che interroga
+-- un'altra tabella con la RLS accesa e' il modo in cui su questo repo e' gia'
+-- nata una ricorsione (M11, 42P17, "infinite recursion detected in policy").
+-- security definer + stable + search_path vuoto e' la forma che il controllo
+-- automatico (scripts/rls-ricorsione-verify.mjs) pretende.
+--
+-- E STA QUI, PRIMA DELLE POLICY, per un motivo che costa un errore a chi lo
+-- scopre incollando: PostgreSQL risolve il nome della funzione nel momento in
+-- cui CREA la policy che la chiama. Definita dopo, la migrazione si ferma a
+-- meta' con "function public.sondaggio_e_aperto(uuid) does not exist".
+-- -----------------------------------------------------------------------------
+
+create or replace function public.sondaggio_e_aperto(p_sondaggio uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.sondaggi s
+    where s.id = p_sondaggio
+      and s.chiuso_at is null
+      and s.scade_at > now()
+  );
+$$;
+
+comment on function public.sondaggio_e_aperto(uuid) is
+  'M19: un sondaggio accetta voti? Vive in una funzione perche'' una policy che legge un''altra tabella con la RLS accesa e'' il modo in cui su questo repo e'' gia'' nata una ricorsione (M11).';
+
+revoke execute on function public.sondaggio_e_aperto(uuid) from public, anon;
+grant execute on function public.sondaggio_e_aperto(uuid) to authenticated, service_role;
+
+-- -----------------------------------------------------------------------------
+-- 6. Row Level Security
 --
 -- Regola del repo (docs/SECURITY_MODEL.md): ogni tabella nuova nasce con la
 -- RLS accesa e le policy esplicite NELLA STESSA migrazione.
 --
 -- Qui l'assenza di una policy e' una scelta, non una dimenticanza: su
 -- `sondaggi`, `sondaggio_opzioni` e `sondaggio_firme` NON esiste alcuna policy
--- di scrittura. Si scrivono soltanto dalle funzioni security definer piu'
--- sotto, che sono il posto in cui vivono le regole (il blocco, la scadenza,
--- il conteggio). E' lo stesso meccanismo di public.impostazioni_invio in M15.
+-- di scrittura. Si scrivono soltanto dalle funzioni security definer di questo
+-- file, che sono il posto in cui vivono le regole (il blocco, la scadenza, il
+-- conteggio). E' lo stesso meccanismo di public.impostazioni_invio in M15.
 -- -----------------------------------------------------------------------------
 
 alter table public.sondaggi enable row level security;
@@ -251,38 +288,6 @@ create policy sondaggio_schede_update_propria
     profile_id = (select auth.uid())
     and (select public.sondaggio_e_aperto(sondaggio_id))
   );
-
--- -----------------------------------------------------------------------------
--- 6. "Questo sondaggio e' aperto?"
---
--- In una funzione e non scritta dentro la policy: una policy che interroga
--- un'altra tabella con la RLS accesa e' il modo in cui su questo repo e' gia'
--- nata una ricorsione (M11, 42P17, "infinite recursion detected in policy").
--- security definer + stable + search_path vuoto e' la forma che il controllo
--- automatico (scripts/rls-ricorsione-verify.mjs) pretende.
--- -----------------------------------------------------------------------------
-
-create or replace function public.sondaggio_e_aperto(p_sondaggio uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select exists (
-    select 1
-    from public.sondaggi s
-    where s.id = p_sondaggio
-      and s.chiuso_at is null
-      and s.scade_at > now()
-  );
-$$;
-
-comment on function public.sondaggio_e_aperto(uuid) is
-  'M19: un sondaggio accetta voti? Vive in una funzione perche'' una policy che legge un''altra tabella con la RLS accesa e'' il modo in cui su questo repo e'' gia'' nata una ricorsione (M11).';
-
-revoke execute on function public.sondaggio_e_aperto(uuid) from public, anon;
-grant execute on function public.sondaggio_e_aperto(uuid) to authenticated, service_role;
 
 -- -----------------------------------------------------------------------------
 -- 7. Il conteggio, e la chiusura quando hanno votato tutti
