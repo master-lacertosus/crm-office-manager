@@ -7,6 +7,7 @@ import {
   ArrowRight,
   CalendarClock,
   Check,
+  ChevronRight,
   Inbox,
   MailPlus,
   Send,
@@ -399,8 +400,20 @@ function RequestRow({ req, showRequester }: { req: TaskRequest; showRequester?: 
     }
   };
 
+  /* Il testo della richiesta c'era, ed era anche completo: semplicemente non
+     lo disegnava nessuno. Questa riga mostrava titolo, meta e stato, e il
+     contesto — cioè la ragione per cui la richiesta è stata scritta — spariva
+     nel momento esatto in cui veniva decisa. Chi l'aveva mandata non poteva
+     più rileggersi le proprie parole.
+     Si apre in posto, come lo storico dei sondaggi: un modale per rileggere
+     due righe sarebbe sproporzionato, e il dettaglio non ha niente da
+     esplorare. */
+  const [aperta, setAperta] = React.useState(false);
+  const daLeggere = Boolean(req.description) || Boolean(req.rejection_reason);
+
   return (
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-accent/60">
+    <div className="rounded-lg px-2.5 py-2 transition-colors hover:bg-accent/60">
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
       {showRequester ? (
         <AvatarInitials
           name={requester?.full_name ?? "?"}
@@ -410,9 +423,29 @@ function RequestRow({ req, showRequester }: { req: TaskRequest; showRequester?: 
       ) : null}
       <span className="min-w-0 flex-1 basis-48">
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className="min-w-0 truncate text-sm font-medium text-ink">
-            {req.title}
-          </span>
+          {daLeggere ? (
+            <button
+              type="button"
+              onClick={() => setAperta((v) => !v)}
+              aria-expanded={aperta}
+              className="flex min-w-0 items-center gap-1.5 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ChevronRight
+                aria-hidden
+                className={cn(
+                  "size-3.5 shrink-0 text-ink-faint transition-transform",
+                  aperta && "rotate-90",
+                )}
+              />
+              <span className="min-w-0 truncate text-sm font-medium text-ink">
+                {req.title}
+              </span>
+            </button>
+          ) : (
+            <span className="min-w-0 truncate text-sm font-medium text-ink">
+              {req.title}
+            </span>
+          )}
           {req.priority === "high" ? <PriorityBadge iconOnly /> : null}
         </span>
         <span className="block truncate text-[11px] text-ink-muted">
@@ -458,6 +491,32 @@ function RequestRow({ req, showRequester }: { req: TaskRequest; showRequester?: 
         >
           <X aria-hidden className="size-3.5" />
         </button>
+      ) : null}
+    </div>
+
+      {aperta ? (
+        <div
+          className={cn(
+            "mt-2 space-y-2 border-t border-border-soft pt-2",
+            showRequester && "sm:pl-[30px]",
+          )}
+        >
+          {req.description ? (
+            /* `whitespace-pre-line` come nella scheda in attesa: senza, una
+               richiesta scritta a elenco diventa un blocco corrente. */
+            <p className="text-[13px]/[19px] break-words whitespace-pre-line text-ink-secondary">
+              {req.description}
+            </p>
+          ) : null}
+          {req.rejection_reason ? (
+            /* Nella riga sopra il motivo è troncato insieme al resto della
+               meta. Qui sta per intero: è la risposta che il richiedente ha
+               ricevuto, e serve tutta. */
+            <p className="rounded-lg bg-danger-soft px-2.5 py-1.5 text-[13px] break-words whitespace-pre-line text-danger-text">
+              Rifiutata: {req.rejection_reason}
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
