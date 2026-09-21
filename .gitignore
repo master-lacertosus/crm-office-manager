@@ -47,3 +47,11 @@ next-env.d.ts
 
 # artefatti audit responsive (screenshot)
 /scripts/.audit/
+
+# skill di terze parti installate con `npx skills add` (skills-lock.json le
+# rimette identiche: `npx skills install`). Restano fuori dal repo perche'
+# sono preferenze di chi lavora, non del prodotto — e alcune contraddicono
+# apertamente docs/design-system.md.
+/.agents/
+/.claude/
+/skills-lock.json

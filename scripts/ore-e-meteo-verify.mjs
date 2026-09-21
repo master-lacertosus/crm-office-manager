@@ -360,5 +360,69 @@ check(
   /href: "\/timbrature"/.test(leggi("components/shell/sidebar.tsx")),
 );
 
+/* ------------------------------------------------------------------ */
+console.log("\n# Il mese si guarda, non si legge riga per riga\n");
+/* ------------------------------------------------------------------ */
+
+const grafico = leggi("components/charts/ore-del-mese.tsx");
+
+check(
+  "I colori del grafico vengono dai token, non scritti a mano",
+  !/fill="#[0-9a-fA-F]{3,8}"/.test(senzaCommenti("components/charts/ore-del-mese.tsx")),
+  "il tema scuro di questo prodotto e' vero: un grafite fisso su --card #191e27 e' una barra invisibile",
+);
+check(
+  "Il riferimento della giornata piena c'e'",
+  /GIORNATA_MINUTI = 8 \* 60/.test(grafico) && /strokeDasharray/.test(grafico),
+  "senza una riga contro cui leggerle, 7h40 e 8h20 sono due numeri qualunque",
+);
+check(
+  "La scala non si adatta al mese piu' tranquillo",
+  /Math\.max\(\s*GIORNATA_MINUTI \* 1\.125/.test(grafico.replace(/\s+/g, " ")),
+  "un tetto che segue il massimo del mese renderebbe due mesi diversi non confrontabili",
+);
+check(
+  "Il colore non e' l'unica cosa che parla",
+  /Entro le 8 ore/.test(grafico) &&
+    /Oltre l&rsquo;orario/.test(grafico) &&
+    /sr-only/.test(grafico),
+  "l'ambra chiara sta a 2,09:1 sul bianco: il metodo la consente solo con legenda ed etichette diritte",
+);
+check(
+  "I giorni vuoti restano vuoti",
+  /g\.minuti === 0 \?/.test(grafico),
+  "una linea che attraversa il sabato disegnerebbe un lavoro che non c'e' stato",
+);
+
+const paginaOre = leggi("components/timbrature-content.tsx");
+check(
+  "La pagina apre con i numeri, non con la tabella",
+  /StatTile/.test(paginaOre) && /OreDelMese/.test(paginaOre),
+);
+check(
+  "Ogni giorno del mese ha la sua colonna, weekend compresi",
+  /giorniDelMese/.test(paginaOre) && /weekend:/.test(paginaOre),
+);
+
+check(
+  "L'icona delle stat tile sta in un posto solo",
+  /export function KpiIcon/.test(leggi("components/charts/kpi-icon.tsx")) &&
+    !/function KpiIcon\(\{/.test(leggi("components/dashboard-content.tsx")),
+  "due copie della stessa misura divergono al primo ritocco: su questo repo e' gia' successo con l'ordinamento e con i filtri",
+);
+
+const blocco = leggi("components/blocco-ore.tsx");
+check(
+  "Il blocco porta a «Le mie ore»",
+  /href="\/timbrature"/.test(blocco),
+  "il mese intero non ci sta in un riquadro della dashboard, ma ci deve portare",
+);
+check(
+  "L'unica barra di avanzamento e' quella della giornata",
+  /GIORNATA_MINUTI = 8 \* 60/.test(blocco) &&
+    !/40 \* 60|MONTE_ORE|OBIETTIVO_/.test(senzaCommenti("components/blocco-ore.tsx")),
+  "una barra «su 40 ore» sarebbe un dovuto, e il dovuto e' proprio il numero che qui non si puo' calcolare",
+);
+
 console.log(falliti === 0 ? "\nTUTTO VERDE" : `\n${falliti} CONTROLLI FALLITI`);
 process.exit(falliti === 0 ? 0 : 1);
