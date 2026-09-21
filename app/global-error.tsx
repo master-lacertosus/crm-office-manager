@@ -33,7 +33,13 @@ export default function GlobalError({
             onClick={() => window.location.reload()}
             style={{
               background: "#ff6b00",
-              color: "#fff",
+              /* Grafite, non bianco: e' lo stesso bottone primario del resto
+                 del prodotto, ma qui il token non arriva (questa pagina e'
+                 autonoma, senza il foglio di stile dell'app), quindi il
+                 valore misurato si scrive per esteso — 6,21:1 invece dei
+                 2,86:1 del bianco. Vedi INCHIOSTRO_SU_ACCENTO in
+                 lib/accenti-scale.ts. */
+              color: "#111827",
               border: 0,
               borderRadius: 12,
               padding: "10px 18px",

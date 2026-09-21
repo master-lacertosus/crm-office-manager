@@ -79,3 +79,41 @@ export const SCALE_ACCENTI: Record<string, Record<string, string> | null> = {
     900: "#0f172a",
   },
 };
+
+/**
+ * Che colore ha il testo SOPRA l'accento.
+ *
+ * Non e' una preferenza: e' una misura. `docs/design-system.md:34` prescrive
+ * «testo grafite su arancio (6.4:1, AA)» e la riga 330 dichiara la soglia di
+ * 4,5:1 non negoziabile -- ma in tema chiaro il token diceva `#ffffff`, che
+ * sull'arancio di marca fa **2,86:1**. Il tema scuro faceva gia' la cosa
+ * giusta: lo stesso bottone seguiva due regole, e quella usata di giorno era
+ * quella che sbagliava.
+ *
+ * Il grigio non e' la risposta per tutti, pero'. Contrasti WCAG misurati su
+ * ogni accento (grafite #111827 contro bianco):
+ *
+ *   arancio  #ff6b00   grafite 6,21   bianco 2,86   -> grafite
+ *   blu      #3b82f6   grafite 4,82   bianco 3,68   -> grafite
+ *   indaco   #6366f1   grafite 3,97   bianco 4,47   -> bianco
+ *   smeraldo #10b981   grafite 6,99   bianco 2,54   -> grafite
+ *   rosa     #f43f5e   grafite 4,83   bianco 3,67   -> grafite
+ *   ardesia  #64748b   grafite 3,73   bianco 4,76   -> bianco
+ *
+ * L'indaco non arriva a 4,5 con nessuno dei due: 4,47 e' il meglio che quel
+ * colore consenta, e vale la pena saperlo invece di credere il contrario.
+ *
+ * I valori sono scritti per esteso e non come `var(--ink)` perche' devono
+ * valere in TUTTI E DUE i temi: di notte `--ink` e' quasi bianco, e l'arancio
+ * non cambia con la luce della stanza. Le due tinte di grafite (#111827 di
+ * giorno, #14181f di notte) danno lo stesso contrasto a due centesimi di
+ * distanza, quindi ne basta una.
+ */
+export const INCHIOSTRO_SU_ACCENTO: Record<string, string> = {
+  orange: "#111827",
+  blue: "#111827",
+  indigo: "#ffffff",
+  emerald: "#111827",
+  rose: "#111827",
+  slate: "#ffffff",
+};

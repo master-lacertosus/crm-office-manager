@@ -399,8 +399,10 @@ export function CalendarView() {
                   <p
                     className={cn(
                       "inline-flex size-6 items-center justify-center rounded-full text-[12px] font-bold",
+                      /* Il numero di oggi sta su .btn-glow, cioe' fondo arancio
+                         di marca: il colore del testo segue il token. */
                       isToday
-                        ? "btn-glow text-white"
+                        ? "btn-glow text-primary-foreground"
                         : cell.inMonth
                           ? "text-ink-secondary"
                           : "text-ink-faint",

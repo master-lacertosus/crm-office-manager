@@ -43,7 +43,25 @@ function estraiAccenti(testo) {
   return accenti;
 }
 
+/** L'inchiostro sopra ogni accento, misurato. Sta nella stessa fonte delle
+ *  tavolozze perche' dipende da esse: cambiare un accento senza rimisurare il
+ *  testo che ci va sopra e' il modo in cui e' nato il difetto che questa
+ *  tabella corregge. */
+function estraiInchiostri(testo) {
+  const inizio = testo.indexOf("export const INCHIOSTRO_SU_ACCENTO");
+  if (inizio < 0) throw new Error("INCHIOSTRO_SU_ACCENTO non trovato");
+  const blocco = testo.slice(inizio, testo.indexOf("\n};", inizio));
+  const out = {};
+  for (const [, key, colore] of blocco.matchAll(
+    /^\s{2}([a-z]+):\s*"(#[0-9a-fA-F]{3,8})"/gm,
+  )) {
+    out[key] = colore;
+  }
+  return out;
+}
+
 const accenti = estraiAccenti(sorgente);
+const inchiostri = estraiInchiostri(sorgente);
 
 const righe = [
   "/*",
@@ -67,6 +85,11 @@ for (const a of accenti) {
   for (const [stop, colore] of Object.entries(a.scale)) {
     righe.push(`  --brand-${stop}: ${colore};`);
   }
+  /* Il testo sopra l'accento viaggia con l'accento: cambiarlo senza cambiare
+     anche questo e' come e' nato il bianco su arancio a 2,86:1. */
+  if (inchiostri[a.key]) {
+    righe.push(`  --primary-foreground: ${inchiostri[a.key]};`);
+  }
   righe.push("}");
 }
 
@@ -86,6 +109,19 @@ if (process.argv.includes("--check")) {
       if (!blocco.includes(atteso)) {
         mancanti++;
         console.log(`FAIL  ${a.key} ${stop}: atteso ${colore}`);
+      }
+    }
+    const inchiostro = inchiostri[a.key];
+    if (inchiostro) {
+      const blocco = globals.slice(
+        globals.indexOf(`[data-accent="${a.key}"]`),
+        globals.indexOf("}", globals.indexOf(`[data-accent="${a.key}"]`)),
+      );
+      if (!blocco.includes(`--primary-foreground: ${inchiostro};`)) {
+        mancanti++;
+        console.log(
+          `FAIL  ${a.key} testo sull'accento: atteso ${inchiostro} (misurato in lib/accenti-scale.ts)`,
+        );
       }
     }
   }

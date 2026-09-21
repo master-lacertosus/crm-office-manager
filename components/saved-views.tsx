@@ -322,9 +322,11 @@ export function SavedViews() {
               Aprici sempre i Task
             </label>
             <button
+              /* Il testo segue il token, non il bianco a mano: `--primary` è
+                 `--brand-500`, e ogni accento ridefinisce i due insieme. */
               onClick={save}
               disabled={!name.trim()}
-              className="rounded-full bg-brand-500 px-2.5 py-1 text-[12px] font-bold text-white outline-none disabled:opacity-40"
+              className="rounded-full bg-brand-500 px-2.5 py-1 text-[12px] font-bold text-primary-foreground outline-none disabled:opacity-40"
             >
               Salva
             </button>

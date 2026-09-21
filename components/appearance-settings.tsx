@@ -76,8 +76,15 @@ function AccentSwatch({
         style={{ backgroundColor: swatch }}
         data-accent={accentKey}
       >
+        {/* Il campione porta già `data-accent`, quindi qui dentro
+            `--primary-foreground` vale l'inchiostro misurato per QUESTO
+            accento (lib/accenti-scale.ts): bianco su indaco e ardesia,
+            grafite sugli altri quattro. Era bianco su tutti e sei. */}
         {active ? (
-          <Check className="size-4 text-white" strokeWidth={3} />
+          <Check
+            className="size-4 text-primary-foreground"
+            strokeWidth={3}
+          />
         ) : null}
       </span>
       <span

@@ -7,6 +7,43 @@ diventa una **Release «Update»** su GitHub (regole in
 [Keep a Changelog](https://keepachangelog.com/it/), con date al posto delle
 versioni (fase pre-1.0).
 
+## 2026-09-22
+
+### Corretto
+- **Il testo dei bottoni arancioni era bianco, e non si leggeva.** Il design
+  system del prodotto prescrive da sempre «testo grafite su arancio» e il tema
+  scuro lo faceva già; il tema chiaro — quello che usate tutto il giorno —
+  faceva bianco, cioè 2,86:1 contro una soglia di 4,5 che lo stesso documento
+  chiama non negoziabile. Ora il colore del testo si **misura** accento per
+  accento invece di sceglierlo: grafite su arancio, blu, smeraldo e rosa;
+  bianco su indaco e ardesia, dove la misura dice il contrario. Le misure sono
+  scritte accanto alla tabella, e un controllo automatico fallisce se qualcuno
+  le contraddice.
+- **Stessa cosa sul rosso.** Bianco su `--destructive` faceva 3,76:1 di giorno
+  e 3,17 di notte. Adesso è grafite: 4,71 e 5,60.
+- **Il banner «non ho salvato» aveva perso il suo rosso.** Usava una classe,
+  `bg-danger`, che nel prodotto non esiste — il tema dichiara `danger-soft` e
+  `danger-text`, mai `danger` — quindi il bordo e il triangolo di avviso erano
+  senza colore. Una classe inventata non dà errore da nessuna parte: si limita
+  a non fare niente. Adesso c'è un controllo che le trova.
+- **Dodici riquadri restavano bianchi in tema scuro.** Le stat tile in cima a
+  Dashboard, Report e «Le mie ore» avevano il fondo scritto a mano: al buio
+  erano card bianche con sopra testo quasi bianco.
+- **Lo sfondo non seguiva il colore scelto in Impostazioni.** Tre strati su
+  quattro erano un arancio, un blu e un viola fissi: chi sceglieva smeraldo si
+  ritrovava un fondale arancio-e-viola sotto un'interfaccia verde.
+- **Le barre di scorrimento** erano chiare anche col tema scuro, e le **righe
+  di luce** sul bordo dell'app, della modalità standup e dei bottoni
+  secondari erano bianco pieno anche di notte.
+- **Un indirizzo sbagliato dava la pagina di Next.js**: inglese, senza barra,
+  senza tema, senza una strada per tornare. Adesso c'è una pagina in italiano
+  con i due link che servono.
+
+### Aggiunto
+- **«Riduci trasparenza» adesso viene ascoltato.** È un'impostazione di
+  accessibilità di Windows e macOS, e questa interfaccia è fatta di vetro:
+  chi la attiva ora vede superfici piene invece di sfocature.
+
 ## 2026-09-21 (notte)
 
 ### Cambiato

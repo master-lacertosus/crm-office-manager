@@ -489,7 +489,7 @@ function OfficeCalendar() {
                     className={cn(
                       "inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold",
                       isToday
-                        ? "btn-glow text-white"
+                        ? "btn-glow text-primary-foreground"
                         : cell.inMonth
                           ? "text-ink-secondary"
                           : "text-ink-faint",

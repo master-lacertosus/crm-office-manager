@@ -183,7 +183,7 @@ function NavLink({
         "relative flex h-9.5 items-center gap-3 rounded-lg px-2.5 text-sm outline-none transition-all",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         active
-          ? "btn-glow font-semibold text-white"
+          ? "btn-glow font-semibold text-primary-foreground"
           : "text-ink-secondary hover:bg-velo/70 hover:text-ink",
         labelVisibility === "lg" && "md:justify-center lg:justify-start",
       )}
@@ -211,7 +211,7 @@ function NavLink({
           aria-hidden
           className={cn(
             "ml-auto rounded border border-border-soft px-1 font-mono text-[10px] leading-4 font-semibold text-ink-faint",
-            active && "border-white/30 text-white/70",
+            active && "border-primary-foreground/30 text-primary-foreground/70",
             labelVisibility === "lg" && "md:hidden lg:inline-block",
           )}
         >
@@ -224,7 +224,9 @@ function NavLink({
           <span
             className={cn(
               "ml-auto inline-flex min-w-5 items-center justify-center rounded-full px-1.5 font-mono text-[11px] font-semibold",
-              active ? "bg-white/25 text-white" : "bg-brand-500 text-white",
+              active
+                ? "bg-primary-foreground/20 text-primary-foreground"
+                : "bg-brand-500 text-primary-foreground",
               labelVisibility === "lg" && "md:hidden lg:inline-flex",
             )}
           >
@@ -234,11 +236,15 @@ function NavLink({
               <span className="sr-only"> — {badgeTitolo}</span>
             ) : null}
           </span>
-          {/* puntino sulla rail compatta (solo icone) */}
+          {/* puntino sulla rail compatta (solo icone). L'anello non e' testo:
+              ritaglia il pallino dal fondo che ha dietro (il telaio di vetro
+              della barra, o l'arancio della voce attiva), quindi prende il
+              colore della superficie — al buio un anello bianco fisso
+              sarebbe un taglio di luce. */}
           {labelVisibility === "lg" && nuove === 0 ? (
             <span
               aria-hidden
-              className="absolute top-1.5 right-1.5 hidden size-2 rounded-full bg-brand-500 ring-2 ring-white md:block lg:hidden"
+              className="absolute top-1.5 right-1.5 hidden size-2 rounded-full bg-brand-500 ring-2 ring-card md:block lg:hidden"
             />
           ) : null}
         </>
@@ -254,7 +260,7 @@ function NavLink({
           aria-hidden
           title={`${nuove} ${nuove === 1 ? "nuova task assegnata" : "nuove task assegnate"}`}
           className={cn(
-            "absolute top-1.5 size-2 rounded-full bg-brand-500 ring-2 ring-white",
+            "absolute top-1.5 size-2 rounded-full bg-brand-500 ring-2 ring-card",
             /* Sulla rail compatta e' l'unico segno: va sull'icona. Con
                l'etichetta visibile si sposta al bordo, per non pestare la
                pastiglia del conteggio. */
@@ -358,7 +364,9 @@ function UserFooter({ compact = false }: { compact?: boolean }) {
           />
           <span
             aria-hidden
-            className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-success ring-2 ring-white"
+            /* Anello di superficie sul chip di vetro, non testo: segue la
+               superficie invece di restare bianco anche al buio. */
+            className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-success ring-2 ring-card"
           />
         </span>
         <span
@@ -400,7 +408,7 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
       <span
         aria-hidden
         className={cn(
-          "hidden size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25),inset_0_0_0_1px_rgb(255_255_255/0.12)]",
+          "hidden size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.25),inset_0_0_0_1px_rgb(255_255_255/0.12)]",
           compact && "md:flex lg:hidden",
         )}
       >

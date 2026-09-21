@@ -64,7 +64,7 @@ export function ProblemsContent() {
                   className={cn(
                     "rounded-full px-2 py-0.5 text-[11px] font-bold",
                     escalated
-                      ? "bg-destructive text-white"
+                      ? "bg-destructive text-destructive-foreground"
                       : "bg-danger-soft text-danger-text",
                   )}
                 >

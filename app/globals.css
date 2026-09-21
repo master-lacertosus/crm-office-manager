@@ -156,6 +156,12 @@
   --ombra-card: rgb(15 23 42 / 0.06);
   --ombra-card-vicina: rgb(15 23 42 / 0.02);
 
+  /* La base sotto le aure. Era scritta dentro `.aura-layer` e il tema scuro
+     la correggeva solo con `opacity: 0.5`: restava un velo chiaro a meta'
+     forza sopra un fondo #0f1319. Adesso e' un token come tutte le altre
+     superfici. */
+  --aura-base: linear-gradient(165deg, #f6f9fd 0%, #eef2f9 55%, #e9eef7 100%);
+
   --background: #ffffff;
   --canvas: #f6f8fc;
   --card: #ffffff;
@@ -187,10 +193,21 @@
   --brand-800: #8f3a06;
   --brand-900: #753008;
 
-  /* Semantica shadcn — mockup: bottoni arancio con testo bianco
-     (deviazione consapevole: ~3.2:1, documentata) */
+  /* Semantica shadcn.
+     Il testo sul bottone primario e' GRAFITE, non bianco: e' cio' che
+     prescrive docs/design-system.md:34 («testo grafite su arancio, 6,4:1»).
+     Qui c'era `#ffffff`, che sull'arancio di marca fa 2,86:1, con accanto un
+     commento che lo dichiarava «deviazione consapevole, ~3.2:1»: la misura
+     era ottimistica e comunque sotto la soglia che la riga 330 dello stesso
+     documento chiama non negoziabile. Il tema scuro faceva gia' la cosa
+     giusta — lo stesso bottone seguiva due regole, e quella usata di giorno
+     era quella che sbagliava.
+     Scritto per esteso e non come `var(--ink)` perche' deve valere anche di
+     notte, dove `--ink` e' quasi bianco e l'arancio non cambia. Gli altri
+     accenti lo ridefiniscono ciascuno col proprio, misurato in
+     lib/accenti-scale.ts: sull'indaco e sull'ardesia vince il bianco. */
   --primary: var(--brand-500);
-  --primary-foreground: #ffffff;
+  --primary-foreground: #111827;
   --primary-hover: var(--brand-550);
   --secondary: #eef2f7;
   --secondary-foreground: #111827;
@@ -199,7 +216,14 @@
   --accent: #f3f6fa;
   --accent-foreground: #111827;
   --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
+  /* Il rosso ha lo stesso difetto dell'arancio, e per la stessa ragione: il
+     bianco sembra ovvio. Su --destructive #ef4444 fa 3,76:1, e di notte su
+     #f0616b scende a 3,17 -- sotto la soglia di 4,5 che docs/design-system.md
+     alla riga 330 chiama non negoziabile. Il grafite fa 4,71 di giorno e 5,60
+     di notte, quindi vale in entrambi i temi e non serve ridefinirlo.
+     Attenzione a non confonderlo con --danger-text (#cc2a1e): quello e' il
+     colore del TESTO rosso sul fondo tenue, non un fondo. */
+  --destructive-foreground: #111827;
   --destructive-hover: #dc2626;
   --ring: var(--brand-600);
   --selected: var(--brand-50);
@@ -239,7 +263,12 @@
   --sidebar: #ffffff;
   --sidebar-foreground: #111827;
   --sidebar-primary: var(--brand-500);
-  --sidebar-primary-foreground: #ffffff;
+  /* Segue --primary-foreground invece di ripetere il bianco: il fondo e' lo
+     stesso arancio di marca, quindi era lo stesso 2,86:1 -- addormentato,
+     perche' oggi non lo usa nessun componente. Lasciarlo bianco voleva dire
+     che il prossimo a scrivere `bg-sidebar-primary` se lo riportava in casa
+     senza che nessun controllo lo fermasse. */
+  --sidebar-primary-foreground: var(--primary-foreground);
   --sidebar-accent: var(--brand-50);
   --sidebar-accent-foreground: var(--brand-700);
   --sidebar-border: #eef2f7;
@@ -255,7 +284,7 @@
  * dopo l'idratazione, e per un istante si vedeva l'arancio predefinito.
  *
  * Generato da scripts/genera-accenti-css.mjs: le tavolozze restano in
- * lib/preferences.tsx, che e' l'unica fonte.
+ * lib/accenti-scale.ts, che e' l'unica fonte.
  *
  * L'arancio non compare: e' il predefinito e vince :root, senza attributo.
  */
@@ -271,6 +300,7 @@
   --brand-700: #1d4ed8;
   --brand-800: #1e40af;
   --brand-900: #1e3a8a;
+  --primary-foreground: #111827;
 }
 [data-accent="indigo"] {
   --brand-50: #eef2ff;
@@ -284,6 +314,7 @@
   --brand-700: #4338ca;
   --brand-800: #3730a3;
   --brand-900: #312e81;
+  --primary-foreground: #ffffff;
 }
 [data-accent="emerald"] {
   --brand-50: #ecfdf5;
@@ -297,6 +328,7 @@
   --brand-700: #047857;
   --brand-800: #065f46;
   --brand-900: #064e3b;
+  --primary-foreground: #111827;
 }
 [data-accent="rose"] {
   --brand-50: #fff1f2;
@@ -310,6 +342,7 @@
   --brand-700: #be123c;
   --brand-800: #9f1239;
   --brand-900: #881337;
+  --primary-foreground: #111827;
 }
 [data-accent="slate"] {
   --brand-50: #f8fafc;
@@ -323,6 +356,7 @@
   --brand-700: #334155;
   --brand-800: #1e293b;
   --brand-900: #0f172a;
+  --primary-foreground: #ffffff;
 }
 
 /*
@@ -358,6 +392,7 @@
   --chip-bordo: rgb(255 255 255 / 0.12);
   --ombra-card: rgb(0 0 0 / 0.45);
   --ombra-card-vicina: rgb(0 0 0 / 0.25);
+  --aura-base: linear-gradient(165deg, #131821 0%, #0f141b 55%, #0d1117 100%);
 
   --background: #14181f;
   --canvas: #0f1319;
@@ -379,8 +414,14 @@
   --input: #3a4454;
 
   /* L'accento resta quello scelto: la marca non cambia con la luce della
-     stanza. Cambia cio' che ci sta intorno. */
-  --primary-foreground: #14181f;
+     stanza. Cambia cio' che ci sta intorno.
+     `--primary-foreground` NON si ridefinisce qui, ed e' una scelta: il
+     colore del testo dipende dall'ACCENTO, non dal tema, perche' il fondo su
+     cui sta e' l'accento e quello di notte e' identico. Riscriverlo qui
+     vincerebbe sui blocchi [data-accent] (arrivano prima nel file) e
+     riporterebbe il grafite sull'indaco e sull'ardesia, dove la misura dice
+     bianco. La vecchia riga diceva #14181f: due centesimi di contrasto di
+     differenza da #111827, e in cambio sei accenti sbagliati su due. */
   --secondary: #232b36;
   --secondary-foreground: #e8ecf3;
   --muted: #1e242e;
@@ -555,7 +596,16 @@
 
 @layer components {
   /* Sfondo ambientale: tre aure morbide, mai sature al punto da ridurre
-     il contrasto del testo sulle superfici glass. */
+     il contrasto del testo sulle superfici glass.
+     È l'unica cosa che si vede in OGNI pagina, e non seguiva l'accento
+     scelto: un solo strato usava `var(--brand-500)`, gli altri tre erano
+     colori scritti a mano — un arancio, un blu e un viola. Chi sceglieva
+     smeraldo si ritrovava un fondale arancio-e-viola sotto un'interfaccia
+     verde. È lo stesso difetto che l'alone del bottone primario aveva già
+     avuto, e che è spiegato più in basso in questo file: la regola c'era,
+     non era arrivata fin qui. Adesso tutti gli strati di tinta nascono da
+     `--brand-*`; resta un contrappeso freddo, ma preso dall'inchiostro, che
+     è un neutro e non un secondo accento che litiga col primo. */
   .aura-layer {
     position: fixed;
     inset: 0;
@@ -566,10 +616,22 @@
         color-mix(in oklch, var(--brand-500), transparent 83%),
         transparent 62%
       ),
-      radial-gradient(560px 400px at 68% 2%, rgb(255 176 102 / 0.12), transparent 58%),
-      radial-gradient(820px 600px at 2% 112%, rgb(96 128 176 / 0.14), transparent 64%),
-      radial-gradient(600px 440px at 38% 120%, rgb(109 93 251 / 0.1), transparent 60%),
-      linear-gradient(165deg, #f6f9fd 0%, #eef2f9 55%, #e9eef7 100%);
+      radial-gradient(
+        560px 400px at 68% 2%,
+        color-mix(in oklch, var(--brand-300), transparent 86%),
+        transparent 58%
+      ),
+      radial-gradient(
+        820px 600px at 2% 112%,
+        color-mix(in oklch, var(--ink-muted), transparent 86%),
+        transparent 64%
+      ),
+      radial-gradient(
+        600px 440px at 38% 120%,
+        color-mix(in oklch, var(--brand-700), transparent 90%),
+        transparent 60%
+      ),
+      var(--aura-base);
   }
 
   /* Card solida premium (revisione mockup): bianco pieno, raggio ampio,
@@ -644,7 +706,7 @@
     top: calc(18% - 120px);
     background: radial-gradient(
       closest-side,
-      rgb(240 146 38 / 0.18) 52%,
+      color-mix(in oklch, var(--brand-400), transparent 82%) 52%,
       transparent 100%
     );
     animation: aura-drift 46s ease-in-out infinite alternate;
@@ -656,7 +718,7 @@
     bottom: calc(-10% - 120px);
     background: radial-gradient(
       closest-side,
-      rgb(109 40 217 / 0.14) 52%,
+      color-mix(in oklch, var(--brand-700), transparent 86%) 52%,
       transparent 100%
     );
     animation: aura-drift 58s ease-in-out infinite alternate-reverse;
@@ -707,11 +769,15 @@
     color: var(--brand-500);
   }
 
-  /* Aurora delle stat tile: alone colorato dal token --aurora */
+  /* Aurora delle stat tile: alone colorato dal token --aurora.
+     Il fondo era `#ffffff` scritto a mano, e questa superficie era rimasta
+     fuori dal giro dei token: in tema scuro dodici stat tile restavano card
+     BIANCHE con sopra `text-ink`, che di notte e' quasi bianco. Stavano in
+     cima alle tre pagine piu' viste. */
   .tile-aurora {
     background:
       radial-gradient(160px 120px at 90% 0%, var(--aurora, transparent), transparent 72%),
-      #ffffff;
+      var(--card);
   }
 
   /* Hairline superiore a gradiente per le card sezione */
@@ -724,7 +790,15 @@
     position: absolute;
     inset: 0 12% auto 12%;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgb(240 146 38 / 0.5) 30%, rgb(109 40 217 / 0.35) 70%, transparent);
+    /* Anche questo filo seguiva il vecchio arancio #F09226 — che non e' piu'
+       in tavolozza — e un viola. Stessa cura dell'aura: nasce dall'accento. */
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklch, var(--brand-400), transparent 50%) 30%,
+      color-mix(in oklch, var(--brand-700), transparent 65%) 70%,
+      transparent
+    );
   }
 
   /* Bottone primario: arancio PIATTO con tocco di vetro — luce interna
@@ -854,10 +928,14 @@
   }
 
   /* Shimmer per gli stati di caricamento. */
+  /* Documentata in docs/ui-primitives.md:45 come primitiva, e finora
+     inutilizzabile al buio: fondo e luccichio erano due bianchi scritti a
+     mano, quindi la prima volta che qualcuno l'avesse adoperata sarebbe
+     comparsa una barra chiara su un'interfaccia scura. */
   .skeleton {
     position: relative;
     overflow: hidden;
-    background: #eef2f7;
+    background: var(--muted);
     border-radius: 10px;
   }
   .skeleton::after {
@@ -867,7 +945,7 @@
     background: linear-gradient(
       100deg,
       transparent 20%,
-      rgb(255 255 255 / 0.7) 50%,
+      var(--vetro-luce-piena) 50%,
       transparent 80%
     );
     transform: translateX(-100%);
@@ -887,20 +965,23 @@
   /* Scrollbar sottili e discrete (WebKit + Firefox). */
   * {
     scrollbar-width: thin;
-    scrollbar-color: #c7d0dc transparent;
+    /* Erano #c7d0dc e #9aa7b8 scritti a mano, senza controparte scura: barre
+       chiare addosso a un'interfaccia scura. I due token si ribaltano gia'
+       da soli. */
+    scrollbar-color: var(--input) transparent;
   }
   *::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   *::-webkit-scrollbar-thumb {
-    background: #c7d0dc;
+    background: var(--input);
     border-radius: 999px;
     border: 2px solid transparent;
     background-clip: content-box;
   }
   *::-webkit-scrollbar-thumb:hover {
-    background: #9aa7b8;
+    background: var(--ink-faint);
     background-clip: content-box;
     border: 2px solid transparent;
   }
@@ -918,6 +999,37 @@
       animation-iteration-count: 1 !important;
       transition-duration: 80ms !important;
       scroll-behavior: auto !important;
+    }
+  }
+
+  /* Chi ha chiesto meno trasparenza.
+     Questa interfaccia è fatta di vetro: `.glass`, `.glass-strong`,
+     `.glass-chrome` e i veli degli overlay sfocano tutti quello che hanno
+     dietro. «Riduci trasparenza» su Windows e su macOS è un'impostazione di
+     accessibilità, non un gusto — chi la attiva fa fatica a leggere il testo
+     sopra una superficie translucida — e qui non veniva ascoltata.
+     Il prodotto aveva già le altre due scappatoie della stessa famiglia
+     (`prefers-reduced-motion` qui sopra, `[data-contrasto="alto"]`): mancava
+     la terza. Non serve toccare un componente, perché i materiali passano
+     tutti da questi token. */
+  @media (prefers-reduced-transparency: reduce) {
+    :root,
+    [data-tema="scuro"] {
+      --vetro: var(--card);
+      --vetro-forte: var(--popover);
+      --vetro-telaio: var(--card);
+      --vetro-bordo: var(--border);
+      --vetro-forte-bordo: var(--border);
+    }
+    .glass,
+    .glass-strong,
+    .glass-chrome,
+    .glass-hero {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+    .aura-layer {
+      display: none;
     }
   }
 
