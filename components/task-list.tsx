@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { ChevronRight, Repeat } from "lucide-react";
 
-import { responsabileEffettivo } from "@/lib/filtro-responsabile";
+import { applicaFiltri, leggiFiltri } from "@/lib/filtri";
 import { useAppStore } from "@/lib/store";
 import { confrontaPerScadenza } from "@/lib/ordine";
 import type { Task } from "@/lib/types";
@@ -76,18 +76,10 @@ function Row({ task }: { task: Task }) {
 export function TaskList() {
   const { tasks, statuses, currentUser } = useAppStore();
   const searchParams = useSearchParams();
-  const ownerFilter = responsabileEffettivo(
-    searchParams.get("owner"),
-    currentUser,
+  const visible = applicaFiltri(
+    tasks,
+    leggiFiltri(new URLSearchParams(searchParams), currentUser),
   );
-  const projectFilter = searchParams.get("project");
-
-  const visible = tasks.filter((task) => {
-    if (task.archived_at) return false;
-    if (ownerFilter && task.owner_id !== ownerFilter) return false;
-    if (projectFilter && task.project_id !== projectFilter) return false;
-    return true;
-  });
 
   return (
     <div className="flex-1 space-y-4 px-4 py-4 sm:px-6">

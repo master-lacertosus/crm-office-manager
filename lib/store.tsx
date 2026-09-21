@@ -323,7 +323,9 @@ interface AppStore {
   }) => void;
   /** Viste salvate (filtri della pagina Task), persistite in locale. */
   savedViews: SavedView[];
-  addSavedView: (name: string, params: string) => void;
+  /** Restituisce l id della vista creata: serve a chi, salvandola, ha
+   *  anche chiesto che diventi il punto di partenza. */
+  addSavedView: (name: string, params: string) => string;
   removeSavedView: (id: string) => void;
   addComment: (taskId: string, body: string) => Promise<void>;
   updateProfileName: (id: string, fullName: string) => Promise<void>;
@@ -2247,10 +2249,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     savedViews,
 
     addSavedView(name, params) {
-      setSavedViews((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), name: name.trim(), params },
-      ]);
+      const id = crypto.randomUUID();
+      setSavedViews((prev) => [...prev, { id, name: name.trim(), params }]);
+      return id;
     },
 
     removeSavedView(id) {

@@ -123,7 +123,15 @@ export function StandupMode({
           role="dialog"
           aria-modal="true"
           aria-label="Modalità standup"
-          className="fixed inset-0 z-[80] overflow-y-auto bg-canvas"
+          /* Stessa cornice del resto dell'app.
+             Era `inset-0`: lo standup andava a filo di finestra mentre tutto
+             il CRM galleggia in un riquadro arrotondato con quattro unita'
+             di margine (vedi AppShell). Il risultato era che aprendolo
+             l'app sembrava cambiare pagina invece di aprire un pannello —
+             gli angoli sparivano, il bordo pure, e il fondale aurora non si
+             vedeva piu' attorno. Qui si ricalca la geometria di AppShell:
+             `inset-4` fa lo stesso margine che li' e' `m-4`. */
+          className="fixed inset-0 z-[80] overflow-y-auto bg-canvas lg:inset-4 lg:rounded-[28px] lg:border lg:border-velo/70 lg:shadow-[0_1px_2px_rgb(15_23_42/0.04),0_28px_90px_rgb(15_23_42/0.16),inset_0_1px_0_rgb(255_255_255/0.9)]"
         >
           <div aria-hidden className="aura-layer" />
 

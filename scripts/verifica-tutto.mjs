@@ -31,6 +31,7 @@ const CONTROLLI = [
   ["verify:overlay", "I pannelli a schermo intero si appendono al body", ["run", "verify:overlay"]],
   ["verify:agenda", "L'agenda risponde alla domanda giusta", ["run", "verify:agenda"]],
   ["verify:assegnazioni", "Il lavoro assegnato non arriva in silenzio", ["run", "verify:assegnazioni"]],
+  ["verify:filtriavanzati", "Un filtro solo, per tutte le viste", ["run", "verify:filtriavanzati"]],
   ["verify:tema", "Il tema scuro si legge davvero", ["run", "verify:tema"]],
   ["verify:chiaro", "Il tema chiaro si legge davvero", ["run", "verify:chiaro"]],
   ["verify:build", "Il sito si costruisce da zero", ["run", "verify:build"]],

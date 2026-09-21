@@ -4,9 +4,9 @@ import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, History, Plus } from "lucide-react";
 
+import { applicaFiltri, leggiFiltri } from "@/lib/filtri";
 import { dueUrgency, todayIso } from "@/lib/format";
 import { updateSearch } from "@/lib/shallow-nav";
-import { responsabileEffettivo } from "@/lib/filtro-responsabile";
 import { useAppStore } from "@/lib/store";
 import { confrontaPerScadenza } from "@/lib/ordine";
 import type { Task, TaskEvent } from "@/lib/types";
@@ -67,16 +67,13 @@ export function CalendarView() {
      cosa aveva in mano un collega bisognava tornare indietro. Il
      predefinito segue il ruolo, quindi un dipendente apre il proprio mese
      e un responsabile quello del team. */
-  const owner = responsabileEffettivo(searchParams.get("owner"), currentUser);
-  const progetto = searchParams.get("project");
   const tasks = React.useMemo(
     () =>
-      tuttiITask.filter(
-        (t) =>
-          (!owner || t.owner_id === owner) &&
-          (!progetto || t.project_id === progetto),
+      applicaFiltri(
+        tuttiITask,
+        leggiFiltri(new URLSearchParams(searchParams), currentUser),
       ),
-    [tuttiITask, owner, progetto],
+    [tuttiITask, searchParams, currentUser],
   );
   const metaByKey = new Map(statuses.map((m) => [m.key, m]));
   const statusColor = (key: string) =>

@@ -4,8 +4,8 @@ import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import { CalendarClock, TriangleAlert } from "lucide-react";
 
+import { applicaFiltri, leggiFiltri } from "@/lib/filtri";
 import { costruisciAgenda, INTERVALLI } from "@/lib/agenda";
-import { responsabileEffettivo } from "@/lib/filtro-responsabile";
 import { addDaysIso, dueUrgency, todayIso } from "@/lib/format";
 import { updateSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
@@ -51,9 +51,6 @@ export function AgendaView() {
   const searchParams = useSearchParams();
   const oggi = todayIso();
 
-  const owner = responsabileEffettivo(searchParams.get("owner"), currentUser);
-  const progetto = searchParams.get("project");
-
   const daUrl = searchParams.get("da");
   const aUrl = searchParams.get("a");
   const completate = searchParams.get("fatte") === "1";
@@ -70,12 +67,11 @@ export function AgendaView() {
 
   const filtrate = React.useMemo(
     () =>
-      tasks.filter(
-        (t) =>
-          (!owner || t.owner_id === owner) &&
-          (!progetto || t.project_id === progetto),
+      applicaFiltri(
+        tasks,
+        leggiFiltri(new URLSearchParams(searchParams), currentUser),
       ),
-    [tasks, owner, progetto],
+    [tasks, searchParams, currentUser],
   );
 
   const agenda = React.useMemo(

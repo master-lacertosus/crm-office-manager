@@ -111,12 +111,12 @@ function NavLink({
          miei, che comprende il fondo del cassetto. Quelli su cui sto
          lavorando ora — il numero a cui si risponde «e adesso?».
 
-     Su Task il lavoro appena arrivato ha la precedenza (M14): finché c'è
-     qualcosa che non hai ancora visto, quella è la risposta giusta a «e
-     adesso?» — e resta l'unico numero che chiede di essere aperto. Letto
-     l'ultimo avviso, la voce torna a dire quanti ne hai in corso.
-     Il `title` dice sempre quale dei due si sta leggendo: due significati
-     nello stesso posto vanno distinti a parole, non lasciati indovinare. */
+     Su Task il numero dice SEMPRE la stessa cosa: quante ne ho in corso.
+     Il lavoro appena assegnato e non ancora visto (M14) non entra in quel
+     numero — diventa un pallino accanto. Sono due domande diverse («quanto
+     ho per le mani» / «mi è arrivato qualcosa»), e un contatore che cambia
+     significato da solo è peggio di due segni distinti: chi legge «3» deve
+     sapere di cosa, senza ricordarsi una regola. */
   const inCorso = tasks.filter(
     (t) =>
       t.owner_id === currentUser.id &&
@@ -127,9 +127,7 @@ function NavLink({
 
   const badge =
     item.href === "/tasks"
-      ? nuove > 0
-        ? nuove
-        : inCorso
+      ? inCorso
       : currentUser.role !== "admin"
         ? 0
         : item.href === "/requests"
@@ -141,18 +139,25 @@ function NavLink({
   const badgeTitolo =
     item.href !== "/tasks" || badge === 0
       ? undefined
-      : nuove > 0
-        ? nuove === 1
-          ? "1 nuova task assegnata"
-          : `${nuove} nuove task assegnate`
-        : `${inCorso} task in corso`;
+      : `${badge} task in corso`;
+
+  const titoloVoce = [
+    badgeTitolo,
+    nuove > 0
+      ? nuove === 1
+        ? "1 nuova task assegnata"
+        : `${nuove} nuove task assegnate`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <Link
       href={href}
       onClick={vado}
       aria-current={active ? "page" : undefined}
-      title={badgeTitolo}
+      title={titoloVoce || undefined}
       className={cn(
         "relative flex h-9.5 items-center gap-3 rounded-lg px-2.5 text-sm outline-none transition-all",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -189,13 +194,34 @@ function NavLink({
             ) : null}
           </span>
           {/* puntino sulla rail compatta (solo icone) */}
-          {labelVisibility === "lg" ? (
+          {labelVisibility === "lg" && nuove === 0 ? (
             <span
               aria-hidden
               className="absolute top-1.5 right-1.5 hidden size-2 rounded-full bg-brand-500 ring-2 ring-white md:block lg:hidden"
             />
           ) : null}
         </>
+      ) : null}
+
+      {/* Il lavoro appena arrivato: un pallino, non un numero — il numero
+          qui accanto ha già un significato suo. Si vede a ogni larghezza,
+          anche sulla rail stretta dove l'etichetta sparisce: e' la cosa che
+          si e' andati a cercare aprendo l'app. Il conteggio esatto sta nella
+          striscia in cima e nella campanella. */}
+      {nuove > 0 ? (
+        <span
+          aria-hidden
+          title={`${nuove} ${nuove === 1 ? "nuova task assegnata" : "nuove task assegnate"}`}
+          className={cn(
+            "absolute top-1.5 size-2 rounded-full bg-brand-500 ring-2 ring-white",
+            /* Sulla rail compatta e' l'unico segno: va sull'icona. Con
+               l'etichetta visibile si sposta al bordo, per non pestare la
+               pastiglia del conteggio. */
+            labelVisibility === "lg"
+              ? "right-1.5 md:right-2.5 lg:right-1.5"
+              : "right-1.5",
+          )}
+        />
       ) : null}
     </Link>
   );
