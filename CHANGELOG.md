@@ -7,7 +7,9 @@ diventa una **Release «Update»** su GitHub (regole in
 [Keep a Changelog](https://keepachangelog.com/it/), con date al posto delle
 versioni (fase pre-1.0).
 
-## Non rilasciato
+## 2026-09-21
+
+Quattro update, pubblicati come Release `update-20260921`, `-2`, `-3`, `-4`.
 
 ### Aggiunto
 - **Il lavoro assegnato arriva anche per email.** M14 lo annuncia dentro
