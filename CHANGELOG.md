@@ -9,6 +9,30 @@ versioni (fase pre-1.0).
 
 ## Non rilasciato
 
+### Corretto
+- **Una richiesta poteva sparire senza che nessuno se ne accorgesse.** E
+  successo il 21 settembre: una richiesta di task inviata, il messaggio
+  "Richiesta inviata" a chi la scriveva, l avviso ai tre responsabili -- e
+  sul database quella richiesta non e mai esistita. La funzione che la crea
+  non aspettava nessuna scrittura: metteva tutto nello stato locale e
+  tornava, e i due sincronizzatori (richiesta e avvisi) procedevano
+  indipendenti su una coda che di proposito non muore su un errore. Bastava
+  che una sola POST fallisse. Peggio: il sincronizzatore segna la riga come
+  scritta PRIMA di scriverla, quindi non veniva nemmeno ritentata. Ora si
+  aspetta l esito, e se il database rifiuta il modulo non si svuota e nessun
+  avviso parte. Stessa cura per le richieste di ferie, che avevano il
+  difetto identico.
+- **Il progetto scelto in una richiesta non veniva salvato.** La colonna
+  esiste da M2 e il modulo lo raccoglieva, ma non arrivava mai al database:
+  chi chiedeva un lavoro "per il progetto X" lo vedeva sparire fra il
+  proprio schermo e la scheda che leggeva il responsabile.
+- **Gli avvisi che non parlano di un task ora portano da qualche parte.** La
+  campanella sapeva andare in un posto solo, e su meta degli avvisi --
+  richieste, ferie, chiusure, menzioni in bacheca -- si premeva e non
+  succedeva niente. Ora ogni avviso porta con se la sua destinazione (M17),
+  e quelli che davvero non ne hanno smettono di sembrare pulsanti.
+  **Richiede la migrazione M17** su Supabase.
+
 ### Aggiunto
 - **Il meteo a Parma, in dashboard.** Com e adesso e come sara nelle
   prossime ore, dove sta l ufficio. Nessun avviso di cambio tempo, e non e

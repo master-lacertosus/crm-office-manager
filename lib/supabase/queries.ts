@@ -721,6 +721,11 @@ export async function insertTaskRequest(
     requester_id: r.requester_id,
     requested_due: r.requested_due ?? null,
     priority: r.priority ?? "normal",
+    /* Il progetto lo si sceglieva nel modulo e non arrivava mai al database:
+       la colonna esiste (M2), ma questa riga mancava. Chi chiedeva un lavoro
+       "per il progetto X" lo vedeva sparire fra il suo schermo e la scheda
+       che leggeva il responsabile. */
+    project_id: r.project_id ?? null,
   });
   if (error) throw error;
 }
@@ -855,7 +860,7 @@ export async function fetchNotifications(
 ): Promise<AppNotification[]> {
   const { data, error } = await supabase
     .from("notifications")
-    .select("id, to_user_id, from_user_id, message, task_id, kind, created_at, read_at")
+    .select("id, to_user_id, from_user_id, message, task_id, link, kind, created_at, read_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as AppNotification[];
@@ -884,6 +889,7 @@ export async function insertNotifications(
     from_user_id: string;
     message: string;
     task_id?: string | null;
+    link?: string | null;
     /* «assegnazione» manca di proposito: quegli avvisi li scrive il trigger
        del database (M14), e il browser non deve poterne fabbricare uno. */
     kind?: "mention" | "sollecito" | "sistema";
@@ -896,6 +902,7 @@ export async function insertNotifications(
       from_user_id: a.from_user_id,
       message: a.message,
       task_id: a.task_id ?? null,
+      link: a.link ?? null,
       kind: a.kind ?? "sistema",
     })),
   );

@@ -35,7 +35,8 @@
     "verify:rifiuto": "node scripts/rifiuto-motivato-verify.mjs",
     "verify:scopribilita": "node --import ./scripts/alias.mjs scripts/scopribilita-verify.mjs",
     "verify:email": "node --import ./scripts/alias.mjs scripts/email-assegnazioni-verify.mjs",
-    "verify:ore": "node --import ./scripts/alias.mjs scripts/ore-e-meteo-verify.mjs"
+    "verify:ore": "node --import ./scripts/alias.mjs scripts/ore-e-meteo-verify.mjs",
+    "verify:fantasma": "node --import ./scripts/alias.mjs scripts/richiesta-fantasma-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

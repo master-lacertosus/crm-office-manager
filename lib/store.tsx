@@ -394,7 +394,9 @@ interface AppStore {
     project_id?: string | null;
     requested_due?: string | null;
     priority?: Task["priority"];
-  }) => Promise<TaskRequest>;
+    /** `null` se il database ha respinto: chi chiama non deve annunciare
+     *  come inviata una richiesta che non e mai nata. */
+  }) => Promise<TaskRequest | null>;
   /** Ritira una propria richiesta ancora in attesa; restituisce l'annulla. */
   withdrawRequest: (id: string) => (() => void) | null;
   /** Approva (solo admin): crea il task collegato e avvisa richiedente
@@ -415,7 +417,7 @@ interface AppStore {
     end_date: string;
     time_range?: string | null;
     note?: string;
-  }) => Promise<LeaveRequest>;
+  }) => Promise<LeaveRequest | null>;
   /** Ritira una propria richiesta in attesa; restituisce l'annulla. */
   withdrawLeave: (id: string) => (() => void) | null;
   /** Decisione (solo admin) con motivazione: avvisa richiedente e gli
@@ -999,12 +1001,26 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   /* Richieste, ferie e chiusure: creazione e ritiro passano dal confronto
      per id, come le altre collezioni. Le DECISIONI invece sono modifiche a
      righe esistenti e si scrivono dove avvengono, più sotto. */
+  /* Le righe che qualcuno ha già scritto per conto suo, aspettandone l'esito.
+     Il sincronizzatore le salta invece di riscriverle: senza questo, una
+     richiesta inviata da `createRequest` verrebbe inserita due volte e la
+     seconda cadrebbe sulla chiave primaria. */
+  const giaScritte = React.useRef(new Set<string>());
+  const saltaSeGiaScritta = (id: string): boolean => {
+    if (!giaScritte.current.has(id)) return false;
+    giaScritte.current.delete(id);
+    return true;
+  };
+
   useSincronizza(
     requests,
     pronto,
     async (nuove) => {
       const supabase = createClient();
-      for (const r of nuove) await insertTaskRequest(supabase, r);
+      for (const r of nuove) {
+        if (saltaSeGiaScritta(r.id)) continue;
+        await insertTaskRequest(supabase, r);
+      }
     },
     async (ids) => {
       const supabase = createClient();
@@ -1019,7 +1035,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     pronto,
     async (nuove) => {
       const supabase = createClient();
-      for (const l of nuove) await insertLeaveRequest(supabase, l);
+      for (const l of nuove) {
+        if (saltaSeGiaScritta(l.id)) continue;
+        await insertLeaveRequest(supabase, l);
+      }
     },
     async (ids) => {
       const supabase = createClient();
@@ -2533,6 +2552,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         project_id: input.project_id ?? null,
         task_id: null,
       };
+      /* Si aspetta l'esito PRIMA di annunciare.
+         Questa funzione non aspettava niente: metteva la richiesta nello
+         stato locale, metteva subito dopo gli avvisi per i responsabili, e
+         tornava. Le due scritture finivano in due sincronizzatori
+         indipendenti, su una coda che per progetto non muore su un errore —
+         quindi bastava che la POST della richiesta fallisse perché i tre
+         avvisi partissero comunque. È successo davvero: il 21 settembre tre
+         responsabili hanno ricevuto «Nuova richiesta di task» per una
+         richiesta che sul database non è mai esistita, e chi l'aveva scritta
+         aveva letto «Richiesta inviata».
+         Peggio: il sincronizzatore segna la riga come scritta PRIMA di
+         scriverla, quindi quella richiesta non è stata nemmeno ritentata. */
+      try {
+        giaScritte.current.add(request.id);
+        await insertTaskRequest(createClient(), request);
+      } catch (e) {
+        giaScritte.current.delete(request.id);
+        setSyncError(messaggioErrore(e, "Richiesta non inviata."));
+        return null;
+      }
+
       setRequests((prev) => [...prev, request]);
       // Avvisa i responsabili (non chi ha inviato, se è admin anche lui)
       const admins = profiles.filter(
@@ -2546,6 +2586,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           from_user_id: currentUser.id,
           message: `📥 Nuova richiesta di task: «${request.title}»`,
           task_id: null,
+          /* Dove porta il clic. Senza, l'avviso finisce nella campanella
+             inerte: si preme e non succede niente. */
+          link: "/requests",
           kind: "sistema" as const,
           created_at: new Date().toISOString(),
           read_at: null,
@@ -2754,6 +2797,19 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         decided_at: null,
         decision_note: null,
       };
+      /* Stesso difetto di `createRequest`, stessa cura: si aspetta l'esito
+         prima di annunciare. Una ferie poteva sparire allo stesso modo,
+         lasciando i responsabili con l'avviso di una richiesta che non
+         esiste — e chi l'aveva chiesta convinto di averla mandata. */
+      try {
+        giaScritte.current.add(leave.id);
+        await insertLeaveRequest(createClient(), leave);
+      } catch (e) {
+        giaScritte.current.delete(leave.id);
+        setSyncError(messaggioErrore(e, "Richiesta di assenza non inviata."));
+        return null;
+      }
+
       setLeaves((prev) => [...prev, leave]);
       const range = formatRange(leave.start_date, leave.end_date);
       /* Chi chiede l'assenza è chi sta scrivendo: per un freelance il

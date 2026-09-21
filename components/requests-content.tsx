@@ -66,7 +66,7 @@ function NewRequestForm() {
     e.preventDefault();
     if (!title.trim() || sending) return;
     setSending(true);
-    await createRequest({
+    const nata = await createRequest({
       title,
       description,
       project_id: projectId || null,
@@ -74,6 +74,12 @@ function NewRequestForm() {
       priority: urgent ? "high" : "normal",
     });
     setSending(false);
+    /* Si annuncia solo cio che e davvero successo. Prima il messaggio
+       "Richiesta inviata" partiva comunque, e il modulo si svuotava: chi
+       scriveva restava convinto di aver mandato, e quello che aveva scritto
+       era gia perso. Ora se il database rifiuta, il testo resta nel modulo e
+       il banner rosso dice perche. */
+    if (!nata) return;
     setTitle("");
     setDescription("");
     setProjectId("");

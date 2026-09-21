@@ -86,12 +86,33 @@ export function NotificationsBell() {
     }
   }
 
-  const openTask = (n: AppNotification) => {
+  /**
+   * Dove porta questo avviso, se porta da qualche parte.
+   *
+   * Prima si sapeva arrivare in un posto solo — un task — e il gestore del
+   * clic si chiamava `openTask`. Ma metà degli avvisi non parla di task e non
+   * può avere un `task_id`: una richiesta in attesa, una ferie da decidere,
+   * una menzione nella bacheca di un progetto. Su quelli si premeva e non
+   * succedeva niente.
+   */
+  const destinazione = (n: AppNotification): string | null =>
+    n.task_id ? `/tasks?task=${n.task_id}` : (n.link ?? null);
+
+  /** Che cosa si apre, a parole. È l'unico invito che l'utente vede. */
+  const etichettaMeta = (n: AppNotification): string => {
+    if (n.task_id) return "Apri il task";
+    if (n.link?.startsWith("/requests")) return "Apri le richieste";
+    if (n.link?.startsWith("/leave")) return "Apri ferie e permessi";
+    if (n.link?.startsWith("/projects")) return "Apri il progetto";
+    return "Apri";
+  };
+
+  const apri = (n: AppNotification) => {
     markNotificationRead(n.id);
-    if (n.task_id) {
-      setOpen(false);
-      router.push(`/tasks?task=${n.task_id}`, { scroll: false });
-    }
+    const dove = destinazione(n);
+    if (!dove) return;
+    setOpen(false);
+    router.push(dove, { scroll: false });
   };
 
   const countFor = (t: Tab) =>
@@ -221,12 +242,24 @@ export function NotificationsBell() {
                         const sender = profiles.find(
                           (p) => p.id === n.from_user_id,
                         );
+                        /* Un avviso senza destinazione NON e un pulsante.
+                           Prima lo era: sfondo che cambiava al passaggio del
+                           mouse, anello del fuoco da tastiera, e alla pressione
+                           niente. Un comando che sembra tale e non fa nulla e
+                           peggio di uno assente, perche insegna a non fidarsi
+                           anche di quelli che funzionano. */
+                        const dove = destinazione(n);
+                        const Riga = dove ? "button" : "div";
                         return (
-                          <button
+                          <Riga
                             key={n.id}
-                            onClick={() => openTask(n)}
+                            {...(dove
+                              ? { onClick: () => apri(n), type: "button" as const }
+                              : {})}
                             className={cn(
-                              "flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left outline-none transition-colors hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring",
+                              "flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left outline-none transition-colors",
+                              dove &&
+                                "hover:bg-accent/70 focus-visible:ring-2 focus-visible:ring-ring",
                               !n.read_at && "bg-brand-50/70",
                               group.items.length > 1 && "pl-4",
                             )}
@@ -253,10 +286,28 @@ export function NotificationsBell() {
                               <span className="mt-0.5 block text-[13px]/[18px] text-ink-secondary">
                                 {n.message}
                               </span>
-                              {n.task_id && group.items.length === 1 ? (
+                              {/* L invito si scrive quando c e davvero dove
+                                  andare, e dice DOVE. Prima compariva solo
+                                  per i task, e solo se erano soli nel gruppo:
+                                  la sua assenza non distingueva un avviso
+                                  inerte da uno raggruppato. */}
+                              {dove && group.items.length === 1 ? (
                                 <span className="mt-1 block text-xs font-medium text-brand-700">
-                                  Apri il task →
+                                  {etichettaMeta(n)} →
                                 </span>
+                              ) : null}
+                              {/* Senza destinazione resta comunque un modo di
+                                  spegnere il pallino: era l unica cosa che il
+                                  clic faceva davvero, e toglierla sarebbe una
+                                  perdita. */}
+                              {!dove && !n.read_at ? (
+                                <button
+                                  type="button"
+                                  onClick={() => markNotificationRead(n.id)}
+                                  className="mt-1 rounded-sm text-xs font-medium text-ink-muted outline-none hover:text-ink hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                  Segna letto
+                                </button>
                               ) : null}
                             </span>
                             {!n.read_at ? (
@@ -265,7 +316,7 @@ export function NotificationsBell() {
                                 className="mt-1.5 size-2 shrink-0 rounded-full bg-brand-500"
                               />
                             ) : null}
-                          </button>
+                          </Riga>
                         );
                       })}
                     </li>
