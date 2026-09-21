@@ -360,7 +360,7 @@ export function CalendarView() {
         </button>
       </div>
       <div className="card-soft overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-border-soft bg-[#fafbfd]">
+        <div className="grid grid-cols-7 border-b border-border-soft bg-canvas">
           {WEEKDAYS.map((d, i) => (
             <p
               key={d}
@@ -389,8 +389,8 @@ export function CalendarView() {
                   "group min-h-28 space-y-1.5 border-b border-border-soft p-2 transition-colors",
                   i % 7 !== 0 && "border-l",
                   i >= 35 && "border-b-0",
-                  !cell.inMonth && "bg-[#fafbfd]",
-                  weekend && cell.inMonth && "bg-[#fbfcfe]",
+                  !cell.inMonth && "bg-canvas",
+                  weekend && cell.inMonth && "bg-canvas/50",
                   isToday && "bg-brand-50/45",
                   isTarget && "bg-brand-50",
                 )}

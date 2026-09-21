@@ -84,7 +84,7 @@ function TemplateForm({
         if (!values.name.trim()) return;
         onSave(values);
       }}
-      className="mt-2 space-y-3 rounded-xl border border-border bg-[#fafbfd] p-3"
+      className="mt-2 space-y-3 rounded-xl border border-border bg-canvas p-3"
     >
       <div className="space-y-1.5">
         <Label htmlFor="tpl-name">Nome attività</Label>

@@ -155,7 +155,7 @@ export function RecurringPlanner() {
               role="dialog"
               aria-modal="true"
               aria-label="Attività ricorrenti"
-              className="absolute inset-x-4 top-1/2 mx-auto max-h-[85dvh] max-w-2xl -translate-y-1/2 overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-[0_28px_90px_rgb(15_23_42/0.24)] sm:inset-x-auto sm:left-1/2 sm:w-full sm:-translate-x-1/2"
+              className="absolute inset-x-4 top-1/2 mx-auto max-h-[85dvh] max-w-2xl -translate-y-1/2 overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-[var(--ombra-dialogo)] sm:inset-x-auto sm:left-1/2 sm:w-full sm:-translate-x-1/2"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -207,7 +207,7 @@ export function RecurringPlanner() {
                     return (
                       <div
                         key={tpl.id}
-                        className="flex items-center gap-3 rounded-xl border border-border-soft bg-[#fafbfd] px-3 py-2.5"
+                        className="flex items-center gap-3 rounded-xl border border-border-soft bg-canvas px-3 py-2.5"
                       >
                         <CheckCircle2
                           aria-label="Già pianificata"

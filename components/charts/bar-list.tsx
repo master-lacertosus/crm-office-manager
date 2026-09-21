@@ -32,7 +32,7 @@ export function BarList({
               style={{
                 width: `${(row.total / max) * 100}%`,
                 background: `linear-gradient(90deg, color-mix(in oklab, ${colors.get(row.key) ?? "#94A3B8"} 62%, white) 0%, ${colors.get(row.key) ?? "#94A3B8"} 100%)`,
-                boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.35)",
+                boxShadow: "inset 0 1px 0 var(--luce-su-tinta)",
               }}
               aria-hidden
             />

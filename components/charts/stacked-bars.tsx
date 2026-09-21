@@ -36,7 +36,7 @@ function Segment({
         flexBasis: 0,
         background:
           meta.key === "backlog" ? BACKLOG_HATCH : segColor(meta.key, meta),
-        boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.25)",
+        boxShadow: "inset 0 1px 0 var(--luce-su-tinta)",
       }}
       onPointerEnter={(e) => onHover(e, meta, count)}
       onPointerLeave={onLeave}

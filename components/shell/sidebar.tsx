@@ -314,7 +314,7 @@ function UserFooter({ compact = false }: { compact?: boolean }) {
             exit="exit"
             role="menu"
             aria-label="Menu account"
-            className="absolute bottom-full left-2.5 z-50 mb-2 w-60 origin-bottom-left rounded-2xl border border-border bg-card p-1.5 shadow-[0_16px_48px_rgb(15_23_42/0.16)]"
+            className="absolute bottom-full left-2.5 z-50 mb-2 w-60 origin-bottom-left rounded-2xl border border-border bg-card p-1.5 shadow-[var(--ombra-pannello)]"
           >
             <Link href="/settings/profile" onClick={() => setOpen(false)} className={item}>
               <UserRound className="size-4 text-ink-muted" strokeWidth={1.75} />
@@ -410,7 +410,7 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
       <span
         aria-hidden
         className={cn(
-          "hidden size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.25),inset_0_0_0_1px_rgb(255_255_255/0.12)]",
+          "hidden size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground shadow-[inset_0_1px_0_var(--vetro-luce),inset_0_0_0_1px_var(--vetro-bordo)]",
           compact && "md:flex lg:hidden",
         )}
       >

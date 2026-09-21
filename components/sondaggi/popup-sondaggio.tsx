@@ -239,7 +239,7 @@ export function PopupSondaggio() {
                   "color-mix(in oklch, var(--brand-500), transparent 88%)",
               } as React.CSSProperties
             }
-            className="card-soft tile-aurora hairline-gradient absolute inset-x-4 top-1/2 mx-auto flex max-h-[85dvh] max-w-md -translate-y-1/2 flex-col shadow-[0_28px_90px_rgb(15_23_42/0.24)] sm:inset-x-auto sm:left-1/2 sm:w-full sm:-translate-x-1/2"
+            className="card-soft tile-aurora hairline-gradient absolute inset-x-4 top-1/2 mx-auto flex max-h-[85dvh] max-w-md -translate-y-1/2 flex-col shadow-[var(--ombra-dialogo)] sm:inset-x-auto sm:left-1/2 sm:w-full sm:-translate-x-1/2"
           >
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6">
               <p className="text-[11px] font-semibold tracking-[0.05em] text-ink-secondary uppercase">

@@ -55,7 +55,7 @@ export function WorkloadView() {
         <section
           key={profile.id}
           aria-label={`Carico di ${profile.full_name}`}
-          className="flex w-[260px] shrink-0 snap-start flex-col rounded-2xl bg-[#EDF1F7]/70 p-2"
+          className="flex w-[260px] shrink-0 snap-start flex-col rounded-2xl bg-secondary/70 p-2"
         >
           <header className="space-y-2 px-1.5 pt-1 pb-2.5">
             <div className="flex items-center gap-2">

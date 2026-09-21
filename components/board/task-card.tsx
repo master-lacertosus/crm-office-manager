@@ -37,12 +37,12 @@ export function CardVisual({
       className={cn(
         "card-soft relative rounded-2xl p-3 pl-4",
         urgency === "overdue" &&
-          "border-destructive/35 shadow-[0_6px_18px_-6px_rgb(217_45_32/0.25)]",
+          "border-destructive/35 shadow-[0_6px_18px_-6px_color-mix(in_oklch,var(--destructive),transparent_75%)]",
         urgency === "today" && "border-brand-300",
         urgency !== "overdue" &&
           urgency !== "today" &&
           task.priority === "high" &&
-          "border-[#F59E0B]/60 shadow-[0_6px_18px_-6px_rgb(245_158_11/0.3)]",
+          "border-warning/60 shadow-[0_6px_18px_-6px_color-mix(in_oklch,var(--warning),transparent_70%)]",
         className,
       )}
     >

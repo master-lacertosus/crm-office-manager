@@ -308,6 +308,34 @@ const bianchiAMano = [
   ...cerca("(bg|text|border|ring)-white/"),
   ...cerca('(color|background|background-color): *.?#(fff|ffffff)'),
 ];
+
+/*
+ * E nessun colore scritto a mano, punto.
+ *
+ * Il bianco era solo il caso più visibile. Sotto ce n'erano ventuno di altri:
+ * `bg-[#fafbfd]` per le fasce smorzate, `bg-[#EDF1F7]` per i binari delle
+ * barre, `bg-[#F59E0B]` per la priorità alta, `text-[#B91C1C]` per lo stato
+ * «problema» — l'unico dei sei stati che non passava dai token, e quindi
+ * l'unico che nessun controllo poteva misurare. Restavano tutti identici in
+ * tema scuro.
+ *
+ * E le OMBRE erano il caso peggiore perché nessuno le guarda: venti
+ * `rgb(15 23 42 / 0.2)`, un grafite pensato per il fondo chiaro. Su #14181f
+ * un'ombra così non esiste, e ogni dialogo del prodotto perdeva la propria
+ * elevazione insieme alla luce.
+ */
+const coloriAMano = [
+  ...cerca("(bg|text|border|ring|from|via|to|fill|stroke)-" + "\\[#"),
+  ...cerca("rgb\\(15[ _]23[ _]42"),
+  ...cerca("rgb\\(255[ _]255[ _]255"),
+];
+check(
+  "Nessun colore scritto a mano nei componenti",
+  coloriAMano.length === 0,
+  coloriAMano.length === 0
+    ? "superfici, stati e ombre passano tutti dai token, quindi si ribaltano col tema"
+    : [...new Set(coloriAMano)].join(" | "),
+);
 check(
   "Nessuno scrive il bianco a mano",
   bianchiAMano.length === 0,

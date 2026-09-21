@@ -148,7 +148,7 @@ export function TaskPanelHost() {
             className={cn(
               "absolute flex flex-col bg-card",
               expanded
-                ? "inset-0 m-auto h-[min(90dvh,840px)] w-[min(1080px,95vw)] overflow-hidden rounded-3xl border border-border shadow-[0_28px_90px_rgb(15_23_42/0.24)]"
+                ? "inset-0 m-auto h-[min(90dvh,840px)] w-[min(1080px,95vw)] overflow-hidden rounded-3xl border border-border shadow-[var(--ombra-dialogo)]"
                 /* 460px erano stretti per un task con descrizione, checklist
                    e commenti: si leggeva tutto in colonne di poche parole.
                    Cresce con lo schermo invece di restare fisso.
@@ -161,7 +161,7 @@ export function TaskPanelHost() {
                    gradini invece di diventare una percentuale: `50vw`
                    sarebbe stato più elegante e avrebbe RISTRETTO il pannello
                    proprio sui 1280, che è la larghezza più diffusa qui. */
-                : "inset-y-0 right-0 w-full border-l border-border shadow-[-16px_0_56px_rgb(15_23_42/0.18)] sm:w-[520px] lg:w-[660px] xl:w-[820px] 2xl:w-[980px] sm:rounded-l-2xl",
+                : "inset-y-0 right-0 w-full border-l border-border shadow-[var(--ombra-laterale)] sm:w-[520px] lg:w-[660px] xl:w-[820px] 2xl:w-[980px] sm:rounded-l-2xl",
             )}
           >
             <PanelBody
@@ -750,9 +750,9 @@ function TaskForm({
             {children}
           </div>
         </div>
-        <aside className="order-first flex min-h-0 flex-col overflow-y-auto border-b border-border-soft bg-[#fafbfd] p-5 lg:order-none lg:border-b-0 lg:border-l">
+        <aside className="order-first flex min-h-0 flex-col overflow-y-auto border-b border-border-soft bg-canvas p-5 lg:order-none lg:border-b-0 lg:border-l">
           <div className="space-y-4">{fieldsGrid}</div>
-          <div className="sticky bottom-0 mt-auto -mx-5 space-y-3 bg-gradient-to-t from-[#fafbfd] from-75% to-transparent px-5 pt-6 pb-1">
+          <div className="sticky bottom-0 mt-auto -mx-5 space-y-3 bg-gradient-to-t from-canvas from-75% to-transparent px-5 pt-6 pb-1">
             {saveRow}
             {task ? <TaskMeta task={task} /> : null}
           </div>

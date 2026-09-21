@@ -22,7 +22,7 @@ export const TASK_STATUSES: Record<
   todo: { label: "Da fare", textClass: "text-status-todo-text", softClass: "bg-status-todo-soft" },
   in_progress: { label: "In corso", textClass: "text-status-progress-text", softClass: "bg-status-progress-soft" },
   in_review: { label: "In revisione", textClass: "text-status-review-text", softClass: "bg-status-review-soft" },
-  alert: { label: "Problema", textClass: "text-[#B91C1C]", softClass: "bg-[#FEE2E2]" },
+  alert: { label: "Problema", textClass: "text-danger-text", softClass: "bg-danger-soft" },
   done: { label: "Fatto", textClass: "text-status-done-text", softClass: "bg-status-done-soft" },
 };
 
