@@ -17,7 +17,13 @@ import {
 
 import { drawer, pop, scrim } from "@/lib/motion";
 import { cn } from "@/lib/utils";
-import { conFiltri, ricorda } from "@/lib/memoria-filtri";
+import {
+  conFiltri,
+  ricorda,
+  sottoscrivi,
+  versione,
+  versioneSulServer,
+} from "@/lib/memoria-filtri";
 import { SEZIONI_ZEN, useZen } from "@/components/shell/modalita-zen";
 import { useAppStore } from "@/lib/store";
 import { signOut } from "@/lib/supabase/auth";
@@ -33,6 +39,7 @@ import {
   IconTasks,
   IconTeam,
 } from "@/components/shell/nav-icons";
+import { tastoPer } from "@/components/shell/scorciatoie";
 import { SoloMie } from "@/components/shell/solo-mie";
 import { Button } from "@/components/ui/button";
 
@@ -83,7 +90,16 @@ function NavLink({
 
   /* Il link porta con sé gli ultimi filtri della sezione. Sulla sezione in
      cui si è già, l'indirizzo resta nudo: cliccare «Task» stando nei task
-     è il modo naturale di dire «togli i filtri». */
+     è il modo naturale di dire «togli i filtri».
+
+     L'iscrizione alla memoria non è un vezzo: i filtri vengono annotati in
+     un effetto, cioè DOPO che questa barra si è già disegnata. Senza, il
+     link restava indietro di un passo — uscendo dai Task con la scorciatoia
+     P, «Task» tornava nudo per tutta la visita ai Progetti, e la memoria
+     sembrava rotta pur avendo annotato tutto. La terza istantanea
+     (`versioneSulServer`) tiene uguale il primo disegno di server e browser,
+     altrimenti l'idratazione troverebbe due indirizzi diversi. */
+  React.useSyncExternalStore(sottoscrivi, versione, versioneSulServer);
   const href = active ? item.href : conFiltri(item.href);
 
   /* I filtri si annotano al momento del clic, leggendoli dalla barra degli
@@ -141,6 +157,9 @@ function NavLink({
       ? undefined
       : `${badge} task in corso`;
 
+  /* La lettera che porta a questa voce, se ce n'è una. */
+  const scorciatoia = tastoPer(item.href);
+
   const titoloVoce = [
     badgeTitolo,
     nuove > 0
@@ -177,6 +196,26 @@ function NavLink({
       >
         {item.label}
       </span>
+      {/* La lettera che porta qui. Le scorciatoie esistevano già e
+          funzionavano; l'unico posto che le elencava era Impostazioni › Info,
+          dove nessuno va a cercare la tastiera. Mostrarle dove si clicca è il
+          modo più diretto perché si imparino: si legge la lettera mentre si
+          fa il gesto lento, e la volta dopo si usa quella.
+          Sparisce quando c'è un contatore da mostrare: il numero dice una
+          cosa che cambia, la lettera una che non cambia mai — e fra le due,
+          in due caratteri di spazio, vince quella che porta informazione. */}
+      {scorciatoia && badge === 0 && nuove === 0 ? (
+        <kbd
+          aria-hidden
+          className={cn(
+            "ml-auto rounded border border-border-soft px-1 font-mono text-[10px] leading-4 font-semibold text-ink-faint",
+            active && "border-white/30 text-white/70",
+            labelVisibility === "lg" && "md:hidden lg:inline-block",
+          )}
+        >
+          {scorciatoia}
+        </kbd>
+      ) : null}
       {badge > 0 ? (
         <>
           {/* pill col conteggio dove l'etichetta è visibile */}

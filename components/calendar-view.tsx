@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, History, Plus } from "lucide-react";
 
 import { applicaFiltri, leggiFiltri } from "@/lib/filtri";
-import { dueUrgency, todayIso } from "@/lib/format";
+import { dueUrgency, giornoLocale, todayIso } from "@/lib/format";
 import { updateSearch } from "@/lib/shallow-nav";
 import { useAppStore } from "@/lib/store";
 import { confrontaPerScadenza } from "@/lib/ordine";
@@ -57,6 +57,20 @@ interface DragState {
  * «oggi» a cerchio pieno, weekend tinteggiato, «+» rapido su ogni giorno
  * (crea un task già datato). Le scadenze si spostano trascinando.
  */
+/**
+ * Che cosa conta come «attivita' svolta».
+ *
+ * Prima era il solo `status_changed`, e una giornata passata a riassegnare
+ * lavoro e spostare consegne risultava vuota. Restano fuori `archived` e
+ * `restored`: sono manutenzione dell'archivio, non lavoro fatto.
+ */
+const TIPI_ATTIVITA = new Set<TaskEvent["type"]>([
+  "created",
+  "status_changed",
+  "due_changed",
+  "owner_changed",
+]);
+
 export function CalendarView() {
   const { tasks: tuttiITask, events, rescheduleTask, statuses, currentUser } =
     useAppStore();
@@ -108,29 +122,42 @@ export function CalendarView() {
    * cosa e' stato FATTO. Sono due informazioni diverse e servono
    * entrambe — una guarda avanti, l'altra indietro.
    *
-   * Si registrano da soli i movimenti di fase, che sono gia' eventi veri:
-   * nessuno deve ricordarsi di segnare niente, ed e' il motivo per cui una
-   * CTA «segna nel calendario» sarebbe rimasta inutilizzata. I commenti no:
-   * sono conversazione, e riversarli qui dentro trasformerebbe il mese in
-   * un registro illeggibile.
+   * Si registrano da soli i movimenti, che sono gia' eventi veri: nessuno
+   * deve ricordarsi di segnare niente, ed e' il motivo per cui una CTA
+   * «segna nel calendario» sarebbe rimasta inutilizzata — chi lavora non si
+   * ferma a compilare. I commenti no: sono conversazione, e riversarli qui
+   * dentro trasformerebbe il mese in un registro illeggibile.
    *
-   * Spento di partenza. Chi apre il calendario di solito vuole sapere cosa
-   * lo aspetta, non ripercorrere la settimana scorsa.
+   * ACCESO di partenza, e la scelta vive nell'indirizzo come ogni altro
+   * filtro di vista. Prima era spento a ogni apertura e non si ricordava
+   * niente: la funzione c'era, ma per vederla bisognava sapere che
+   * esisteva, trovare un pulsante di testo grigio in fondo a destra, e
+   * rifare il gesto a ogni visita. Ora un calendario «con l'attivita'» si
+   * manda anche a un collega, e lui vede la stessa cosa.
    */
-  const [mostraAttivita, setMostraAttivita] = React.useState(false);
+  const mostraAttivita = searchParams.get("attivita") !== "0";
 
   const attivitaPerGiorno = React.useMemo(() => {
     const mappa = new Map<string, TaskEvent[]>();
     if (!mostraAttivita) return mappa;
+    /* Gli eventi seguono gli STESSI filtri dei task. Prima no: la griglia
+       nascondeva i lavori di un collega filtrato via, ma li contava
+       nell'attivita' — due insiemi diversi nella stessa cella, e un
+       dettaglio che diceva «un task» perche' quel task non era piu' nella
+       lista da cercare. */
+    const visibili = new Set(tasks.map((t) => t.id));
     for (const ev of events) {
-      if (ev.type !== "status_changed") continue;
-      const giorno = ev.created_at.slice(0, 10);
+      if (!TIPI_ATTIVITA.has(ev.type)) continue;
+      if (!visibili.has(ev.task_id)) continue;
+      /* Giorno LOCALE, non UTC: un lavoro chiuso a Roma dopo le 22 finiva
+         nella casella del giorno prima. */
+      const giorno = giornoLocale(ev.created_at);
       const lista = mappa.get(giorno) ?? [];
       lista.push(ev);
       mappa.set(giorno, lista);
     }
     return mappa;
-  }, [events, mostraAttivita]);
+  }, [events, mostraAttivita, tasks]);
 
   const gridRef = React.useRef<HTMLDivElement>(null);
   const stripRef = React.useRef<HTMLDivElement>(null);
@@ -313,9 +340,14 @@ export function CalendarView() {
       <div className="mb-2 flex justify-end">
         <button
           type="button"
-          onClick={() => setMostraAttivita((v) => !v)}
+          onClick={() =>
+            updateSearch(
+              { attivita: mostraAttivita ? "0" : null },
+              { replace: true },
+            )
+          }
           aria-pressed={mostraAttivita}
-          title="Mostra cosa e' stato fatto, oltre a cosa scade"
+          title="Mostra cosa è stato fatto, oltre a cosa scade"
           className={cn(
             "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
             mostraAttivita
@@ -407,27 +439,49 @@ export function CalendarView() {
                   const svolte = attivitaPerGiorno.get(cell.iso);
                   if (!svolte || svolte.length === 0) return null;
                   const conclusi = svolte.filter((e) => e.to === "done").length;
+                  const altri = svolte.length - conclusi;
+                  /* Il dettaglio stava tutto dentro un `title`, cioè solo
+                     al passaggio del mouse e mai su un telefono: chi non ha
+                     un puntatore leggeva «3 movimenti» e finiva lì. Ora la
+                     prima riga si legge scritta, e il resto si conta. */
+                  const prima = svolte[0];
+                  const titoloPrima = tasks.find(
+                    (x) => x.id === prima.task_id,
+                  )?.title;
+                  /* Che cosa è successo, a parole. «Packaging: In corso →
+                     Fatto» dice in una riga quello che «3 movimenti» non
+                     diceva affatto. */
+                  const cosa =
+                    prima.type === "status_changed"
+                      ? `${statusLabelOf(prima.from)} → ${statusLabelOf(prima.to)}`
+                      : prima.type === "created"
+                        ? "creato"
+                        : prima.type === "due_changed"
+                          ? "scadenza spostata"
+                          : "cambio responsabile";
                   return (
-                    <p
-                      className="mt-1 flex items-center gap-1 border-t border-border-soft pt-1 text-[11px] text-ink-muted"
-                      title={svolte
-                        .map((e) => {
-                          const t = tasks.find((x) => x.id === e.task_id);
-                          return `${t?.title ?? "un task"}: ${statusLabelOf(e.from)} → ${statusLabelOf(e.to)}`;
-                        })
-                        .join("\n")}
-                    >
-                      <History aria-hidden className="size-3 shrink-0" />
-                      {conclusi > 0 ? (
-                        <span className="font-semibold text-success-text">
-                          {conclusi} chius{conclusi === 1 ? "o" : "i"}
-                        </span>
+                    <div className="mt-1 border-t border-border-soft pt-1">
+                      <p className="flex items-center gap-1 text-[11px] text-ink-muted">
+                        <History aria-hidden className="size-3 shrink-0" />
+                        {conclusi > 0 ? (
+                          <span className="font-semibold text-success-text">
+                            {conclusi} chius{conclusi === 1 ? "o" : "i"}
+                          </span>
+                        ) : null}
+                        {conclusi > 0 && altri > 0 ? " · " : null}
+                        {altri > 0
+                          ? `${altri} movimento${altri === 1 ? "" : "i"}`
+                          : null}
+                      </p>
+                      {titoloPrima ? (
+                        <p className="mt-0.5 truncate text-[11px] text-ink-faint">
+                          <span className="text-ink-muted">{titoloPrima}</span>
+                          {": "}
+                          {cosa}
+                          {svolte.length > 1 ? ` +${svolte.length - 1}` : ""}
+                        </p>
                       ) : null}
-                      {conclusi > 0 && svolte.length > conclusi ? " · " : null}
-                      {svolte.length > conclusi
-                        ? `${svolte.length - conclusi} movimenti`
-                        : null}
-                    </p>
+                    </div>
                   );
                 })()}
               </div>

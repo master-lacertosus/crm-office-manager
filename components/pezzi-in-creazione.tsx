@@ -84,10 +84,20 @@ export function PezziInCreazione({
 
   return (
     <div className="space-y-2">
+      {/* «Sotto-task» e non «Pezzi».
+          Il riquadro c'era, era montato in entrambi i layout del pannello e
+          non si nascondeva mai — eppure non lo trovava nessuno. La ragione è
+          il nome: l'interfaccia chiamava la stessa cosa in tre modi
+          («Lavori» sul task esistente, «Pezzi» qui, «sotto-task» nei file e
+          nelle conversazioni dell'ufficio), e non si cerca una cosa di cui
+          non si conosce il nome. Ora la parola è una sola, ed è quella che
+          usa chi lavora. */}
       <Label htmlFor="pezzo-nuovo" className="flex items-center gap-1.5">
         <Split aria-hidden className="size-3.5 text-ink-muted" />
-        Pezzi di questo lavoro
-        <span className="font-normal text-ink-muted">— facoltativo</span>
+        Sotto-task
+        <span className="font-normal text-ink-muted">
+          — facoltativi, puoi già assegnarli
+        </span>
       </Label>
 
       {pezzi.length > 0 ? (

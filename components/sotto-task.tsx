@@ -89,11 +89,14 @@ export function SottoTask({ task }: { task: Task }) {
   };
 
   return (
-    <section aria-label="Pezzi del lavoro" className="px-5 pb-2">
+    <section aria-label="Sotto-task" className="px-5 pb-2">
       <Separator className="mb-4" />
       <h3 className="flex flex-wrap items-center gap-2 text-[11px] font-bold tracking-[0.06em] text-ink-secondary uppercase">
         <Split className="size-3.5" />
-        Lavori
+        {/* Una parola sola per una cosa sola: qui si leggeva «Lavori», nella
+            creazione «Pezzi», e nell ufficio si dice «sotto-task». Tre nomi
+            per lo stesso oggetto lo rendono impossibile da cercare. */}
+        Sotto-task
         {pezzi.length > 0 ? (
           <span className="font-mono text-[11px] font-normal text-ink-muted">
             {fatti}/{pezzi.length}
@@ -123,8 +126,8 @@ export function SottoTask({ task }: { task: Task }) {
       <ul className="mt-2.5 space-y-0.5">
         {pezzi.length === 0 ? (
           <li className="text-[13px] text-ink-muted">
-            Nessun pezzo: questo lavoro è di una persona sola. Dividilo se ci
-            lavorano in più.
+            Nessun sotto-task: questo lavoro è di una persona sola. Dividilo
+            se ci lavorano in più.
           </li>
         ) : (
           pezzi.map((pezzo) => {

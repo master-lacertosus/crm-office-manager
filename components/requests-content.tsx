@@ -197,11 +197,22 @@ function PendingCard({ req }: { req: TaskRequest }) {
     }
   };
 
+  /* Il database esige una motivazione (vincolo `request_rejection_needs_reason`,
+     M2): senza, respinge. Prima il rifiuto partiva comunque e chi aveva
+     premuto si vedeva l'errore tecnico del vincolo — e nello stesso istante
+     il messaggio «Richiesta rifiutata», che diceva il contrario. */
+  const motivoMancante = reason.trim().length === 0;
+
   const reject = async () => {
-    if (busy) return;
+    if (busy || motivoMancante) return;
     setBusy(true);
-    await rejectRequest(req.id, reason);
+    const fatto = await rejectRequest(req.id, reason);
     setBusy(false);
+    /* Si annuncia solo ciò che è davvero successo: il messaggio di successo
+       partiva anche quando la scrittura era stata annullata. */
+    if (!fatto) return;
+    setRejecting(false);
+    setReason("");
     toast("Richiesta rifiutata: il richiedente è stato avvisato.");
   };
 
@@ -279,10 +290,20 @@ function PendingCard({ req }: { req: TaskRequest }) {
             variant="destructive"
             size="sm"
             onClick={reject}
-            disabled={busy}
+            disabled={busy || motivoMancante}
           >
             {busy ? "Invio…" : "Conferma rifiuto"}
           </Button>
+          {/* Scritto, non affidato a un `title`: i pulsanti di questo
+              progetto portano `disabled:pointer-events-none`
+              (components/ui/button.tsx:13), quindi su un pulsante spento il
+              tooltip nativo non parte mai — né col mouse né su telefono. Un
+              pulsante che sbiadisce e non dice perché è un vicolo cieco. */}
+          {motivoMancante ? (
+            <span className="text-[12px] text-ink-muted">
+              Scrivi il motivo per confermare
+            </span>
+          ) : null}
           <Button
             variant="ghost"
             size="icon-sm"

@@ -624,12 +624,18 @@ function PendingLeaveCard({ leave }: { leave: LeaveRequest }) {
     if (busy || !deciding) return;
     if (deciding === "reject" && !note.trim()) return;
     setBusy(true);
-    await decideLeave(
+    const fatto = await decideLeave(
       leave.id,
       deciding === "approve" ? "approved" : "rejected",
       note,
     );
     setBusy(false);
+    /* Si annuncia solo ciò che è davvero successo: il messaggio partiva anche
+       quando il database aveva respinto e lo store aveva già annullato tutto,
+       e usciva accanto al banner rosso che diceva il contrario. */
+    if (!fatto) return;
+    setDeciding(null);
+    setNote("");
     toast(
       deciding === "approve"
         ? "Richiesta approvata: richiedente e responsabili avvisati."

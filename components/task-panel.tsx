@@ -151,10 +151,17 @@ export function TaskPanelHost() {
                 ? "inset-0 m-auto h-[min(90dvh,840px)] w-[min(1080px,95vw)] overflow-hidden rounded-3xl border border-border shadow-[0_28px_90px_rgb(15_23_42/0.24)]"
                 /* 460px erano stretti per un task con descrizione, checklist
                    e commenti: si leggeva tutto in colonne di poche parole.
-                   Cresce con lo schermo invece di restare fisso — su un
-                   monitor da ufficio si guadagna quasi metà larghezza, su un
-                   portatile resta quello di prima. */
-                : "inset-y-0 right-0 w-full border-l border-border shadow-[-16px_0_56px_rgb(15_23_42/0.18)] sm:w-[460px] lg:w-[560px] xl:w-[680px] sm:rounded-l-2xl",
+                   Cresce con lo schermo invece di restare fisso.
+
+                   I gradini sono saliti tutti, e ne è comparso uno per i
+                   monitor grandi: sopra i 1280px la scala si fermava, quindi
+                   un 1920 dava gli stessi 680px di un portatile e i 1240px
+                   avanzati restavano velo sfocato. Nessuna larghezza
+                   peggiora rispetto a prima — è la ragione per cui restano
+                   gradini invece di diventare una percentuale: `50vw`
+                   sarebbe stato più elegante e avrebbe RISTRETTO il pannello
+                   proprio sui 1280, che è la larghezza più diffusa qui. */
+                : "inset-y-0 right-0 w-full border-l border-border shadow-[-16px_0_56px_rgb(15_23_42/0.18)] sm:w-[520px] lg:w-[660px] xl:w-[820px] 2xl:w-[980px] sm:rounded-l-2xl",
             )}
           >
             <PanelBody
