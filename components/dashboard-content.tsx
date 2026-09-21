@@ -78,9 +78,9 @@ function ProgressRing({
       <svg viewBox="0 0 140 140" className="size-[140px] -rotate-90">
         <defs>
           <linearGradient id="ring-brand" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#ff9d47" />
-            <stop offset="55%" stopColor="#ff6b00" />
-            <stop offset="100%" stopColor="#f05a00" />
+            <stop offset="0%" stopColor="var(--brand-300)" />
+            <stop offset="55%" stopColor="var(--brand-500)" />
+            <stop offset="100%" stopColor="var(--brand-550)" />
           </linearGradient>
         </defs>
         {/* quadrante a tacche (manometro d'officina) */}

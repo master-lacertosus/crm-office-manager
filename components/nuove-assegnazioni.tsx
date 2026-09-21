@@ -64,7 +64,7 @@ export function NuoveAssegnazioni() {
         >
           <span
             aria-hidden
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-white shadow-xs"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-primary-foreground shadow-xs"
           >
             <Inbox className="size-4" />
           </span>
@@ -84,7 +84,7 @@ export function NuoveAssegnazioni() {
           <Link
             href={destinazione(daVedere, currentUser.id)}
             onClick={markAssegnazioniRead}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-brand-500 px-3 text-[13px] font-semibold text-white outline-none transition-transform hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-brand-50"
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-brand-500 px-3 text-[13px] font-semibold text-primary-foreground outline-none transition-transform hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-brand-50"
           >
             {una ? "Aprila" : "Guardale"}
             <ArrowRight aria-hidden className="size-3.5" />

@@ -72,7 +72,10 @@ export function Sparkline({
       {endDot ? (
         <span
           aria-hidden
-          className="absolute size-2 -translate-y-1/2 rounded-full ring-2 ring-white"
+          /* Anello di superficie, non testo: stacca il punto finale dalla
+             stat tile che lo ospita, quindi segue `--card` invece di restare
+             bianco anche al buio. */
+          className="absolute size-2 -translate-y-1/2 rounded-full ring-2 ring-card"
           style={{
             top: `${(last.y / height) * 100}%`,
             right: 2,

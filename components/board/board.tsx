@@ -763,7 +763,7 @@ function AddPhaseLane({
                 style={{ background: p.color }}
               >
                 {preset === i ? (
-                  <Check className="size-3.5 text-white" />
+                  <Check className="size-3.5" style={{ color: p.inchiostro }} />
                 ) : null}
               </button>
             ))}

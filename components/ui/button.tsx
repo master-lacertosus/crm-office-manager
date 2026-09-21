@@ -19,7 +19,7 @@ const buttonVariants = cva(
         outline:
           "glass-chip border-border/90 text-foreground transition-all hover:-translate-y-px hover:brightness-[1.01] aria-expanded:bg-accent",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.75),inset_0_0_0_1px_rgb(255_255_255/0.35),0_1px_2px_rgb(15_23_42/0.04)] hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]",
+          "bg-secondary text-secondary-foreground shadow-[inset_0_1px_0_var(--vetro-luce),inset_0_0_0_1px_rgb(255_255_255/0.35),0_1px_2px_rgb(15_23_42/0.04)] hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]",
         ghost:
           "text-ink-secondary hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground",
         destructive:

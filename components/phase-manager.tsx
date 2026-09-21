@@ -104,7 +104,7 @@ export function PhaseManager() {
                 )}
                 style={{ background: p.color }}
               >
-                {preset === i ? <Check className="size-3.5 text-white" /> : null}
+                {preset === i ? <Check className="size-3.5" style={{ color: p.inchiostro }} /> : null}
               </button>
             ))}
           </div>

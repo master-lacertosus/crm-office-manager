@@ -164,5 +164,196 @@ if (alto) {
   }
 }
 
+/* ------------------------------------------------------------------ */
+console.log("\n# Il testo sopra l'accento\n");
+/* ------------------------------------------------------------------ */
+
+/*
+ * Il difetto piu' vecchio del prodotto, e il piu' facile da non vedere.
+ *
+ * docs/design-system.md:34 prescrive «testo grafite su arancio (6,4:1)», e il
+ * tema scuro lo faceva. Il tema chiaro no: `--primary-foreground: #ffffff`
+ * sull'arancio di marca fa 2,86:1, con accanto un commento che lo chiamava
+ * «deviazione consapevole, ~3.2:1» — una misura ottimistica su una soglia che
+ * lo stesso documento, alla riga 330, chiama non negoziabile. Lo stesso
+ * bottone seguiva due regole, e quella usata di giorno era quella sbagliata.
+ *
+ * E il grigio non e' la risposta per tutti: sull'indaco e sull'ardesia vince
+ * il bianco. Per questo il colore si MISURA, accento per accento, invece di
+ * deciderlo una volta e ricopiarlo.
+ */
+const ACCENTI_DA_MISURARE = [
+  { nome: "arancio (predefinito)", selettore: ":root" },
+  { nome: "blu", selettore: '[data-accent="blue"]' },
+  { nome: "indaco", selettore: '[data-accent="indigo"]' },
+  { nome: "smeraldo", selettore: '[data-accent="emerald"]' },
+  { nome: "rosa", selettore: '[data-accent="rose"]' },
+  { nome: "ardesia", selettore: '[data-accent="slate"]' },
+];
+
+for (const a of ACCENTI_DA_MISURARE) {
+  const vars = variabiliDi(a.selettore);
+  const fondo = vars?.["--brand-500"];
+  const testo = vars?.["--primary-foreground"];
+  if (!fondo || !testo) {
+    check(`${a.nome}: fondo e testo dichiarati`, false, `manca in ${a.selettore}`);
+    continue;
+  }
+  const mio = contrasto(testo, fondo);
+  const alternativo = contrasto(testo === "#ffffff" ? "#111827" : "#ffffff", fondo);
+  check(
+    `${a.nome}: ${testo} su ${fondo} = ${mio}:1`,
+    mio >= alternativo,
+    mio >= alternativo
+      ? ""
+      : `l'altro inchiostro farebbe ${alternativo}:1 — si misura, non si sceglie`,
+  );
+}
+
+/* Il tema scuro NON deve ridefinire questo token: il fondo su cui sta il
+   testo e' l'accento, e l'accento di notte e' identico. Ridefinirlo qui
+   vincerebbe sui blocchi [data-accent], che nel file arrivano prima. */
+check(
+  "Il tema scuro non sovrascrive il testo dell'accento",
+  variabiliDi('[data-tema="scuro"]')?.["--primary-foreground"] === undefined,
+  "il colore dipende dall'accento, non dalla luce della stanza: ridefinirlo qui riporterebbe il grafite sull'indaco e sull'ardesia, dove la misura dice bianco",
+);
+
+/*
+ * E nessuno deve riscrivere il bianco a mano.
+ *
+ * La prima versione di questo controllo cercava «un fondo di marca e
+ * text-white sulla stessa riga». Sembrava una rete e non lo era: una
+ * revisione l'ha messa alla prova e ha trovato cinque cose che ci passavano
+ * sotto — `ring-white`, le varianti con opacita' (`text-white/70`,
+ * `bg-white/25`), una className su piu' righe col fondo altrove, `#fff`
+ * scritto inline in un file autonomo, e un fondo dichiarato con una classe
+ * che NON ESISTE (`bg-danger`), dove il bianco finiva sull'arancio sotto.
+ *
+ * Quindi qui non si cerca piu' l'accoppiata: si vieta il bianco scritto a
+ * mano, punto, e le eccezioni si dichiarano. Un elenco di eccezioni si legge;
+ * una regola che non vede niente, no.
+ */
+const ECCEZIONI = [
+  /* Le uniche superfici bianche per davvero: fogli di stile dei report in
+     stampa e il tema chiaro dei token, che il bianco lo DEFINISCE. */
+  "app/globals.css",
+  /* I campioni di colore scelti dall'utente prendono l'inchiostro misurato
+     da lib/types.ts e lib/accenti-scale.ts, non una classe. */
+];
+
+const { execSync } = await import("node:child_process");
+
+/*
+ * I commenti di questo repo spiegano spesso PERCHE' una cosa non si fa, e
+ * nominarla li' dentro non e' farla: la frase «il fondo era bg-danger, che non
+ * esiste» farebbe fallire il controllo che vieta bg-danger.
+ *
+ * Non basta guardare se la riga COMINCIA con un marcatore: un commento lungo
+ * ha righe di continuazione che cominciano con una parola qualunque. Quindi si
+ * toglie il commento davvero, sostituendolo con spazi in modo che i numeri di
+ * riga restino quelli veri. E' la stessa idea di `senzaCommenti` negli altri
+ * script, con in piu' la conservazione delle righe.
+ */
+const senzaCommentiCache = new Map();
+function righeSenzaCommenti(file) {
+  if (senzaCommentiCache.has(file)) return senzaCommentiCache.get(file);
+  const testo = readFileSync(file, "utf8").replace(/\r\n/g, "\n");
+  const pulito = testo
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/(^|[^:])\/\/.*$/gm, (m) =>
+      m.replace(/\/\/.*$/, (c) => c.replace(/./g, " ")),
+    );
+  const righe = pulito.split("\n");
+  senzaCommentiCache.set(file, righe);
+  return righe;
+}
+
+/** `file:12:  <div className="bg-danger">` -> resta solo se quel pezzo di
+ *  codice esiste ancora dopo aver tolto i commenti. */
+function fuoriDaiCommenti(risultato) {
+  const [file, numero] = risultato.split(":");
+  const n = Number(numero);
+  if (!file || !Number.isFinite(n)) return true;
+  try {
+    return (righeSenzaCommenti(file)[n - 1] ?? "").trim().length > 0;
+  } catch {
+    return true;
+  }
+}
+
+function cerca(pattern) {
+  try {
+    return execSync(
+      `git grep -n --untracked -E "${pattern}" -- components app lib`,
+      { encoding: "utf8" },
+    )
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .filter((r) => !ECCEZIONI.some((e) => r.startsWith(e)))
+      .filter((r) => fuoriDaiCommenti(r));
+  } catch {
+    /* git grep esce 1 quando non trova nulla: e' il caso buono. */
+    return [];
+  }
+}
+
+/* `--untracked` perche' un file appena creato non e' ancora nell'indice, e
+   senza quel flag il controllo lo salterebbe in silenzio: il posto peggiore
+   dove avere un buco e' proprio il codice nuovo. */
+const bianchiAMano = [
+  ...cerca("text-white"),
+  ...cerca("ring-white"),
+  ...cerca("(bg|text|border|ring)-white/"),
+  ...cerca('(color|background|background-color): *.?#(fff|ffffff)'),
+];
+check(
+  "Nessuno scrive il bianco a mano",
+  bianchiAMano.length === 0,
+  bianchiAMano.length === 0
+    ? "si usano i token: text-primary-foreground, text-destructive-foreground, ring-card"
+    : bianchiAMano.join(" | "),
+);
+
+/* E il fondo dev'essere un colore che esiste. `bg-danger` non esisteva — il
+   tema dichiara `--danger-soft` e `--danger-text`, mai `--danger` — quindi
+   quella pastiglia era trasparente e le cifre bianche stavano sull'arancio
+   che aveva sotto. Una classe inventata non da' errore da nessuna parte: si
+   limita a non fare niente. */
+const DICHIARATI = new Set(
+  [...CSS.matchAll(/--color-([\w-]+):/g)].map((m) => m[1]),
+);
+const FORME_TAILWIND = /^(\d+|\[.*\]|transparent|current|inherit|white|black|none|auto)$/;
+const fondiInventati = cerca("(bg|text|border|ring)-[a-z]+(-[a-z0-9]+)*")
+  .flatMap((riga) => {
+    const [file, numero, ...resto] = riga.split(":");
+    const codice = resto.join(":");
+    return [...codice.matchAll(/\b(?:bg|text|border|ring)-([a-z][\w-]*)/g)]
+      .map((m) => m[1])
+      .filter((nome) => !FORME_TAILWIND.test(nome))
+      .filter((nome) => {
+        /* Si scarta il suffisso di opacita' e si prova anche il nome intero:
+           `danger-soft` e' dichiarato, `danger` no. */
+        const pulito = nome.split("/")[0];
+        if (DICHIARATI.has(pulito)) return false;
+        /* Le scale di Tailwind (slate-500, red-50...) non passano da @theme. */
+        return /^(danger|success|warning|info|brand|ink|status|velo|canvas|scrim|selected)(-|$)/.test(
+          pulito,
+        );
+      })
+      /* `id="ring-brand"` e `url(#ring-brand)` non sono classi: sono nomi di
+         gradienti SVG, e assomigliano a `ring-<colore>` solo per caso. */
+      .filter(() => !/id=|url\(#/.test(codice))
+      .map((nome) => `${file}:${numero} ${nome}`);
+  });
+check(
+  "Ogni colore semantico usato e' davvero dichiarato",
+  fondiInventati.length === 0,
+  fondiInventati.length === 0
+    ? "niente classi inventate: una classe che non esiste non sbaglia, semplicemente non fa niente"
+    : [...new Set(fondiInventati)].join(" | "),
+);
+
 console.log(falliti === 0 ? "\nTUTTO VERDE" : `\n${falliti} CONTROLLI FALLITI`);
 process.exit(falliti === 0 ? 0 : 1);

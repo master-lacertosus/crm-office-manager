@@ -83,7 +83,7 @@ export function FiltriAvanzati({ idPrefix = "adv" }: { idPrefix?: string }) {
         <SlidersHorizontal />
         Filtri
         {accesi > 0 ? (
-          <span className="ml-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-brand-500 px-1 font-mono text-[10px] font-bold text-white">
+          <span className="ml-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-brand-500 px-1 font-mono text-[10px] font-bold text-primary-foreground">
             {accesi}
           </span>
         ) : null}

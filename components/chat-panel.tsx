@@ -288,7 +288,7 @@ export function ChatPanel() {
             >
               {c.nome}
               {n > 0 && !attivo ? (
-                <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-brand-500 px-1 font-mono text-[10px] font-semibold text-white">
+                <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-brand-500 px-1 font-mono text-[10px] font-semibold text-primary-foreground">
                   {n}
                 </span>
               ) : null}
@@ -402,11 +402,21 @@ export function ChatPanel() {
          stessa idea di «reagisce al passaggio», senza scollarsi da dove
          deve stare. L'imbottitura segue l'altezza, così l'icona resta
          centrata. */
-      className="btn-glow fixed bottom-0 left-1/2 z-90 flex h-10 w-20 -translate-x-1/2 items-end justify-center rounded-t-full pb-2.5 text-white shadow-[0_-6px_24px_rgb(15_23_42/0.22)] transition-[height,padding] duration-200 hover:h-12 hover:pb-3.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className="btn-glow fixed bottom-0 left-1/2 z-90 flex h-10 w-20 -translate-x-1/2 items-end justify-center rounded-t-full pb-2.5 text-primary-foreground shadow-[0_-6px_24px_rgb(15_23_42/0.22)] transition-[height,padding] duration-200 hover:h-12 hover:pb-3.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       <MessageSquare className="size-5" strokeWidth={1.75} />
       {totaleNonLetti > 0 ? (
-        <span className="absolute top-1 right-2.5 inline-flex min-w-4 items-center justify-center rounded-full bg-danger px-1 font-mono text-[10px] leading-4 font-semibold text-white ring-2 ring-white">
+        /* L'anello non e' testo: ritaglia la pastiglia dal fondo che ha
+           dietro — la linguetta arancio e, per lo spigolo che sporge, la
+           pagina. Prende percio' il colore della superficie (`ring-card`),
+           che al buio e' scuro: un anello bianco fisso sarebbe un taglio di
+           luce sul tema scuro.
+           Il fondo era `bg-danger`, che NON esiste: il tema espone solo
+           `--danger-soft` e `--danger-text`, mai un `--danger`, quindi la
+           pastiglia non aveva fondo e le cifre bianche stavano sull'arancio
+           della linguetta, a 2,86:1. Ora e' `bg-destructive`, lo stesso rosso
+           della pastiglia gemella in components/notifications.tsx. */
+        <span className="absolute top-1 right-2.5 inline-flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 font-mono text-[10px] leading-4 font-semibold text-destructive-foreground ring-2 ring-card">
           {totaleNonLetti}
         </span>
       ) : null}

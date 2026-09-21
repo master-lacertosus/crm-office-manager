@@ -134,9 +134,12 @@ export function NotificationsBell() {
       >
         {unreadCount > 0 ? <BellRing /> : <Bell />}
         {unreadCount > 0 ? (
+          /* Il testo resta bianco perche' sta sul rosso. L'anello invece non
+             e' testo: stacca la pastiglia dalla topbar, che in tema scuro e'
+             scura — quindi segue la superficie, non il bianco fisso. */
           <span
             aria-hidden
-            className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive font-mono text-[10px] font-semibold text-white ring-2 ring-white"
+            className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive font-mono text-[10px] font-semibold text-destructive-foreground ring-2 ring-card"
           >
             {unreadCount}
           </span>

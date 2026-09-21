@@ -120,7 +120,9 @@ export function ProjectsContent() {
                         name={p!.full_name}
                         src={p!.avatar_url}
                         size="sm"
-                        className="ring-2 ring-white"
+                        /* Anello di superficie: separa gli avatar accatastati
+                           fra loro e dalla card sotto. Segue `--card`. */
+                        className="ring-2 ring-card"
                       />
                     ))}
                   </span>

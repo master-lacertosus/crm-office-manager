@@ -425,11 +425,20 @@ export const CUSTOM_STATUS_PRESETS: {
   color: string;
   soft: string;
   text: string;
+  /** Che colore ha la spunta quando il campione e selezionato. Misurato, non
+   *  scelto: la spunta era bianca su tutti e sei, e su tre di questi colori il
+   *  bianco e il peggiore dei due. Contrasti WCAG sul pieno `color`,
+   *  grafite #111827 contro bianco:
+   *    Teal   4,74 / 3,74   Rosa   3,86 / 4,60   Indaco 2,82 / 6,29
+   *    Ciano  4,82 / 3,68   Lime   5,74 / 3,09   Grigio 3,73 / 4,76
+   *  Stesso ragionamento, e stesse misure, di INCHIOSTRO_SU_ACCENTO in
+   *  lib/accenti-scale.ts. */
+  inchiostro: string;
 }[] = [
-  { name: "Teal", color: "#0D9488", soft: "#CCFBF1", text: "#0F766E" },
-  { name: "Rosa", color: "#DB2777", soft: "#FCE7F3", text: "#BE185D" },
-  { name: "Indaco", color: "#4F46E5", soft: "#E0E7FF", text: "#4338CA" },
-  { name: "Ciano", color: "#0891B2", soft: "#CFFAFE", text: "#0E7490" },
-  { name: "Lime", color: "#65A30D", soft: "#ECFCCB", text: "#4D7C0F" },
-  { name: "Grigio", color: "#64748B", soft: "#F1F5F9", text: "#475569" },
+  { name: "Teal", color: "#0D9488", soft: "#CCFBF1", text: "#0F766E", inchiostro: "#111827" },
+  { name: "Rosa", color: "#DB2777", soft: "#FCE7F3", text: "#BE185D", inchiostro: "#ffffff" },
+  { name: "Indaco", color: "#4F46E5", soft: "#E0E7FF", text: "#4338CA", inchiostro: "#ffffff" },
+  { name: "Ciano", color: "#0891B2", soft: "#CFFAFE", text: "#0E7490", inchiostro: "#111827" },
+  { name: "Lime", color: "#65A30D", soft: "#ECFCCB", text: "#4D7C0F", inchiostro: "#111827" },
+  { name: "Grigio", color: "#64748B", soft: "#F1F5F9", text: "#475569", inchiostro: "#ffffff" },
 ];
