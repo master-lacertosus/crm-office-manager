@@ -7,7 +7,9 @@ diventa una **Release «Update»** su GitHub (regole in
 [Keep a Changelog](https://keepachangelog.com/it/), con date al posto delle
 versioni (fase pre-1.0).
 
-## Non rilasciato
+## 2026-09-21 (sera)
+
+Tre update: `update-20260921-5`, `-6`, `-7`.
 
 ### Corretto
 - **Chi usciva e rientrava trovava un errore al posto della timbratura.**
