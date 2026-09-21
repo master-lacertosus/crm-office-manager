@@ -780,6 +780,28 @@
       var(--card);
   }
 
+  /* L'alone del sondaggio: uno strato di LUCE, non di vernice.
+     `.aura-layer` sta a `z-index: -1` sul canvas nudo e può permettersi una
+     tinta a bassa opacità. Qui sotto invece c'è il velo, che SCURISCE: la
+     stessa alfa, nello stesso posto, darebbe un alito di grigio caldo.
+     `plus-lighter` la somma invece di coprire — è l'unica differenza, ed è
+     tutta la differenza.
+     La sfocatura resta cotta nel gradiente, come in `.aura-layer::before`:
+     la scheda video compone un livello leggero invece di ricalcolare una
+     sfocatura enorme a ogni fotogramma.
+     `color-mix` su `--brand-500` e non un colore scritto a mano, se no con
+     l'accento smeraldo si riaprirebbe l'alone arancione sotto un'interfaccia
+     verde — il difetto corretto poche righe più su. */
+  .alone-marca {
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklch, var(--brand-500), transparent 80%) 0%,
+      color-mix(in oklch, var(--brand-500), transparent 90%) 52%,
+      transparent 100%
+    );
+    mix-blend-mode: plus-lighter;
+  }
+
   /* Hairline superiore a gradiente per le card sezione */
   .hairline-gradient {
     position: relative;
@@ -1028,9 +1050,16 @@
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
     }
-    .aura-layer {
+    .aura-layer,
+    .alone-marca {
       display: none;
     }
+  }
+
+  /* Chi ha chiesto più contrasto non vuole un velo caldo sul bordo del
+     testo: l'alone del sondaggio si spegne come si spegne l'aura. */
+  [data-contrasto="alto"] .alone-marca {
+    display: none;
   }
 
   /* Stampa dei report: fondo bianco, card piatte con bordo, niente chrome

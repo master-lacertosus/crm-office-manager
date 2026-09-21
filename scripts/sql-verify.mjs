@@ -47,6 +47,13 @@ const DA_INCOLLARE = [
   "supabase/migrations/20260825160000_m11_ricorsione.sql",
   "supabase/migrations/20260918120000_m14_assegnazioni.sql",
   "supabase/migrations/20260921160000_m17_avvisi_con_destinazione.sql",
+  /* Anche queste si incollano a mano: l'elenco si era fermato a M17 mentre le
+     migrazioni andavano avanti, e un elenco che non sta al passo controlla
+     sempre meno di quanto sembra. */
+  "supabase/migrations/20260921120000_m15_email_assegnazioni.sql",
+  "supabase/migrations/20260921140000_m16_timbrature.sql",
+  "supabase/migrations/20260921180000_m18_rientro.sql",
+  "supabase/migrations/20260921200000_m19_sondaggi.sql",
 ];
 
 /** Svuota le stringhe fra apici, lasciando spazi al loro posto: così le

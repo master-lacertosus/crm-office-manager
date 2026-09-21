@@ -23,6 +23,16 @@ const TABELLE = [
   "task_requests",
   "leave_requests",
   "notifications",
+  /* I sondaggi cambiano durante la giornata e riguardano gli ALTRI: e il
+     criterio dichiarato qui sopra. Senza queste tre righe il canale si apre
+     e non arriva mai niente, e il battito da 60 secondi maschera il buco
+     facendo sembrare il sondaggio lento invece che rotto.
+     `sondaggio_schede` NO, ed e una scelta: e lurna. Non ha lettori oltre
+     al proprietario, quindi non porterebbe niente a nessuno -- ma lasciarla
+     fuori dice a chi legge che li dentro non si entra. */
+  "sondaggi",
+  "sondaggio_opzioni",
+  "sondaggio_firme",
 ] as const;
 
 export function subscribeToWorkspace(

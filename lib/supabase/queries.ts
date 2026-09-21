@@ -12,6 +12,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Giornata } from "@/lib/timbrature";
+import type { Sondaggio } from "@/lib/sondaggi";
 import type {
   AppNotification,
   ChecklistItem,
@@ -1289,5 +1290,129 @@ export async function deleteTimbratura(
   id: string,
 ): Promise<void> {
   const { error } = await supabase.from("timbrature").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sondaggi (M19)                                                             */
+/*                                                                            */
+/* Una lettura sola, annidata, e la RLS taglia da se' quello che non deve      */
+/* uscire: `sondaggio_opzioni` e `sondaggio_firme` arrivano intere (sono       */
+/* pubbliche per costruzione), mentre di `sondaggio_schede` -- l'urna --       */
+/* torna al massimo la PROPRIA riga, perche' la policy non ne consegna altre.  */
+/* E' per questo che `miaScelta` si puo' leggere e le scelte degli altri no:   */
+/* non e' l'interfaccia a nasconderle, e' che non arrivano.                    */
+/*                                                                            */
+/* Le scritture che hanno regole -- lanciare e chiudere -- passano da due      */
+/* funzioni del database e non da insert e update: il blocco «uno per volta»   */
+/* e la chiusura degli scaduti devono succedere nella stessa transazione, e    */
+/* un indice unico da solo darebbe «duplicate key», che lib/riprova.ts         */
+/* scambierebbe per «gia' fatto».                                             */
+/* -------------------------------------------------------------------------- */
+
+const SONDAGGIO_COLUMNS = `
+  id, autore_id, domanda, aperto_at, scade_at, chiuso_at, chiuso_da,
+  aventi_diritto, voti_totali,
+  sondaggio_opzioni ( id, testo, posizione, voti ),
+  sondaggio_firme ( profile_id ),
+  sondaggio_schede ( opzione_id )
+`;
+
+interface SondaggioRow {
+  id: string;
+  autore_id: string;
+  domanda: string;
+  aperto_at: string;
+  scade_at: string;
+  chiuso_at: string | null;
+  chiuso_da: string | null;
+  aventi_diritto: number;
+  voti_totali: number;
+  sondaggio_opzioni: {
+    id: string;
+    testo: string;
+    posizione: number;
+    voti: number;
+  }[];
+  sondaggio_firme: { profile_id: string }[];
+  sondaggio_schede: { opzione_id: string }[];
+}
+
+function toSondaggio(row: SondaggioRow): Sondaggio {
+  return {
+    id: row.id,
+    autore_id: row.autore_id,
+    domanda: row.domanda,
+    aperto_at: row.aperto_at,
+    scade_at: row.scade_at,
+    chiuso_at: row.chiuso_at,
+    chiuso_da: row.chiuso_da,
+    aventi_diritto: row.aventi_diritto,
+    voti_totali: row.voti_totali,
+    opzioni: [...(row.sondaggio_opzioni ?? [])].sort(
+      (a, b) => a.posizione - b.posizione,
+    ),
+    firme: (row.sondaggio_firme ?? []).map((f) => f.profile_id),
+    /* Al massimo una: la chiave primaria dell'urna e' (sondaggio, persona). */
+    miaScelta: row.sondaggio_schede?.[0]?.opzione_id ?? null,
+  };
+}
+
+export async function fetchSondaggi(
+  supabase: SupabaseClient,
+): Promise<Sondaggio[]> {
+  const { data, error } = await supabase
+    .from("sondaggi")
+    .select(SONDAGGIO_COLUMNS)
+    .order("aperto_at", { ascending: false })
+    .limit(60);
+  if (error) throw error;
+  return (data as unknown as SondaggioRow[]).map(toSondaggio);
+}
+
+/** Lancia un sondaggio. Ritorna l'id del nuovo, oppure alza: il messaggio
+ *  che arriva e' gia' italiano e dice chi ha il sondaggio aperto. */
+export async function lanciaSondaggio(
+  supabase: SupabaseClient,
+  domanda: string,
+  opzioni: string[],
+  ore: number,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("lancia_sondaggio", {
+    p_domanda: domanda,
+    p_opzioni: opzioni,
+    p_ore: ore,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function chiudiSondaggio(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("chiudi_sondaggio", {
+    p_sondaggio: id,
+  });
+  if (error) throw error;
+}
+
+/** Vota, o cambia idea. `upsert` perche' sono lo stesso gesto: la chiave
+ *  primaria dell'urna e' (sondaggio, persona), quindi la seconda volta si
+ *  sposta la scheda invece di aggiungerne una. */
+export async function votaSondaggio(
+  supabase: SupabaseClient,
+  sondaggioId: string,
+  profileId: string,
+  opzioneId: string,
+): Promise<void> {
+  const { error } = await supabase.from("sondaggio_schede").upsert(
+    {
+      sondaggio_id: sondaggioId,
+      profile_id: profileId,
+      opzione_id: opzioneId,
+    },
+    { onConflict: "sondaggio_id,profile_id" },
+  );
   if (error) throw error;
 }

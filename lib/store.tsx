@@ -8,6 +8,7 @@ import {
   PAUSA_PREDEFINITA_MINUTI,
   type Giornata,
 } from "@/lib/timbrature";
+import type { Sondaggio } from "@/lib/sondaggi";
 import {
   giornoLocale,
   nextMonthlyIso,
@@ -43,6 +44,10 @@ import {
   fetchNotifications,
   deleteTimbratura,
   fetchTimbrature,
+  fetchSondaggi,
+  lanciaSondaggio as lanciaSondaggioSuDb,
+  chiudiSondaggio as chiudiSondaggioSuDb,
+  votaSondaggio as votaSondaggioSuDb,
   insertTimbratura,
   updateTimbratura,
   fetchSavedViews,
@@ -376,6 +381,29 @@ interface AppStore {
   ) => Promise<boolean>;
   /** Cancella una giornata (solo le proprie: lo impone la RLS). */
   eliminaGiornata: (id: string) => Promise<void>;
+
+  /** I sondaggi del workspace, il più recente per primo (M19). Ne arriva al
+   *  massimo uno aperto: lo impone un indice unico sul database, non una
+   *  verifica qui. */
+  sondaggi: Sondaggio[];
+  /** Quelli messi via con «Più tardi», per questa sessione. Non è «l'ho
+   *  visto»: chi scarta quello di oggi deve vedere quello di domani. */
+  sondaggiScartati: string[];
+  /** Mette via il popup senza votare. Il sondaggio resta votabile dalla
+   *  pagina: scartare non è rinunciare. */
+  scartaSondaggio: (id: string) => void;
+  /** Lancia un sondaggio. Torna l'id, oppure `null` se il database ha
+   *  rifiutato — e in quel caso il messaggio, che nomina chi ha già il
+   *  sondaggio aperto, è arrivato in `syncError` così com'era. */
+  lanciaSondaggio: (
+    domanda: string,
+    opzioni: string[],
+    ore: number,
+  ) => Promise<string | null>;
+  /** Vota, o cambia idea finché è aperto. `false` se il database rifiuta. */
+  votaSondaggio: (sondaggioId: string, opzioneId: string) => Promise<boolean>;
+  /** Chiude un sondaggio. `false` se il database rifiuta. */
+  chiudiSondaggio: (id: string) => Promise<boolean>;
   notifications: AppNotification[];
   unreadCount: number;
   sendNotification: (
@@ -637,6 +665,22 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [snoozes, setSnoozes] = React.useState<Record<string, string>>({});
   const [savedViews, setSavedViews] = React.useState<SavedView[]>([]);
   const [timbrature, setTimbrature] = React.useState<Giornata[]>([]);
+  const [sondaggi, setSondaggi] = React.useState<Sondaggio[]>([]);
+  /* Quelli messi via con «Piu tardi». Sessione e non persistenza: un «piu
+     tardi» non deve sopravvivere al giorno dopo. sessionStorage e non
+     localStorage per la stessa ragione di lib/memoria-filtri.ts, e sempre
+     in try/catch, perche puo essere negato (finestra privata, dati del sito
+     bloccati) e li dentro uneccezione fermerebbe il primo disegno. */
+  const [sondaggiScartati, setSondaggiScartati] = React.useState<string[]>(
+    () => {
+      try {
+        const grezzo = window.sessionStorage.getItem("sondaggi-scartati");
+        return grezzo ? (JSON.parse(grezzo) as string[]) : [];
+      } catch {
+        return [];
+      }
+    },
+  );
   const [templates, setTemplates] = React.useState<WorkspaceTemplate[]>([]);
   const [events, setEvents] = React.useState<TaskEvent[]>([]);
   const [requests, setRequests] = React.useState<TaskRequest[]>([]);
@@ -775,6 +819,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           statoPersonale,
           collaboratori,
           timbratureList,
+          sondaggiList,
         ] = await Promise.all([
           fetchProfiles(supabase),
           fetchProjects(supabase),
@@ -794,6 +839,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           fetchUserTaskState(supabase),
           fetchCollaborators(supabase),
           fetchTimbrature(supabase),
+          fetchSondaggi(supabase),
         ]);
 
         if (smontatoRef.current) return;
@@ -848,6 +894,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         setTemplates(templateList);
         setSavedViews(viewList);
         setTimbrature(timbratureList);
+        setSondaggi(sondaggiList);
         setFocusIds(statoPersonale.focusIds);
         setSnoozes(statoPersonale.snoozes);
         if (userId) setCurrentUserId(userId);
@@ -1110,18 +1157,22 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
          `from_user_id = auth.uid()`. Quelli senza mittente li scrive il
          lavoro pianificato del database (M5), non il browser.
 
-         Fuori anche le assegnazioni: le scrive il trigger di M14 e arrivano
-         qui solo perché il destinatario le ha lette. Rimandarle indietro
-         creerebbe un doppione dell'avviso che le ha appena fatte comparire —
-         e il tipo di `insertNotifications` non le accetta proprio, così la
-         regola la ricorda il compilatore invece di un commento. */
+         Fuori anche le assegnazioni (M14) e i sondaggi (M19): li scrivono
+         due funzioni del database e arrivano qui solo perché il destinatario
+         li ha letti. Rimandarli indietro creerebbe un doppione dell'avviso
+         che li ha appena fatti comparire — e il tipo di `insertNotifications`
+         non li accetta proprio, così la regola la ricorda il compilatore
+         invece di un commento. */
       const miei = nuovi.filter(
         (
           n,
         ): n is typeof n & {
           from_user_id: string;
-          kind?: Exclude<NotificationKind, "assegnazione">;
-        } => n.from_user_id === currentUserId && n.kind !== "assegnazione",
+          kind?: Exclude<NotificationKind, "assegnazione" | "sondaggio">;
+        } =>
+          n.from_user_id === currentUserId &&
+          n.kind !== "assegnazione" &&
+          n.kind !== "sondaggio",
       );
       if (miei.length > 0) await insertNotifications(createClient(), miei);
     },
@@ -2536,6 +2587,113 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       }
     },
 
+    sondaggi,
+    sondaggiScartati,
+
+    scartaSondaggio(id) {
+      setSondaggiScartati((prev) => {
+        const dopo = prev.includes(id) ? prev : [...prev, id];
+        try {
+          window.sessionStorage.setItem(
+            "sondaggi-scartati",
+            JSON.stringify(dopo),
+          );
+        } catch {
+          /* Negato: vale per questa scheda e basta. Non è un errore da
+             mostrare — chi ha i dati del sito bloccati non vuole saperlo
+             ogni volta che mette via un popup. */
+        }
+        return dopo;
+      });
+    },
+
+    /* Padre e figli li scrive il database dentro una funzione sola
+       (`lancia_sondaggio`): niente Promise.all di insert, niente ordine da
+       proteggere qui. E soprattutto niente «l'errore 23505 vuol dire già
+       fatto»: `lib/riprova.ts` lo ingoierebbe in silenzio, ed è esattamente
+       per questo che M19 alza una frase in italiano PRIMA che l'indice unico
+       apra bocca. Quella frase nomina chi ha il sondaggio aperto, quindi
+       arriva all'utente così com'è: riformularla toglierebbe l'unica
+       informazione che conteneva. */
+    async lanciaSondaggio(domanda, opzioni, ore) {
+      try {
+        return await inCoda(() =>
+          lanciaSondaggioSuDb(createClient(), domanda, opzioni, ore),
+        );
+        /* La riga vera la portano Realtime e la rilettura completa: qui non
+           si ricostruisce a mano un sondaggio con le sue opzioni, che sarebbe
+           una seconda verità da tenere allineata. */
+      } catch (e) {
+        setSyncError(messaggioErrore(e, "Sondaggio non lanciato."));
+        return null;
+      }
+    },
+
+    async votaSondaggio(sondaggioId, opzioneId) {
+      const prima = sondaggi;
+      try {
+        await inCoda(() =>
+          votaSondaggioSuDb(
+            createClient(),
+            sondaggioId,
+            currentUser.id,
+            opzioneId,
+          ),
+        );
+        /* Ritocco locale del minimo che si sa con certezza: la propria
+           scheda, la propria firma, i conteggi. La chiusura automatica
+           «hanno votato tutti» la decide il trigger e arriva da Realtime:
+           inventarla qui vorrebbe dire ricopiare M19 dentro React, e le due
+           copie divergerebbero al primo ritocco. */
+        setSondaggi((precedenti) =>
+          precedenti.map((s) => {
+            if (s.id !== sondaggioId) return s;
+            const vecchia = s.miaScelta;
+            const avevaFirmato = s.firme.includes(currentUser.id);
+            return {
+              ...s,
+              miaScelta: opzioneId,
+              firme: avevaFirmato ? s.firme : [...s.firme, currentUser.id],
+              voti_totali: avevaFirmato ? s.voti_totali : s.voti_totali + 1,
+              opzioni: s.opzioni.map((o) =>
+                o.id === opzioneId
+                  ? { ...o, voti: o.voti + 1 }
+                  : o.id === vecchia
+                    ? { ...o, voti: Math.max(0, o.voti - 1) }
+                    : o,
+              ),
+            };
+          }),
+        );
+        return true;
+      } catch (e) {
+        setSondaggi(prima);
+        setSyncError(messaggioErrore(e, "Risposta non registrata."));
+        return false;
+      }
+    },
+
+    async chiudiSondaggio(id) {
+      try {
+        await inCoda(() => chiudiSondaggioSuDb(createClient(), id));
+        setSondaggi((precedenti) =>
+          precedenti.map((s) =>
+            s.id === id && s.chiuso_at === null
+              ? {
+                  ...s,
+                  chiuso_at: new Date().toISOString(),
+                  chiuso_da: currentUser.id,
+                }
+              : s,
+          ),
+        );
+        return true;
+      } catch (e) {
+        setSyncError(messaggioErrore(e, "Sondaggio non chiuso."));
+        return false;
+      }
+    },
+
     /* Il caso che capita a tutti: ci si dimentica di timbrare del tutto, e il
        giorno dopo si vuole scrivere «sono stato dalle 9 alle 18». Senza
        questo, l'unico modo sarebbe non avere quella giornata. */
@@ -3093,6 +3251,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }, [
     aggiornamentoRemoto,
     avatars,
+    sondaggi,
+    sondaggiScartati,
     closures,
     timbrature,
     loading,
