@@ -38,6 +38,10 @@ export interface Giornata {
   uscita: string | null;
   /** Minuti tolti per la pausa. */
   pausa_minuti: number;
+  /** La pausa viene da un uscita e un rientro veri (M18), o e ancora l ora
+   *  presunta? Al primo rientro la presunta si sostituisce, ai successivi si
+   *  somma: senza distinguerle si conterebbe la pausa due volte. */
+  pausa_misurata: boolean;
   /** Quando è stata corretta a mano, se è successo. */
   corretta_at: string | null;
 }

@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { ChatPanel } from "@/components/chat-panel";
 import { NuoveAssegnazioni } from "@/components/nuove-assegnazioni";
+import { MeteoAngolo } from "@/components/shell/meteo-angolo";
 import { OnboardingProfile } from "@/components/onboarding-profile";
 import { MobileDrawer, Sidebar } from "@/components/shell/sidebar";
 import { SyncErrorBanner } from "@/components/sync-error-banner";
@@ -49,6 +50,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <ChatPanel />
         {/* Quando il database rifiuta una scrittura lo store annulla da solo:
             senza questo, l'annullamento sarebbe invisibile. */}
+        {/* Il tempo che fa: un icona in un angolo, dove non compete con
+            niente. Non chiede gesti, quindi non sta dove stanno i gesti. */}
+        <MeteoAngolo />
         <SyncErrorBanner />
       </div>
     </ShellContext.Provider>
