@@ -295,11 +295,33 @@ check(
   /const LAYOUT_VERSION = 1;/.test(layout),
   "alzarla farebbe scartare il layout personalizzato di tutti e sei",
 );
-check("Il blocco delle ore è registrato", /ore: \{ title:/.test(layout));
 check(
-  "Il meteo NON è un blocco della dashboard",
-  !/meteo: \{ title:/.test(layout),
-  "era un riquadro grande accanto a cose che parlano di lavoro: troppo per una notizia",
+  "Ne le ore NE il meteo sono blocchi della dashboard",
+  !/ore: \{ title:/.test(layout) && !/meteo: \{ title:/.test(layout),
+  "erano due riquadri che parlano di te e del cielo in mezzo a task e scadenze: fuori posto tutti e due, e tutti e due usciti nello stesso modo",
+);
+check(
+  "Chi aveva personalizzato la dashboard non perde il resto",
+  /const LAYOUT_VERSION = 1;/.test(layout) &&
+    /!\(id in BLOCK_META\)/.test(layout),
+  "sanitize() scarta gli id spariti da BLOCK_META: togliere un blocco non richiede di alzare la versione, e alzarla azzererebbe il layout di tutti e sei",
+);
+
+const orologio = leggi("components/shell/le-mie-ore.tsx");
+check(
+  "Le ore stanno sotto l'orologio in barra, accanto a «Timbra»",
+  /BloccoOre/.test(orologio) &&
+    /<LeMieOre \/>/.test(leggi("components/shell/topbar.tsx")),
+  "il gesto e il suo registro sono la stessa cosa, e stavano a due schermate di distanza",
+);
+check(
+  "Ed e' una sbirciata, non un'interruzione",
+  !/createPortal/.test(orologio) && /absolute right-0/.test(orologio),
+  "un velo nero su tutta l'applicazione per tre numeri sarebbe una cerimonia sproporzionata: e' un pannello come la campanella",
+);
+check(
+  "Esc chiude e restituisce il fuoco a chi l'ha aperto",
+  /Escape/.test(orologio) && /bottoneRef\.current\?\.focus\(\)/.test(orologio),
 );
 
 const angolo = leggi("components/shell/meteo-angolo.tsx");

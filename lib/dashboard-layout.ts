@@ -12,8 +12,14 @@ export type DashboardBlockId =
   | "mine"
   | "team"
   | "overdue"
-  | "week"
-  | "ore";
+  | "week";
+/* «ore» era qui. Le proprie ore sono uscite dalla dashboard: erano un
+   riquadro che parla di te in mezzo a task, scadenze e polso del team, ed
+   erano fuori posto esattamente come il meteo prima di loro. Adesso stanno
+   sotto l'orologio in barra, accanto al bottone con cui si timbra.
+   `sanitize()` scarta gli id che non sono più in BLOCK_META, quindi chi
+   aveva già personalizzato la dashboard non perde nulla del resto e
+   LAYOUT_VERSION NON si alza. */
 
 /** Larghezze a preset sulla griglia lg a 12 colonne (3/4/5/6). */
 export type DashboardBlockSize = "S" | "M" | "L" | "XL";
@@ -53,7 +59,6 @@ export const BLOCK_META: Record<
   team: { title: "Polso del team" },
   overdue: { title: "In ritardo" },
   week: { title: "In scadenza questa settimana" },
-  ore: { title: "Le mie ore" },
 };
 
 /** Il default riproduce la composizione asimmetrica storica (3+5+4 / 5+3+4). */
@@ -65,10 +70,6 @@ export const DEFAULT_DASHBOARD_LAYOUT: readonly DashboardBlockState[] = [
   { id: "team", size: "L", visible: true },
   { id: "overdue", size: "S", visible: true },
   { id: "week", size: "M", visible: true },
-  /* In coda e visibili: chi ha gia personalizzato la dashboard se li trova
-     in fondo, senza che il suo ordine venga toccato. LAYOUT_VERSION NON si
-     alza per questo — alzarla azzererebbe il layout di tutti. */
-  { id: "ore", size: "M", visible: true },
 ];
 
 const STORAGE_KEY = "dashboard-layout";

@@ -145,7 +145,7 @@ function Settimana({
  * Nessuno vede queste righe tranne chi le ha fatte: lo impone la RLS, non
  * questo componente.
  */
-export function BloccoOre() {
+export function BloccoOre({ onNaviga }: { onNaviga?: () => void } = {}) {
   const { timbrature, correggiGiornata } = useAppStore();
   const [apertaId, setApertaId] = React.useState<string | null>(null);
 
@@ -256,6 +256,7 @@ export function BloccoOre() {
         </p>
         <Link
           href="/timbrature"
+          onClick={onNaviga}
           className="inline-flex shrink-0 items-center gap-1 rounded-lg px-1 py-0.5 text-[12px] font-semibold text-ink-secondary outline-none transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-ring"
         >
           Tutto il mese

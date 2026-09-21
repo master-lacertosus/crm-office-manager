@@ -4,6 +4,7 @@ import { Menu } from "lucide-react";
 
 import { DeadlineIndicator } from "@/components/deadline-indicator";
 import { CercaTutto } from "@/components/shell/cerca-tutto";
+import { LeMieOre } from "@/components/shell/le-mie-ore";
 import { Timbra } from "@/components/shell/timbra";
 import { NotificationsBell } from "@/components/notifications";
 import { useShell } from "@/components/shell/app-shell";
@@ -36,7 +37,10 @@ export function Topbar({
       <div className="flex shrink-0 items-center gap-2">
         <CercaTutto />
         {actions}
+        {/* L'orologio sta attaccato a «Timbra»: il gesto e il suo registro
+            sono la stessa cosa, e finora erano a due schermate di distanza. */}
         <Timbra />
+        <LeMieOre />
         <DeadlineIndicator />
         <NotificationsBell />
       </div>
