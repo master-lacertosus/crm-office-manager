@@ -7,6 +7,30 @@ diventa una **Release «Update»** su GitHub (regole in
 [Keep a Changelog](https://keepachangelog.com/it/), con date al posto delle
 versioni (fase pre-1.0).
 
+## Non rilasciato
+
+### Aggiunto
+- **Il meteo a Parma, in dashboard.** Com e adesso e come sara nelle
+  prossime ore, dove sta l ufficio. Nessun avviso di cambio tempo, e non e
+  una dimenticanza: i lavori qui dentro non hanno un luogo, quindi un avviso
+  non saprebbe a chi e diretto — e un avviso per tutti e un avviso per
+  nessuno. Se saltera fuori un caso concreto, si costruisce attorno a quello.
+  I dati arrivano da MET Norway e non da Open-Meteo, il cui piano gratuito e
+  dichiarato per uso non commerciale. Nessuna dipendenza nuova.
+- **Le proprie ore (M16).** Si timbra dalla barra in alto, da qualunque
+  schermata, e in dashboard si vede quanto si e fatto oggi, questa settimana
+  e questo mese. Due gesti al giorno: l ora di pausa si scala da se, e chi
+  non si e fermato puo dirlo sulla singola giornata.
+  **Le ore sono di chi le ha fatte: nemmeno un admin le vede.** E la policy
+  degli avvisi, non quella delle ferie — un collega via e un fatto
+  organizzativo, l ora in cui uno entra la mattina no.
+  Non c e un «saldo» e non ci sono gli «straordinari», di proposito: quel
+  numero sarebbe falso finche il prodotto non conosce i festivi
+  infrasettimanali e non sa contare un permesso a ore, e un numero falso
+  messo in grande e peggio di un numero assente. Si contano le ore fatte, che
+  e cio che era stato chiesto.
+  **Richiede la migrazione M16** su Supabase.
+
 ## 2026-09-21
 
 Quattro update, pubblicati come Release `update-20260921`, `-2`, `-3`, `-4`.

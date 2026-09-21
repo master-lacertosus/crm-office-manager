@@ -25,6 +25,8 @@ import { personLeaveOnDay } from "@/lib/leave";
 import { useAppStore } from "@/lib/store";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { BloccoMeteo } from "@/components/blocco-meteo";
+import { BloccoOre } from "@/components/blocco-ore";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { Sparkline } from "@/components/charts/sparkline";
 import { StatTile } from "@/components/charts/stat-tile";
@@ -307,6 +309,12 @@ export function DashboardContent() {
   };
 
   const blockContent: Record<DashboardBlockId, React.ReactNode> = {
+    /* Due blocchi che non guardano i task: le proprie ore e il tempo che fa.
+       Stanno qui perché la dashboard è la pagina del «come va», e perché il
+       sistema a blocchi li lascia spegnere a chi non li vuole senza che
+       nessuno debba decidere per tutti. */
+    ore: <BloccoOre />,
+    meteo: <BloccoMeteo />,
     kpi: (
       <div className="grid h-full auto-rows-fr grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile

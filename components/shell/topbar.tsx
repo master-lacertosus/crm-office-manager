@@ -4,6 +4,7 @@ import { Menu } from "lucide-react";
 
 import { DeadlineIndicator } from "@/components/deadline-indicator";
 import { CercaTutto } from "@/components/shell/cerca-tutto";
+import { Timbra } from "@/components/shell/timbra";
 import { NotificationsBell } from "@/components/notifications";
 import { useShell } from "@/components/shell/app-shell";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ export function Topbar({
       <div className="flex shrink-0 items-center gap-2">
         <CercaTutto />
         {actions}
+        <Timbra />
         <DeadlineIndicator />
         <NotificationsBell />
       </div>
