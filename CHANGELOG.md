@@ -10,6 +10,19 @@ versioni (fase pre-1.0).
 ## 2026-09-21 (notte)
 
 ### Cambiato
+- **«Le mie ore» esce dalla dashboard e va sotto un orologio in barra.**
+  Nella griglia della dashboard era fuori posto — un riquadro che parla di te
+  in mezzo a task, scadenze e polso del team — ed era lo stesso errore che
+  aveva già fatto il meteo. Il posto giusto era scritto da mesi nel commento
+  della pastiglia «Timbra», due bottoni più in là: *«sta nella barra
+  superiore e non in un blocco della dashboard perché è un gesto, non
+  un'informazione»*. Il registro di quel gesto va dove sta il gesto.
+  Adesso è un orologio accanto a «Timbra»: si preme e scende un pannello come
+  quello della campanella, con oggi, la settimana, il mese e le ultime
+  giornate correggibili. Non è un modale a schermo intero, perché guardare
+  quanto hai fatto è una sbirciata, non un'interruzione.
+  Chi aveva personalizzato la dashboard non perde nient'altro: il blocco
+  sparisce e il resto resta com'era.
 - **«Le mie ore» adesso si guarda, invece di leggerla riga per riga.** Era
   una tabella preceduta da tre numeri: corretta, ma muta. Ora la pagina apre
   con i quattro numeri che rispondono a «com'è andato il mese» — ore totali
