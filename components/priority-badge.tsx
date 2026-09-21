@@ -22,18 +22,18 @@ export function PriorityBadge({
         title="Priorità alta"
         aria-label="Priorità alta"
         className={cn(
-          "inline-flex size-4 shrink-0 items-center justify-center rounded-[5px] bg-[#F59E0B]",
+          "inline-flex size-4 shrink-0 items-center justify-center rounded-[5px] bg-warning",
           className,
         )}
       >
-        <ArrowUp className="size-3 text-[#161B26]" strokeWidth={3} />
+        <ArrowUp className="size-3 text-warning-foreground" strokeWidth={3} />
       </span>
     );
   }
   return (
     <span
       className={cn(
-        "inline-flex h-5 shrink-0 items-center gap-0.5 rounded-md bg-[#F59E0B] pr-1.5 pl-1 text-[11px] font-bold text-[#161B26]",
+        "inline-flex h-5 shrink-0 items-center gap-0.5 rounded-md bg-warning pr-1.5 pl-1 text-[11px] font-bold text-warning-foreground",
         className,
       )}
     >

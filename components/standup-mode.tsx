@@ -131,7 +131,7 @@ export function StandupMode({
              gli angoli sparivano, il bordo pure, e il fondale aurora non si
              vedeva piu' attorno. Qui si ricalca la geometria di AppShell:
              `inset-4` fa lo stesso margine che li' e' `m-4`. */
-          className="fixed inset-0 z-[80] overflow-y-auto bg-canvas lg:inset-4 lg:rounded-[28px] lg:border lg:border-velo/70 lg:shadow-[0_1px_2px_rgb(15_23_42/0.04),0_28px_90px_rgb(15_23_42/0.16),inset_0_1px_0_var(--vetro-luce)]"
+          className="fixed inset-0 z-[80] overflow-y-auto bg-canvas lg:inset-4 lg:rounded-[28px] lg:border lg:border-velo/70 lg:shadow-[0_1px_2px_var(--ombra-card),var(--ombra-dialogo),inset_0_1px_0_var(--vetro-luce)]"
         >
           <div aria-hidden className="aura-layer" />
 

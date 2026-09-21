@@ -200,7 +200,7 @@ export function ProjectTimeline({ projectId }: { projectId: string }) {
                         {task.priority === "high" ? (
                           <ArrowUp
                             aria-label="Priorità alta"
-                            className="mr-1 size-3 shrink-0 text-[#B45309]"
+                            className="mr-1 size-3 shrink-0 text-warning-text"
                             strokeWidth={3}
                           />
                         ) : null}

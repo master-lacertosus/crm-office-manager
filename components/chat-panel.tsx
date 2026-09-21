@@ -245,7 +245,7 @@ export function ChatPanel() {
       initial="hidden"
       animate="visible"
       exit="exit"
-      className="fixed bottom-0 left-1/2 z-90 flex max-h-[min(620px,calc(100dvh-3rem))] w-[min(460px,calc(100vw-1.5rem))] -translate-x-1/2 flex-col overflow-hidden rounded-t-2xl border border-b-0 border-border bg-card shadow-[0_-8px_48px_rgb(15_23_42/0.18)]"
+      className="fixed bottom-0 left-1/2 z-90 flex max-h-[min(620px,calc(100dvh-3rem))] w-[min(460px,calc(100vw-1.5rem))] -translate-x-1/2 flex-col overflow-hidden rounded-t-2xl border border-b-0 border-border bg-card shadow-[var(--ombra-da-sotto)]"
     >
       <div className="flex items-center gap-2 border-b border-border-soft px-3 py-2.5">
         <MessageSquare className="size-4 text-ink-muted" strokeWidth={1.75} />
@@ -402,7 +402,7 @@ export function ChatPanel() {
          stessa idea di «reagisce al passaggio», senza scollarsi da dove
          deve stare. L'imbottitura segue l'altezza, così l'icona resta
          centrata. */
-      className="btn-glow fixed bottom-0 left-1/2 z-90 flex h-10 w-20 -translate-x-1/2 items-end justify-center rounded-t-full pb-2.5 text-primary-foreground shadow-[0_-6px_24px_rgb(15_23_42/0.22)] transition-[height,padding] duration-200 hover:h-12 hover:pb-3.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className="btn-glow fixed bottom-0 left-1/2 z-90 flex h-10 w-20 -translate-x-1/2 items-end justify-center rounded-t-full pb-2.5 text-primary-foreground shadow-[var(--ombra-da-sotto)] transition-[height,padding] duration-200 hover:h-12 hover:pb-3.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       <MessageSquare className="size-5" strokeWidth={1.75} />
       {totaleNonLetti > 0 ? (

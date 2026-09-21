@@ -64,6 +64,7 @@
   --color-danger-soft: var(--danger-soft);
   --color-danger-text: var(--danger-text);
   --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-warning-soft: var(--warning-soft);
   --color-warning-text: var(--warning-text);
   --color-info: var(--info);
@@ -150,11 +151,41 @@
   --vetro-telaio: rgb(255 255 255 / 0.68);
   --vetro-luce: rgb(255 255 255 / 0.9);
   --vetro-luce-piena: rgb(255 255 255 / 0.95);
+
+  /* La luce in cima a un riempimento COLORATO: la barra di un grafico, un
+     segmento impilato, una pastiglia piena. È l'unico bianco del prodotto che
+     NON si ribalta col tema, ed è voluto: gli altri stanno su superfici che
+     di notte diventano scure, questo sta su una tinta che resta la stessa.
+     Ribaltarlo spegnerebbe il rilievo delle barre senza che nessuno l'abbia
+     chiesto.
+     Ha un nome proprio perché l'eccezione si dichiara: c'è un controllo che
+     vieta i bianchi scritti a mano, e una regola con un'eccezione scritta
+     resta una regola — una con un'eccezione silenziosa è un buco. */
+  --luce-su-tinta: rgb(255 255 255 / 0.3);
+
   --chip-da: #ffffff;
   --chip-a: #f7f9fc;
   --chip-bordo: rgb(226 232 240 / 0.9);
   --ombra-card: rgb(15 23 42 / 0.06);
   --ombra-card-vicina: rgb(15 23 42 / 0.02);
+
+  /* Le ombre di ciò che si solleva davvero: dialoghi, pannelli, menu, barre
+     galleggianti.
+     Erano scritte a mano in venti punti come `rgb(15 23 42 / 0.18…0.24)` —
+     un grafite pensato per il fondo chiaro. Di notte quel grafite finisce su
+     #14181f, dove non si vede: OGNI dialogo del prodotto perdeva la propria
+     elevazione insieme alla luce, e restava una scheda appoggiata sul nulla.
+     Come token diventano nere e più profonde quando la stanza è buia, che è
+     l'unico modo in cui un'ombra funziona al buio.
+     Ce ne sono cinque e non venti perché venti erano casuali: quattro
+     dialoghi avevano quattro ombre diverse per pochi pixel di differenza. */
+  --ombra-dialogo: 0 28px 90px rgb(15 23 42 / 0.24);
+  --ombra-pannello: 0 16px 48px rgb(15 23 42 / 0.18);
+  --ombra-sollevata: 0 12px 34px rgb(15 23 42 / 0.1);
+  /* Chi sta in basso e proietta verso l'alto (linguetta chat, barra Zen). */
+  --ombra-da-sotto: 0 -8px 40px rgb(15 23 42 / 0.2);
+  /* Il pannello che entra da destra. */
+  --ombra-laterale: -16px 0 56px rgb(15 23 42 / 0.18);
 
   /* La base sotto le aure. Era scritta dentro `.aura-layer` e il tema scuro
      la correggeva solo con `opacity: 0.5`: restava un velo chiaro a meta'
@@ -234,6 +265,12 @@
   --success-text: #0e7a4a;
   --danger-soft: #feecec;
   --danger-text: #cc2a1e;
+  /* Il testo sopra l'ambra PIENA (la pastiglia della priorità alta), non
+     sopra l'ambra tenue — quello è `--warning-text`. Misurato come gli
+     accenti: grafite fa 8,26:1 sull'ambra chiara e 8,64 su quella scura,
+     bianco ne farebbe 2,15. Vale in entrambi i temi perché l'ambra, come la
+     marca, non cambia con la luce della stanza. */
+  --warning-foreground: #111827;
   --warning: #f59e0b;
   --warning-soft: #fdf1dc;
   --warning-text: #92600a;
@@ -393,6 +430,14 @@
   --ombra-card: rgb(0 0 0 / 0.45);
   --ombra-card-vicina: rgb(0 0 0 / 0.25);
   --aura-base: linear-gradient(165deg, #131821 0%, #0f141b 55%, #0d1117 100%);
+
+  /* Nere e più profonde: su un fondo scuro un'ombra grafite al 24% non
+     esiste, e l'elevazione la deve fare qualcos'altro o non la fa nessuno. */
+  --ombra-dialogo: 0 28px 90px rgb(0 0 0 / 0.7);
+  --ombra-pannello: 0 16px 48px rgb(0 0 0 / 0.55);
+  --ombra-sollevata: 0 12px 34px rgb(0 0 0 / 0.45);
+  --ombra-da-sotto: 0 -8px 40px rgb(0 0 0 / 0.55);
+  --ombra-laterale: -16px 0 56px rgb(0 0 0 / 0.55);
 
   --background: #14181f;
   --canvas: #0f1319;

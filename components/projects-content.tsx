@@ -81,7 +81,7 @@ export function ProjectsContent() {
                       {percent}%
                     </p>
                   </div>
-                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[#EDF1F7]">
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-secondary">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600 transition-[width] duration-300"
                       style={{ width: `${percent}%` }}
