@@ -43,15 +43,52 @@ export interface Sondaggio {
   miaScelta: string | null;
 }
 
-/** Quanto dura un sondaggio. Poche scelte, perché sono tutte ragionevoli. */
-export const DURATE: { ore: number; etichetta: string }[] = [
-  { ore: 1, etichetta: "Un'ora" },
-  { ore: 4, etichetta: "Mezza giornata" },
-  { ore: 24, etichetta: "Un giorno" },
-  { ore: 72, etichetta: "Tre giorni" },
-];
+/*
+ * Quando si chiude: un momento scelto, non un intervallo di ore.
+ *
+ * Un sondaggio si chiude quando serve la risposta — prima della riunione di
+ * giovedì, entro stasera — non dopo un numero tondo di ore. Con le durate a
+ * scelta fissa, alle 15:23 «entro stasera» non si poteva dire: si sceglieva
+ * «un giorno» e il sondaggio scadeva domani alle 15:23, che non è una
+ * scadenza, è un caso.
+ */
 
-export const DURATA_PREDEFINITA = 24;
+/** `Date` → `2026-09-23T17:30`, il formato che vuole `datetime-local`. */
+export function perIlCampo(quando: Date): string {
+  const due = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${quando.getFullYear()}-${due(quando.getMonth() + 1)}-${due(quando.getDate())}` +
+    `T${due(quando.getHours())}:${due(quando.getMinutes())}`
+  );
+}
+
+/**
+ * La scadenza proposta: domani alla fine dell'orario d'ufficio.
+ *
+ * Non «fra ventiquattro ore». Le 17:30 sono il momento in cui questo ufficio
+ * smette, quindi sono l'ultimo istante in cui una risposta serve ancora a
+ * qualcosa. Sempre domani e mai oggi: una proposta che scade fra due ore
+ * costringerebbe a correggerla ogni volta.
+ */
+export function scadenzaPredefinita(adesso: Date): string {
+  const domani = new Date(adesso);
+  domani.setDate(domani.getDate() + 1);
+  domani.setHours(17, 30, 0, 0);
+  return perIlCampo(domani);
+}
+
+/** Il primo momento accettabile, per il `min` del campo: un quarto d'ora,
+ *  come pretende il database. Prima di allora nessuno fa in tempo a
+ *  rispondere, e un sondaggio già scaduto bloccherebbe il prossimo. */
+export function scadenzaMinima(adesso: Date): string {
+  return perIlCampo(new Date(adesso.getTime() + 15 * 60_000));
+}
+
+/** E l'ultimo: due settimane. Oltre, un sondaggio non se lo ricorda più
+ *  nessuno. */
+export function scadenzaMassima(adesso: Date): string {
+  return perIlCampo(new Date(adesso.getTime() + 14 * 24 * 60 * 60_000));
+}
 
 /**
  * È ancora aperto?
@@ -160,6 +197,8 @@ export function daInterrompere(
 export function perche(
   domanda: string,
   opzioni: readonly string[],
+  scadeAt: string,
+  adesso: Date,
 ): string | null {
   if (domanda.trim().length < 3) return "Scrivi la domanda";
   if (domanda.trim().length > 200) return "La domanda è troppo lunga";
@@ -170,5 +209,20 @@ export function perche(
   }
   const doppie = new Set(piene.map((o) => o.trim().toLowerCase()));
   if (doppie.size !== piene.length) return "Ci sono due risposte uguali";
+
+  /* La scadenza si controlla anche qui e non solo sul database: far scrivere
+     una domanda e sei risposte per poi sentirsi dire di no è uno scherzo. Il
+     database resta l'ultima parola — fra questo controllo e il clic passa del
+     tempo, e un quarto d'ora può essersi consumato. */
+  const quando = new Date(scadeAt);
+  if (!scadeAt || Number.isNaN(quando.getTime())) {
+    return "Scegli quando si chiude";
+  }
+  if (quando.getTime() < adesso.getTime() + 15 * 60_000) {
+    return "La scadenza dev'essere almeno fra un quarto d'ora";
+  }
+  if (quando.getTime() > adesso.getTime() + 14 * 24 * 60 * 60_000) {
+    return "Due settimane sono il massimo";
+  }
   return null;
 }

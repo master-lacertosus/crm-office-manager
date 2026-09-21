@@ -398,7 +398,9 @@ interface AppStore {
   lanciaSondaggio: (
     domanda: string,
     opzioni: string[],
-    ore: number,
+    /** Il momento in cui si chiude, in ISO (M20). Non più un numero di ore:
+     *  un sondaggio scade quando serve la risposta. */
+    scadeAt: string,
   ) => Promise<string | null>;
   /** Vota, o cambia idea finché è aperto. `false` se il database rifiuta. */
   votaSondaggio: (sondaggioId: string, opzioneId: string) => Promise<boolean>;
@@ -2615,14 +2617,30 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
        apra bocca. Quella frase nomina chi ha il sondaggio aperto, quindi
        arriva all'utente così com'è: riformularla toglierebbe l'unica
        informazione che conteneva. */
-    async lanciaSondaggio(domanda, opzioni, ore) {
+    async lanciaSondaggio(domanda, opzioni, scadeAt) {
       try {
-        return await inCoda(() =>
-          lanciaSondaggioSuDb(createClient(), domanda, opzioni, ore),
+        const id = await inCoda(() =>
+          lanciaSondaggioSuDb(createClient(), domanda, opzioni, scadeAt),
         );
-        /* La riga vera la portano Realtime e la rilettura completa: qui non
-           si ricostruisce a mano un sondaggio con le sue opzioni, che sarebbe
-           una seconda verità da tenere allineata. */
+        /*
+         * E ADESSO SI RILEGGE, subito.
+         *
+         * Qui c'era scritto «la riga vera la portano Realtime e la rilettura
+         * completa», e per chi lancia era falso. Il battito di sicurezza
+         * dello store riparte SOLO se Realtime è spento: con il canale
+         * connesso ma le tre tabelle dei sondaggi fuori dalla publication —
+         * che è esattamente quello che succede se il ruolo non ha il permesso
+         * di modificarla, e M19 in quel caso scrive un avviso senza fallire —
+         * non arriva nessun annuncio e nessuno rilegge mai.
+         * Risultato: chi lanciava il sondaggio non lo vedeva comparire, non
+         * poteva votarlo, e trovava lo storico vuoto.
+         *
+         * Il proprio gesto non si aspetta da un annuncio: si rilegge. Sono le
+         * righe che si è appena creato, e sono poche.
+         */
+        const aggiornati = await fetchSondaggi(createClient());
+        setSondaggi(aggiornati);
+        return id;
       } catch (e) {
         setSyncError(messaggioErrore(e, "Sondaggio non lanciato."));
         return null;
