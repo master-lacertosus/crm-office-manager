@@ -6,6 +6,7 @@ import { BellPlus, LoaderCircle, Send } from "lucide-react";
 
 import { useAppStore } from "@/lib/store";
 import { MemberActions } from "@/components/member-actions";
+import { ScheletroElenco } from "@/components/scheletro-elenco";
 import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { useToast } from "@/components/toaster";
@@ -83,9 +84,18 @@ function AlertForm({
 }
 
 export function TeamContent() {
-  const { profiles, tasks, currentUser } = useAppStore();
+  const { profiles, tasks, currentUser, loading } = useAppStore();
   const [alertFor, setAlertFor] = React.useState<string | null>(null);
   const isAdmin = currentUser.role === "admin";
+
+  /* Il secondo vuoto della pagina Team, dopo quello del cancello sul server.
+     Lo store legge diciotto tabelle in una volta sola, e fino ad allora
+     `profiles` è un array vuoto: senza questo ramo la pagina si apriva su una
+     scheda con dentro niente e una nota in fondo, che è indistinguibile da un
+     ufficio senza persone. */
+  if (loading && profiles.length === 0) {
+    return <ScheletroElenco righe={5} />;
+  }
 
   return (
     <div className="flex-1 px-4 py-4 sm:px-6">
