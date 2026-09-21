@@ -7,6 +7,31 @@ diventa una **Release «Update»** su GitHub (regole in
 [Keep a Changelog](https://keepachangelog.com/it/), con date al posto delle
 versioni (fase pre-1.0).
 
+## 2026-09-22 (sera)
+
+### Aggiunto
+- **I sondaggi al team.** Una domanda, da due a otto risposte, una durata — e
+  a tutti compare un popup con la domanda. Si sceglie, si conferma, e le
+  righe che avevi appena davanti diventano loro stesse le barre del risultato:
+  non cambia schermata, cambia mestiere la riga che stavi guardando.
+  Chi non vuole rispondere adesso preme «Più tardi» e lo trova nella pagina
+  **Sondaggi**, dove si lancia, si vede quello in corso e si sfoglia
+  l'archivio.
+  **Richiede la migrazione M19** su Supabase.
+- **Il voto è anonimo, e non è una promessa scritta nell'interfaccia.** Si
+  vede *chi* ha votato — serve, con sei persone, per sapere chi sollecitare —
+  ma non *cosa*, nemmeno da amministratore. La riservatezza dei dati di
+  PostgreSQL lavora per righe e non sa nascondere una colonna, quindi l'urna
+  e il registro sono due tabelle diverse: la scheda di un altro non arriva
+  proprio al tuo browser. Ci sono quattro test che lo difendono.
+- **Un sondaggio alla volta**, come chiesto. Il blocco sta nel database e non
+  nell'interfaccia — due schede aperte scavalcherebbero un controllo in
+  pagina. Ma non è un muro: ogni sondaggio nasce con una scadenza, si chiude
+  da solo quando ha risposto l'ultima persona, e lo può chiudere chi l'ha
+  lanciato, un responsabile, o chiunque se è già scaduto. Il modulo per il
+  prossimo resta scrivibile mentre uno è in corso, e ti dice quale sondaggio
+  sta aspettando e per quanto ancora.
+
 ## 2026-09-22
 
 ### Corretto

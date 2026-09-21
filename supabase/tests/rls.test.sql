@@ -9,7 +9,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(29);
+select plan(36);
 
 -- UUID degli utenti di test (supabase/seed.sql)
 -- alessia (admin):  00000000-0000-4000-8000-000000000001
@@ -362,6 +362,93 @@ select results_eq(
   'select count(*)::int from public.timbrature',
   array[0],
   'nemmeno un admin vede le ore altrui'
+);
+
+-- ---------------------------------------------------------------------------
+-- Sondaggi (M19): l'urna e il registro
+--
+-- Il voto è anonimo, e l'anonimato qui non è una promessa scritta
+-- nell'interfaccia: è il fatto che la scheda di un altro non si può proprio
+-- leggere. La RLS di PostgreSQL è row level e non sa nascondere una colonna,
+-- quindi «chi ha votato» e «cosa ha votato» sono due tabelle diverse — e
+-- questi test sono ciò che impedisce di ricucirle per comodità.
+-- ---------------------------------------------------------------------------
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+
+select lives_ok(
+  $q$select public.lancia_sondaggio('Che giorno facciamo la riunione?', array['Martedì', 'Giovedì'], 24)$q$,
+  'marco lancia un sondaggio'
+);
+
+select throws_ok(
+  $q$select public.lancia_sondaggio('E una seconda?', array['Sì', 'No'], 24)$q$,
+  'P0001',
+  null,
+  'se ne fa uno per volta'
+);
+
+select throws_ok(
+  $q$select public.lancia_sondaggio('Con una sola risposta?', array['Va bene'], 24)$q$,
+  'P0001',
+  null,
+  'un sondaggio ha almeno due risposte'
+);
+
+-- Il voto vero, e il conteggio che ne deriva.
+insert into public.sondaggio_schede (sondaggio_id, profile_id, opzione_id)
+select o.sondaggio_id, '00000000-0000-4000-8000-000000000002', o.id
+  from public.sondaggio_opzioni o
+  join public.sondaggi s on s.id = o.sondaggio_id
+ where s.chiuso_at is null and o.posizione = 1;
+
+select results_eq(
+  'select sum(voti)::int from public.sondaggio_opzioni',
+  array[1],
+  'il voto finisce nel conteggio dell''opzione'
+);
+
+select results_eq(
+  'select count(*)::int from public.sondaggio_firme',
+  array[1],
+  'e la firma finisce nel registro'
+);
+
+-- Giulia: vede che marco ha votato, non che cosa.
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000003","role":"authenticated"}',
+  true
+);
+
+select results_eq(
+  'select count(*)::int from public.sondaggio_firme',
+  array[1],
+  'giulia vede CHE marco ha votato'
+);
+
+select results_eq(
+  'select count(*)::int from public.sondaggio_schede',
+  array[0],
+  'ma non vede COSA ha votato marco'
+);
+
+-- E nemmeno un admin. Se il titolare può vedere come hai votato, non hai
+-- votato: hai risposto.
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}',
+  true
+);
+
+select results_eq(
+  'select count(*)::int from public.sondaggio_schede',
+  array[0],
+  'nemmeno un admin apre l''urna'
 );
 
 reset role;

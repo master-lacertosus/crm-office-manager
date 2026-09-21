@@ -13,6 +13,7 @@ import {
   MailPlus,
   Settings,
   UserRound,
+  Vote,
   X,
 } from "lucide-react";
 
@@ -59,6 +60,7 @@ const NAV_ITEMS: {
   { href: "/timbrature", label: "Le mie ore", icon: Clock4 },
   { href: "/reports", label: "Report", icon: IconReports },
   { href: "/team", label: "Team", icon: IconTeam },
+  { href: "/sondaggi", label: "Sondaggi", icon: Vote },
   { href: "/settings/profile", label: "Impostazioni", icon: IconSettings },
 ];
 

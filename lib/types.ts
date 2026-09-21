@@ -297,6 +297,12 @@ export type NotificationKind =
   /** Ti è arrivato un lavoro (M14). Lo scrive il database, mai il browser:
    *  è l'unico modo perché valga per ogni strada che assegna una task. */
   | "assegnazione"
+  /** E stato lanciato un sondaggio (M19). Lo scrive lancia_sondaggio() per
+   *  conto di chi lancia: la policy di M9 pretende `from_user_id = auth.uid()`
+   *  una riga per volta, e qui le righe sono cinque. Stessa ragione di
+   *  «assegnazione». Non ha un tab suo nella campanella: un sondaggio alla
+   *  volta non riempie una scheda, e cade sotto «Tutte». */
+  | "sondaggio"
   | "sistema";
 
 /** Avviso interno: un responsabile lo invia a un singolo membro. */
