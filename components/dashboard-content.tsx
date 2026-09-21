@@ -15,7 +15,6 @@ import {
   Inbox,
   SlidersHorizontal,
   Star,
-  type LucideIcon,
 } from "lucide-react";
 
 import { buildAnalytics } from "@/lib/analytics";
@@ -27,6 +26,7 @@ import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { BloccoOre } from "@/components/blocco-ore";
 import { AvatarInitials } from "@/components/avatar-initials";
+import { KpiIcon } from "@/components/charts/kpi-icon";
 import { Sparkline } from "@/components/charts/sparkline";
 import { StatTile } from "@/components/charts/stat-tile";
 import {
@@ -160,26 +160,6 @@ function ProgressRing({
         </p>
       </div>
     </div>
-  );
-}
-
-function KpiIcon({
-  icon: Icon,
-  className,
-}: {
-  icon: LucideIcon;
-  className: string;
-}) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex size-11 shrink-0 items-center justify-center rounded-xl",
-        className,
-      )}
-    >
-      <Icon className="size-5" strokeWidth={2} />
-    </span>
   );
 }
 

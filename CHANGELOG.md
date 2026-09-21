@@ -7,6 +7,48 @@ diventa una **Release «Update»** su GitHub (regole in
 [Keep a Changelog](https://keepachangelog.com/it/), con date al posto delle
 versioni (fase pre-1.0).
 
+## 2026-09-21 (notte)
+
+### Cambiato
+- **«Le mie ore» adesso si guarda, invece di leggerla riga per riga.** Era
+  una tabella preceduta da tre numeri: corretta, ma muta. Ora la pagina apre
+  con i quattro numeri che rispondono a «com'è andato il mese» — ore totali
+  con l'andamento accanto, media al giorno, giornate timbrate, ore oltre
+  l'orario — e subito sotto il mese intero, una colonna per giorno, con la
+  riga della giornata piena a otto ore. La parte di colonna che la supera
+  diventa ambra: una giornata lunga si vede da lontano senza leggere un
+  numero. Sabati e domeniche restano disegnati ma in sordina, perché un
+  weekend vuoto non è la stessa cosa di un mercoledì vuoto.
+  La tabella c'è ancora, in fondo, dove serve: quando hai già deciso che c'è
+  qualcosa da correggere. Ogni orario resta riscrivibile, e adesso i campi
+  smettono di sembrare un modulo da compilare finché non li tocchi.
+- **Anche il riquadro «Le mie ore» sulla dashboard.** Oggi è il numero
+  grande, con una barra che dice quanto manca alle otto ore; la settimana è
+  sette colonnine lunedì-domenica, così un mercoledì saltato si vede; il mese
+  porta il suo andamento. In fondo, un link al mese intero.
+  L'unica barra di avanzamento è quella della giornata: una barra «su 40 ore»
+  sarebbe un monte ore dovuto, ed è esattamente il numero che questo prodotto
+  non può ancora calcolare senza mentire.
+
+### Dettagli tecnici
+- Nuovo grafico `components/charts/ore-del-mese.tsx`. I colori vengono dai
+  token (`fill-ink-secondary`, `fill-warning`) e non da esadecimali scritti a
+  mano: il tema scuro di questo prodotto è vero, e un grafite fisso su un
+  fondo `#191e27` è una barra invisibile. La coppia è passata dal validatore
+  della palette su entrambe le superfici — separazione per daltonismo ΔE 32,2
+  di giorno e 16,8 di notte, contro una soglia di 8. L'ambra chiara sta sotto
+  3:1 sul bianco, e il metodo lo consente solo se il colore non è l'unica
+  cosa che parla: ci sono legenda, la pastiglia «+1h 20m» accanto a ogni
+  giornata lunga e una tabella per i lettori di schermo.
+- `KpiIcon` esce da `dashboard-content.tsx` e diventa
+  `components/charts/kpi-icon.tsx`: adesso la usano due pagine, e due copie
+  della stessa misura divergono al primo ritocco.
+- Undici controlli nuovi in `scripts/ore-e-meteo-verify.mjs`, fra cui quello
+  che vieta di reintrodurre una barra verso un monte ore.
+- `.agents/`, `.claude/` e `skills-lock.json` — skill di terze parti
+  installate dall'esterno — vanno in `.gitignore`: sono preferenze di chi
+  lavora, non del prodotto.
+
 ## 2026-09-21 (sera)
 
 Tre update: `update-20260921-5`, `-6`, `-7`.
