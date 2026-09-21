@@ -10,6 +10,32 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Corretto
+- **Chi usciva e rientrava trovava un errore al posto della timbratura.**
+  Timbrare entrata, uscita e poi rientrare provava a creare una SECONDA
+  giornata per lo stesso giorno, e sbatteva contro il vincolo: "duplicate
+  key value violates unique constraint". La migrazione M16 diceva gia la
+  cosa giusta -- "chi esce e rientra non apre una riga nuova: corregge la
+  sua" -- ma quella frase era rimasta un commento. Ora il rientro riprende
+  la giornata, e il tempo passato fuori diventa pausa vera: la prima volta
+  sostituisce l ora presunta, dalle successive si somma.
+  **Richiede la migrazione M18** su Supabase.
+
+### Aggiunto
+- **Una pagina "Le mie ore".** Mese per mese, ogni giornata con entrata,
+  uscita, pausa e totale -- e ogni orario si puo riscrivere. Esiste per una
+  ragione precisa: il computer che si accende non e l ora in cui hai
+  iniziato. Si puo anche scrivere a mano una giornata dimenticata del tutto.
+  Le correzioni lasciano un segno, ma non chiedono l approvazione di
+  nessuno: sono ore tue, e le vedi solo tu.
+
+### Cambiato
+- **Il meteo e diventato un icona in basso a destra.** Era un blocco della
+  dashboard, ed era troppo: un riquadro grande accanto a cose che parlano di
+  lavoro. Il tempo che fa non chiede nessun gesto, quindi non sta dove
+  stanno i gesti. Ora e un sole o una nuvola in un angolo, che si apre se
+  serve e per il resto non chiede niente a nessuno.
+
+### Corretto
 - **Una richiesta poteva sparire senza che nessuno se ne accorgesse.** E
   successo il 21 settembre: una richiesta di task inviata, il messaggio
   "Richiesta inviata" a chi la scriveva, l avviso ai tre responsabili -- e

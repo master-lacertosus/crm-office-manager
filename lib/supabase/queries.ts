@@ -1227,7 +1227,7 @@ export async function insertProject(
 /* -------------------------------------------------------------------------- */
 
 const TIMBRATURA_COLUMNS =
-  "id, giorno, entrata, uscita, pausa_minuti, corretta_at";
+  "id, giorno, entrata, uscita, pausa_minuti, pausa_misurata, corretta_at";
 
 export async function fetchTimbrature(
   supabase: SupabaseClient,
@@ -1267,7 +1267,12 @@ export async function insertTimbratura(
 export async function updateTimbratura(
   supabase: SupabaseClient,
   id: string,
-  patch: { entrata?: string; uscita?: string | null; pausa_minuti?: number },
+  patch: {
+    entrata?: string;
+    uscita?: string | null;
+    pausa_minuti?: number;
+    pausa_misurata?: boolean;
+  },
 ): Promise<Giornata> {
   const { data, error } = await supabase
     .from("timbrature")

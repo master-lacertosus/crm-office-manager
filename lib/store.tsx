@@ -41,6 +41,7 @@ import {
   fetchCollaborators,
   fetchLeaveRequests,
   fetchNotifications,
+  deleteTimbratura,
   fetchTimbrature,
   insertTimbratura,
   updateTimbratura,
@@ -367,6 +368,14 @@ interface AppStore {
     id: string,
     patch: { entrata?: string; uscita?: string | null; pausa_minuti?: number },
   ) => Promise<void>;
+  /** Scrive a mano una giornata dimenticata. `false` se il database rifiuta. */
+  aggiungiGiornata: (
+    giorno: string,
+    dalle: string,
+    alle: string | null,
+  ) => Promise<boolean>;
+  /** Cancella una giornata (solo le proprie: lo impone la RLS). */
+  eliminaGiornata: (id: string) => Promise<void>;
   notifications: AppNotification[];
   unreadCount: number;
   sendNotification: (
@@ -2447,10 +2456,44 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     async timbraEntrata() {
       if (giornataAperta(timbrature)) return;
       const adesso = new Date();
+      const oggi = giornoLocale(adesso.toISOString());
+
+      /* CHI ESCE E RIENTRA non apre una giornata nuova: riprende la sua.
+         Inserire una seconda riga per lo stesso giorno sbatteva contro
+         `timbrature_una_per_giorno`, e chi rientrava dopo pranzo si trovava
+         un errore di chiave duplicata al posto della timbratura. */
+      const diOggi = timbrature.find((g) => g.giorno === oggi);
+      if (diOggi?.uscita) {
+        /* Il tempo passato fuori è pausa vera, misurata. Sostituisce l'ora
+           presunta la prima volta — sommarcela la conterebbe due volte — e si
+           accumula alle successive, perché le uscite sono più d'una. */
+        const fuoriMinuti = Math.max(
+          0,
+          Math.floor(
+            (adesso.getTime() - new Date(diOggi.uscita).getTime()) / 60_000,
+          ),
+        );
+        try {
+          const ripresa = await updateTimbratura(createClient(), diOggi.id, {
+            uscita: null,
+            pausa_minuti: diOggi.pausa_misurata
+              ? diOggi.pausa_minuti + fuoriMinuti
+              : fuoriMinuti,
+            pausa_misurata: true,
+          });
+          setTimbrature((prev) =>
+            prev.map((g) => (g.id === ripresa.id ? ripresa : g)),
+          );
+        } catch (e) {
+          setSyncError(messaggioErrore(e, "Rientro non registrato."));
+        }
+        return;
+      }
+
       try {
         const nata = await insertTimbratura(createClient(), {
           profile_id: currentUser.id,
-          giorno: giornoLocale(adesso.toISOString()),
+          giorno: oggi,
           entrata: adesso.toISOString(),
           pausa_minuti: PAUSA_PREDEFINITA_MINUTI,
         });
@@ -2477,12 +2520,53 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     async correggiGiornata(id, patch) {
       try {
-        const corretta = await updateTimbratura(createClient(), id, patch);
+        const corretta = await updateTimbratura(createClient(), id, {
+          ...patch,
+          /* Una pausa scritta a mano è una pausa decisa, non presunta: un
+             rientro successivo deve sommarsi a quella, non sostituirla. */
+          ...(patch.pausa_minuti !== undefined
+            ? { pausa_misurata: true }
+            : {}),
+        });
         setTimbrature((prev) =>
           prev.map((g) => (g.id === corretta.id ? corretta : g)),
         );
       } catch (e) {
         setSyncError(messaggioErrore(e, "Correzione non salvata."));
+      }
+    },
+
+    /* Il caso che capita a tutti: ci si dimentica di timbrare del tutto, e il
+       giorno dopo si vuole scrivere «sono stato dalle 9 alle 18». Senza
+       questo, l'unico modo sarebbe non avere quella giornata. */
+    async aggiungiGiornata(giorno, dalle, alle) {
+      try {
+        const nata = await insertTimbratura(createClient(), {
+          profile_id: currentUser.id,
+          giorno,
+          entrata: dalle,
+          pausa_minuti: PAUSA_PREDEFINITA_MINUTI,
+        });
+        const completa = alle
+          ? await updateTimbratura(createClient(), nata.id, { uscita: alle })
+          : nata;
+        setTimbrature((prev) => [completa, ...prev]);
+        return true;
+      } catch (e) {
+        setSyncError(messaggioErrore(e, "Giornata non aggiunta."));
+        return false;
+      }
+    },
+
+    async eliminaGiornata(id) {
+      const prima = timbrature.find((g) => g.id === id);
+      if (!prima) return;
+      setTimbrature((prev) => prev.filter((g) => g.id !== id));
+      try {
+        await deleteTimbratura(createClient(), id);
+      } catch (e) {
+        setTimbrature((prev) => [prima, ...prev]);
+        setSyncError(messaggioErrore(e, "Giornata non eliminata."));
       }
     },
 

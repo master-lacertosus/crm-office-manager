@@ -59,6 +59,7 @@ const giornata = (giorno, dalle, alle, pausa = PAUSA_PREDEFINITA_MINUTI) => ({
   entrata: new Date(`${giorno}T${dalle}:00`).toISOString(),
   uscita: alle ? new Date(`${giorno}T${alle}:00`).toISOString() : null,
   pausa_minuti: pausa,
+  pausa_misurata: false,
   corretta_at: null,
 });
 
@@ -294,9 +295,69 @@ check(
   /const LAYOUT_VERSION = 1;/.test(layout),
   "alzarla farebbe scartare il layout personalizzato di tutti e sei",
 );
+check("Il blocco delle ore è registrato", /ore: \{ title:/.test(layout));
 check(
-  "I due blocchi sono registrati",
-  /meteo: \{ title:/.test(layout) && /ore: \{ title:/.test(layout),
+  "Il meteo NON è un blocco della dashboard",
+  !/meteo: \{ title:/.test(layout),
+  "era un riquadro grande accanto a cose che parlano di lavoro: troppo per una notizia",
+);
+
+const angolo = leggi("components/shell/meteo-angolo.tsx");
+check(
+  "Vive in un angolo, sotto i messaggi del toaster",
+  /fixed right-4 bottom-4 z-40/.test(angolo),
+  "un messaggio dura tre secondi e ha più diritto di farsi leggere",
+);
+check(
+  "E sparisce se il servizio non risponde",
+  /if \(!meteo\) return null;/.test(angolo),
+  "un punto esclamativo per il meteo chiederebbe un'attenzione che non merita",
+);
+
+/* ------------------------------------------------------------------ */
+console.log("\n# Chi esce e rientra\n");
+/* ------------------------------------------------------------------ */
+
+const storeOre = leggi("lib/store.tsx");
+check(
+  "Rientrando si riprende la giornata, non se ne apre una nuova",
+  /const diOggi = timbrature\.find\(\(g\) => g\.giorno === oggi\)/.test(storeOre) &&
+    /uscita: null,/.test(storeOre),
+  "inserire una seconda riga sbatteva contro timbrature_una_per_giorno: chi rientrava dopo pranzo vedeva un errore di chiave duplicata",
+);
+check(
+  "Il tempo passato fuori diventa pausa vera",
+  /pausa_misurata \? diOggi\.pausa_minuti \+ fuoriMinuti : fuoriMinuti/.test(
+    storeOre.replace(/\s+/g, " "),
+  ),
+  "la prima volta sostituisce l'ora presunta — sommarla la conterebbe due volte — dalla seconda si accumula",
+);
+check(
+  "Una pausa scritta a mano vale come misurata",
+  /pausa_minuti !== undefined[\s\S]{0,90}pausa_misurata: true/.test(storeOre),
+  "è una pausa decisa: un rientro dopo deve sommarsi a quella",
+);
+
+/* ------------------------------------------------------------------ */
+console.log("\n# La pagina dove si rettifica\n");
+/* ------------------------------------------------------------------ */
+
+const pagina = leggi("components/timbrature-content.tsx");
+check("Ogni orario è scrivibile", /type="time"/.test(pagina));
+check("Si può scrivere una giornata dimenticata", /aggiungiGiornata/.test(pagina));
+check(
+  "Una correzione lascia un segno",
+  /corretta/.test(pagina),
+  "un quaderno che non ricorda di essere stato riscritto è un quaderno di cui non ci si fida",
+);
+check(
+  "E si dice perché gli orari si correggono",
+  /computer che si accende/.test(pagina.replace(/\s+/g, " ")),
+  "era la ragione portata dall'ufficio, e vale la pena scriverla dove serve",
+);
+check(
+  "La pagina è raggiungibile",
+  /href: "\/timbrature"/.test(leggi("components/shell/sidebar.tsx")),
 );
 
 console.log(falliti === 0 ? "\nTUTTO VERDE" : `\n${falliti} CONTROLLI FALLITI`);

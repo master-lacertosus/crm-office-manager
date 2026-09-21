@@ -13,7 +13,6 @@ export type DashboardBlockId =
   | "team"
   | "overdue"
   | "week"
-  | "meteo"
   | "ore";
 
 /** Larghezze a preset sulla griglia lg a 12 colonne (3/4/5/6). */
@@ -54,7 +53,6 @@ export const BLOCK_META: Record<
   team: { title: "Polso del team" },
   overdue: { title: "In ritardo" },
   week: { title: "In scadenza questa settimana" },
-  meteo: { title: "Meteo a Parma" },
   ore: { title: "Le mie ore" },
 };
 
@@ -71,7 +69,6 @@ export const DEFAULT_DASHBOARD_LAYOUT: readonly DashboardBlockState[] = [
      in fondo, senza che il suo ordine venga toccato. LAYOUT_VERSION NON si
      alza per questo — alzarla azzererebbe il layout di tutti. */
   { id: "ore", size: "M", visible: true },
-  { id: "meteo", size: "S", visible: true },
 ];
 
 const STORAGE_KEY = "dashboard-layout";
