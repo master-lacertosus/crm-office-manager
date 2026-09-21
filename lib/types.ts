@@ -308,6 +308,10 @@ export interface AppNotification {
   from_user_id: string | null;
   message: string;
   task_id: string | null;
+  /** Dove porta il clic (M17). Percorso relativo, es. `/requests`.
+   *  `null` = questo avviso non porta da nessuna parte, e la campanella lo
+   *  mostra inerte invece di fingere che sia cliccabile. */
+  link?: string | null;
   kind?: NotificationKind;
   created_at: string;
   read_at: string | null;

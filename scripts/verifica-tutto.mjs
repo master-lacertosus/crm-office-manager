@@ -36,6 +36,7 @@ const CONTROLLI = [
   ["verify:scopribilita", "Quello che c e si puo trovare", ["run", "verify:scopribilita"]],
   ["verify:email", "La mail del lavoro assegnato dice qualcosa", ["run", "verify:email"]],
   ["verify:ore", "Le ore si contano giuste, e il meteo non rompe niente", ["run", "verify:ore"]],
+  ["verify:fantasma", "Non si annuncia cio che non e stato salvato", ["run", "verify:fantasma"]],
   ["verify:tema", "Il tema scuro si legge davvero", ["run", "verify:tema"]],
   ["verify:chiaro", "Il tema chiaro si legge davvero", ["run", "verify:chiaro"]],
   ["verify:build", "Il sito si costruisce da zero", ["run", "verify:build"]],

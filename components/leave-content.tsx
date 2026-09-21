@@ -183,7 +183,7 @@ function LeaveForm() {
     e.preventDefault();
     if (!canSend) return;
     setSending(true);
-    await createLeave({
+    const nata = await createLeave({
       type,
       start_date: start,
       end_date: effEnd,
@@ -191,6 +191,9 @@ function LeaveForm() {
       note,
     });
     setSending(false);
+    /* Come per le richieste: niente annuncio se la scrittura non e passata,
+       e il modulo non si svuota — quello che si era scritto serve ancora. */
+    if (!nata) return;
     setNote("");
     setTimeRange("");
     toast("Richiesta inviata: i responsabili sono stati avvisati.");
