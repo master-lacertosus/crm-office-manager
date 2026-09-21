@@ -10,6 +10,21 @@ versioni (fase pre-1.0).
 ## Non rilasciato
 
 ### Aggiunto
+- **Il lavoro assegnato arriva anche per email.** M14 lo annuncia dentro
+  l'app — striscia, campanella, pallino — e resta scoperto chi l'app non ce
+  l'ha aperta: il freelance che lavora a giornate alterne, chi e' in giro,
+  chi torna da due settimane di ferie. Per loro l'avviso c'e' ma lo vedono
+  quando ormai e' tardi. Ora arriva anche in casella, con oggetto che dice il
+  lavoro e non la categoria: «Da Francesco: Rifare la scheda prodotto —
+  entro il 24 set», non «Ti e' stata assegnata una nuova task», che dopo tre
+  invii e' invisibile. Si spegne da Impostazioni > Aspetto > Avvisi.
+  Il lavoro gira ogni cinque minuti e **raggruppa per destinatario**: un
+  template a pacchetto crea sei task con un clic, e produce una mail sola.
+  Nessuna dipendenza nuova: Resend si chiama via `fetch`.
+  **Richiede tre passaggi manuali** (migrazione M15 su Supabase, una riga di
+  configurazione, tre variabili su Vercel): finche' mancano, la rotta
+  risponde e non manda niente. Istruzioni in
+  [`docs/EMAIL_ASSEGNAZIONI.md`](docs/EMAIL_ASSEGNAZIONI.md).
 - **Un campo «Cerca» nella barra di ogni pagina.** La ricerca globale
   esisteva gia' ed era piu' completa di quanto chiunque immaginasse — trova
   task aperti e chiusi, sotto-task, progetti, persone, richieste, ferie, e

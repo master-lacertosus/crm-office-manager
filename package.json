@@ -33,7 +33,8 @@
     "verify:assegnazioni": "node --import ./scripts/alias.mjs scripts/assegnazioni-verify.mjs",
     "verify:filtriavanzati": "node --import ./scripts/alias.mjs scripts/filtri-avanzati-verify.mjs",
     "verify:rifiuto": "node scripts/rifiuto-motivato-verify.mjs",
-    "verify:scopribilita": "node --import ./scripts/alias.mjs scripts/scopribilita-verify.mjs"
+    "verify:scopribilita": "node --import ./scripts/alias.mjs scripts/scopribilita-verify.mjs",
+    "verify:email": "node --import ./scripts/alias.mjs scripts/email-assegnazioni-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
