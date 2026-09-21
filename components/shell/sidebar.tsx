@@ -76,7 +76,8 @@ function NavLink({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const { requests, leaves, tasks, currentUser } = useAppStore();
+  const { requests, leaves, tasks, currentUser, nuoveAssegnazioni } =
+    useAppStore();
   const active = isActive(pathname, item.href);
   const Icon = item.icon;
 
@@ -108,15 +109,27 @@ function NavLink({
        - Task: quanti ne ho aperti IO in questo momento. Non il totale del
          workspace, che sarebbe un numero grande e inerte; nemmeno tutti i
          miei, che comprende il fondo del cassetto. Quelli su cui sto
-         lavorando ora — il numero a cui si risponde «e adesso?». */
+         lavorando ora — il numero a cui si risponde «e adesso?».
+
+     Su Task il lavoro appena arrivato ha la precedenza (M14): finché c'è
+     qualcosa che non hai ancora visto, quella è la risposta giusta a «e
+     adesso?» — e resta l'unico numero che chiede di essere aperto. Letto
+     l'ultimo avviso, la voce torna a dire quanti ne hai in corso.
+     Il `title` dice sempre quale dei due si sta leggendo: due significati
+     nello stesso posto vanno distinti a parole, non lasciati indovinare. */
+  const inCorso = tasks.filter(
+    (t) =>
+      t.owner_id === currentUser.id &&
+      t.status === "in_progress" &&
+      !t.archived_at,
+  ).length;
+  const nuove = item.href === "/tasks" ? nuoveAssegnazioni.length : 0;
+
   const badge =
     item.href === "/tasks"
-      ? tasks.filter(
-          (t) =>
-            t.owner_id === currentUser.id &&
-            t.status === "progress" &&
-            !t.archived_at,
-        ).length
+      ? nuove > 0
+        ? nuove
+        : inCorso
       : currentUser.role !== "admin"
         ? 0
         : item.href === "/requests"
@@ -125,11 +138,21 @@ function NavLink({
             ? leaves.filter((l) => l.status === "pending").length
             : 0;
 
+  const badgeTitolo =
+    item.href !== "/tasks" || badge === 0
+      ? undefined
+      : nuove > 0
+        ? nuove === 1
+          ? "1 nuova task assegnata"
+          : `${nuove} nuove task assegnate`
+        : `${inCorso} task in corso`;
+
   return (
     <Link
       href={href}
       onClick={vado}
       aria-current={active ? "page" : undefined}
+      title={badgeTitolo}
       className={cn(
         "relative flex h-9.5 items-center gap-3 rounded-lg px-2.5 text-sm outline-none transition-all",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -160,6 +183,10 @@ function NavLink({
             )}
           >
             {badge}
+            {/* Da solo il numero si legge «Task 3», che non dice 3 di cosa. */}
+            {badgeTitolo ? (
+              <span className="sr-only"> — {badgeTitolo}</span>
+            ) : null}
           </span>
           {/* puntino sulla rail compatta (solo icone) */}
           {labelVisibility === "lg" ? (

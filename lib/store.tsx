@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { nonViste } from "@/lib/assegnazioni";
 import { nextMonthlyIso, shiftIsoDays, todayIso } from "@/lib/format";
 import { messaggioErrore } from "@/lib/errori";
 import { extractMentionIds } from "@/lib/mentions";
@@ -351,6 +352,13 @@ interface AppStore {
   markTaskNotificationsRead: (taskId: string) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
+  /** I lavori che ti sono arrivati e che non hai ancora visto, dal più
+   *  recente. Li scrive il trigger del database (M14): qui si leggono e
+   *  basta. Alimentano il banner, il tab della campanella e il contatore
+   *  sulla voce Task — tre viste dello stesso fatto, non tre conteggi. */
+  nuoveAssegnazioni: AppNotification[];
+  /** «Le ho viste»: azzera il banner senza aprire niente. */
+  markAssegnazioniRead: () => void;
   /** Richieste di task: chiunque propone, i responsabili decidono. */
   requests: TaskRequest[];
   createRequest: (input: {
@@ -1037,10 +1045,20 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     async (nuovi) => {
       /* Solo gli avvisi mandati da una persona: la policy pretende
          `from_user_id = auth.uid()`. Quelli senza mittente li scrive il
-         lavoro pianificato del database (M5), non il browser. */
+         lavoro pianificato del database (M5), non il browser.
+
+         Fuori anche le assegnazioni: le scrive il trigger di M14 e arrivano
+         qui solo perché il destinatario le ha lette. Rimandarle indietro
+         creerebbe un doppione dell'avviso che le ha appena fatte comparire —
+         e il tipo di `insertNotifications` non le accetta proprio, così la
+         regola la ricorda il compilatore invece di un commento. */
       const miei = nuovi.filter(
-        (n): n is typeof n & { from_user_id: string } =>
-          n.from_user_id === currentUserId,
+        (
+          n,
+        ): n is typeof n & {
+          from_user_id: string;
+          kind?: Exclude<NotificationKind, "assegnazione">;
+        } => n.from_user_id === currentUserId && n.kind !== "assegnazione",
       );
       if (miei.length > 0) await insertNotifications(createClient(), miei);
     },
@@ -1203,6 +1221,39 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
     let unreadCount = 0;
     for (const n of myNotifications) if (!n.read_at) unreadCount += 1;
+
+    /* I lavori arrivati e non ancora visti. Un elenco solo, da cui pescano
+       banner, campanella e contatore della sidebar: tre contatori calcolati
+       ognuno per conto suo sarebbero liberi di dire numeri diversi, e il
+       primo a sbagliare distruggerebbe la fiducia negli altri due. */
+    const nuoveAssegnazioni = nonViste(myNotifications);
+
+    /** Gli avvisi miei, non letti, che soddisfano il filtro. */
+    const mieiNonLetti = (tiene: (n: AppNotification) => boolean): string[] =>
+      myNotifications.filter((n) => !n.read_at && tiene(n)).map((n) => n.id);
+
+    /** Spunta subito, scrive in blocco, torna indietro se il database dice
+     *  di no. Vale per un avviso solo come per venti. */
+    const segnaLetti = (ids: string[]) => {
+      if (ids.length === 0) return;
+      const daSegnare = new Set(ids);
+      setNotifications((prev) =>
+        prev.map((n) =>
+          daSegnare.has(n.id)
+            ? { ...n, read_at: new Date().toISOString() }
+            : n,
+        ),
+      );
+      scriviCon(
+        () => markNotificationsRead(createClient(), ids),
+        () =>
+          setNotifications((prev) =>
+            prev.map((n) =>
+              daSegnare.has(n.id) ? { ...n, read_at: null } : n,
+            ),
+          ),
+      );
+    };
 
     return {
     currentUser,
@@ -2354,63 +2405,29 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     /* «Letto» è una modifica alla riga, non una riga nuova: il confronto per
        id non la vede. Si scrive esplicitamente, in blocco — segnare venti
-       avvisi letti non deve costare venti richieste. */
+       avvisi letti non deve costare venti richieste.
+
+       I quattro modi di dire «letto» (un avviso, un task, una categoria,
+       tutti) cambiano solo nel filtro: il resto — spunta subito, scrittura
+       in blocco, ritorno indietro se il database rifiuta — è lo stesso, e
+       sta scritto una volta in `segnaLetti`. */
 
     markTaskNotificationsRead(taskId) {
-      const ids = notifications
-        .filter(
-          (n) =>
-            n.to_user_id === currentUser.id && n.task_id === taskId && !n.read_at,
-        )
-        .map((n) => n.id);
-      if (ids.length === 0) return;
-      setNotifications((prev) =>
-        prev.map((n) =>
-          ids.includes(n.id) ? { ...n, read_at: new Date().toISOString() } : n,
-        ),
-      );
-      scriviCon(
-        () => markNotificationsRead(createClient(), ids),
-        () =>
-          setNotifications((prev) =>
-            prev.map((n) => (ids.includes(n.id) ? { ...n, read_at: null } : n)),
-          ),
-      );
+      segnaLetti(mieiNonLetti((n) => n.task_id === taskId));
     },
 
     markNotificationRead(id) {
-      if (notifications.find((n) => n.id === id)?.read_at) return;
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === id ? { ...n, read_at: new Date().toISOString() } : n,
-        ),
-      );
-      scriviCon(
-        () => markNotificationsRead(createClient(), [id]),
-        () =>
-          setNotifications((prev) =>
-            prev.map((n) => (n.id === id ? { ...n, read_at: null } : n)),
-          ),
-      );
+      segnaLetti(mieiNonLetti((n) => n.id === id));
     },
 
     markAllNotificationsRead() {
-      const ids = notifications
-        .filter((n) => n.to_user_id === currentUser.id && !n.read_at)
-        .map((n) => n.id);
-      if (ids.length === 0) return;
-      setNotifications((prev) =>
-        prev.map((n) =>
-          ids.includes(n.id) ? { ...n, read_at: new Date().toISOString() } : n,
-        ),
-      );
-      scriviCon(
-        () => markNotificationsRead(createClient(), ids),
-        () =>
-          setNotifications((prev) =>
-            prev.map((n) => (ids.includes(n.id) ? { ...n, read_at: null } : n)),
-          ),
-      );
+      segnaLetti(mieiNonLetti(() => true));
+    },
+
+    nuoveAssegnazioni,
+
+    markAssegnazioniRead() {
+      segnaLetti(nuoveAssegnazioni.map((n) => n.id));
     },
 
     requests,

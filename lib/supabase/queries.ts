@@ -883,6 +883,8 @@ export async function insertNotifications(
     from_user_id: string;
     message: string;
     task_id?: string | null;
+    /* «assegnazione» manca di proposito: quegli avvisi li scrive il trigger
+       del database (M14), e il browser non deve poterne fabbricare uno. */
     kind?: "mention" | "sollecito" | "sistema";
   }[],
 ): Promise<void> {

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { AtSign, Bell, BellRing, CheckCheck } from "lucide-react";
+import { Bell, BellRing, CheckCheck } from "lucide-react";
 
 import { timeAgo } from "@/lib/format";
 import { pop } from "@/lib/motion";
@@ -13,10 +13,13 @@ import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/avatar-initials";
 import { Button } from "@/components/ui/button";
 
-type Tab = "tutte" | "mention" | "sollecito";
+type Tab = "tutte" | "assegnazione" | "mention" | "sollecito";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "tutte", label: "Tutte" },
+  /* Per primo dopo «Tutte»: è la categoria che porta lavoro da fare, le
+     altre due portano conversazione. */
+  { key: "assegnazione", label: "Assegnate" },
   { key: "mention", label: "Menzioni" },
   { key: "sollecito", label: "Solleciti" },
 ];
@@ -158,13 +161,12 @@ export function NotificationsBell() {
                     aria-selected={tab === key}
                     onClick={() => setTab(key)}
                     className={cn(
-                      "flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                      "flex flex-1 items-center justify-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium whitespace-nowrap outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                       tab === key
                         ? "bg-card text-ink shadow-xs"
                         : "text-ink-muted hover:text-ink",
                     )}
                   >
-                    {key === "mention" ? <AtSign className="size-3" /> : null}
                     {label}
                     {unread > 0 ? (
                       <span className="font-mono text-[10px] text-brand-700">

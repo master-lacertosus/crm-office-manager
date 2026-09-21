@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { ChatPanel } from "@/components/chat-panel";
+import { NuoveAssegnazioni } from "@/components/nuove-assegnazioni";
 import { OnboardingProfile } from "@/components/onboarding-profile";
 import { MobileDrawer, Sidebar } from "@/components/shell/sidebar";
 import { SyncErrorBanner } from "@/components/sync-error-banner";
@@ -33,7 +34,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-dvh w-full lg:m-4 lg:min-h-[calc(100dvh-2rem)] lg:w-[calc(100%-2rem)] lg:overflow-clip lg:rounded-[28px] lg:border lg:border-velo/70 lg:bg-velo/50 lg:shadow-[0_1px_2px_rgb(15_23_42/0.04),0_28px_90px_rgb(15_23_42/0.16),inset_0_1px_0_rgb(255_255_255/0.9)]">
         <Sidebar />
         <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Sopra la topbar, non dentro una pagina: il lavoro che arriva va
+              visto anche da chi apre l'app sulla Dashboard. Scorre via
+              leggendo — non è un errore da tenere fisso, è una notizia. */}
+          <NuoveAssegnazioni />
+          {children}
+        </div>
         {/* Copre l'app finché il profilo non è configurato: si decide una
             volta come apparire ai colleghi, e non si rimanda. */}
         <OnboardingProfile />
