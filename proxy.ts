@@ -68,7 +68,19 @@ export async function proxy(request: NextRequest) {
   const autenticato = Boolean(data?.claims);
 
   const percorso = request.nextUrl.pathname;
-  const pubblica = percorso === "/login" || percorso.startsWith("/auth");
+  /* `/api/avvisi-email` non ha e non può avere una sessione: la chiama il
+     lavoro pianificato del database, non un browser. Senza questa eccezione
+     il cancello le risponderebbe con un redirect al login, e l'invio
+     fallirebbe senza dire niente a nessuno — il tipo di guasto peggiore,
+     perché somiglia a «non è ancora arrivato nulla da spedire».
+     Non è un buco: quella rotta si difende da sé con un segreto condiviso
+     confrontato a tempo costante (app/api/avvisi-email/route.ts), che è la
+     stessa regola della Server Action di invito — chi usa poteri
+     amministrativi controlla i permessi in casa propria. */
+  const pubblica =
+    percorso === "/login" ||
+    percorso.startsWith("/auth") ||
+    percorso === "/api/avvisi-email";
 
   if (!autenticato && !pubblica) {
     // Si ricorda dove si stava andando, così dopo l'accesso si atterra lì e

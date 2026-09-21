@@ -50,6 +50,17 @@ export interface Preferences {
    *  compito ha il diritto di spegnerlo, invece di vedere comparire
    *  avvisi su task che non lo riguardano. */
   avvisiAltrui: boolean;
+  /** Mandare anche una email quando ti viene assegnato un lavoro (M15).
+   *
+   *  Vive qui dentro e non in una colonna sua per una ragione pratica: le
+   *  preferenze finiscono gia' tutte insieme nel jsonb `appearance` di
+   *  `user_preferences`, che il lavoro di invio legge lato server. Una
+   *  chiave in piu' costa zero migrazioni.
+   *
+   *  Resta accesa: chi non tiene l'app aperta e' esattamente la persona
+   *  per cui questa funzione esiste. Ma chi la tiene aperta tutto il giorno
+   *  la mail ce l'ha gia' vista in app, e ha il diritto di zittirla. */
+  emailAssegnazioni: boolean;
   /** La vista salvata da applicare aprendo i Task. `null` = nessuna. */
   vistaPredefinita: string | null;
   tema: TemaKey;
@@ -61,6 +72,7 @@ const DEFAULTS: Preferences = {
   reduceMotion: false,
   contrastoAlto: false,
   avvisiAltrui: true,
+  emailAssegnazioni: true,
   vistaPredefinita: null,
   tema: "sistema",
 };
@@ -154,6 +166,7 @@ interface PreferencesContextValue {
   setReduceMotion: (on: boolean) => void;
   setContrastoAlto: (on: boolean) => void;
   setAvvisiAltrui: (on: boolean) => void;
+  setEmailAssegnazioni: (on: boolean) => void;
   setVistaPredefinita: (id: string | null) => void;
   setTema: (tema: TemaKey) => void;
   reset: () => void;
@@ -214,6 +227,8 @@ export function PreferencesProvider({
         setPrefs((p) => ({ ...p, contrastoAlto })),
       setAvvisiAltrui: (avvisiAltrui) =>
         setPrefs((p) => ({ ...p, avvisiAltrui })),
+      setEmailAssegnazioni: (emailAssegnazioni) =>
+        setPrefs((p) => ({ ...p, emailAssegnazioni })),
       setVistaPredefinita: (vistaPredefinita) =>
         setPrefs((p) => ({ ...p, vistaPredefinita })),
       setTema: (tema) => setPrefs((p) => ({ ...p, tema })),

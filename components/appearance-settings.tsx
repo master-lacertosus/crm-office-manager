@@ -134,11 +134,13 @@ export function AppearanceSettings() {
     setReduceMotion,
     setContrastoAlto,
     setAvvisiAltrui,
+    setEmailAssegnazioni,
     setTema,
   } = usePreferences();
   const reduceId = React.useId();
   const contrastoId = React.useId();
   const avvisiId = React.useId();
+  const emailId = React.useId();
 
   return (
     <div className="space-y-4">
@@ -315,6 +317,25 @@ export function AppearanceSettings() {
             id={avvisiId}
             checked={prefs.avvisiAltrui}
             onChange={setAvvisiAltrui}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-4 border-t border-border-soft pt-4">
+          <label htmlFor={emailId} className="min-w-0">
+            <span className="block text-[13px] font-medium text-ink">
+              Mandami una email per i lavori assegnati
+            </span>
+            <span className="block text-[12px] text-ink-muted">
+              Quando qualcuno ti affida un lavoro, oltre all&rsquo;avviso qui
+              dentro arriva una email. Serve a chi non tiene il CRM aperto
+              tutto il giorno: se invece ce l&rsquo;hai sempre davanti, questa
+              puoi spegnerla. Gli avvisi nell&rsquo;app restano comunque.
+            </span>
+          </label>
+          <Switch
+            id={emailId}
+            checked={prefs.emailAssegnazioni}
+            onChange={setEmailAssegnazioni}
           />
         </div>
       </SettingCard>
