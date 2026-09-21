@@ -11,6 +11,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { Giornata } from "@/lib/timbrature";
 import type {
   AppNotification,
   ChecklistItem,
@@ -1206,4 +1207,75 @@ export async function insertProject(
 
   if (error) throw error;
   return toProject(data as ProjectRow);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Timbrature (M16)                                                            */
+/*                                                                             */
+/* La RLS fa già tutto il lavoro: la policy `timbrature_select_proprie`        */
+/* restituisce solo le righe di chi chiede, quindi qui non serve nessun        */
+/* filtro per utente. Aggiungerne uno darebbe l'impressione che sia lui a      */
+/* proteggere il dato, e il giorno che qualcuno lo togliesse «per semplicità»  */
+/* nessuno si accorgerebbe di aver spostato una difesa.                        */
+/* -------------------------------------------------------------------------- */
+
+const TIMBRATURA_COLUMNS =
+  "id, giorno, entrata, uscita, pausa_minuti, corretta_at";
+
+export async function fetchTimbrature(
+  supabase: SupabaseClient,
+): Promise<Giornata[]> {
+  const { data, error } = await supabase
+    .from("timbrature")
+    .select(TIMBRATURA_COLUMNS)
+    .order("giorno", { ascending: false })
+    .limit(400);
+  if (error) throw error;
+  return (data ?? []) as Giornata[];
+}
+
+/** Apre la giornata. `giorno` è quello LOCALE di chi timbra: il database non
+ *  sa in che fuso si trova, e calcolarlo lì sposterebbe di un giorno chi
+ *  timbra dopo mezzanotte. */
+export async function insertTimbratura(
+  supabase: SupabaseClient,
+  riga: {
+    profile_id: string;
+    giorno: string;
+    entrata: string;
+    pausa_minuti: number;
+  },
+): Promise<Giornata> {
+  const { data, error } = await supabase
+    .from("timbrature")
+    .insert(riga)
+    .select(TIMBRATURA_COLUMNS)
+    .single();
+  if (error) throw error;
+  return data as Giornata;
+}
+
+/** Chiude la giornata, o ne corregge gli orari. La guardia del database
+ *  segna da sé `corretta_at` quando un orario cambia. */
+export async function updateTimbratura(
+  supabase: SupabaseClient,
+  id: string,
+  patch: { entrata?: string; uscita?: string | null; pausa_minuti?: number },
+): Promise<Giornata> {
+  const { data, error } = await supabase
+    .from("timbrature")
+    .update(patch)
+    .eq("id", id)
+    .select(TIMBRATURA_COLUMNS)
+    .single();
+  if (error) throw error;
+  return data as Giornata;
+}
+
+export async function deleteTimbratura(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase.from("timbrature").delete().eq("id", id);
+  if (error) throw error;
 }

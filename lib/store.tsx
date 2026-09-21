@@ -3,7 +3,17 @@
 import * as React from "react";
 
 import { nonViste } from "@/lib/assegnazioni";
-import { nextMonthlyIso, shiftIsoDays, todayIso } from "@/lib/format";
+import {
+  giornataAperta,
+  PAUSA_PREDEFINITA_MINUTI,
+  type Giornata,
+} from "@/lib/timbrature";
+import {
+  giornoLocale,
+  nextMonthlyIso,
+  shiftIsoDays,
+  todayIso,
+} from "@/lib/format";
 import { messaggioErrore } from "@/lib/errori";
 import { extractMentionIds } from "@/lib/mentions";
 import { puoModificareTask } from "@/lib/permessi";
@@ -31,6 +41,9 @@ import {
   fetchCollaborators,
   fetchLeaveRequests,
   fetchNotifications,
+  fetchTimbrature,
+  insertTimbratura,
+  updateTimbratura,
   fetchSavedViews,
   fetchTaskRequests,
   fetchTemplates,
@@ -342,6 +355,18 @@ interface AppStore {
   /** Disattiva o riattiva un collega. Lancia se ha ancora task aperti:
    *  l'invariante sta nel database, non in un controllo dell'interfaccia. */
   setProfileActive: (profileId: string, isActive: boolean) => Promise<void>;
+  /** Le proprie giornate timbrate (M16). La RLS non ne consegna altre:
+   *  nemmeno un admin vede le ore dei colleghi. */
+  timbrature: Giornata[];
+  /** Apre la giornata di oggi. Se e gia aperta non fa niente. */
+  timbraEntrata: () => Promise<void>;
+  /** Chiude la giornata aperta. Se non ce n e una non fa niente. */
+  timbraUscita: () => Promise<void>;
+  /** Corregge gli orari o la pausa di una giornata. */
+  correggiGiornata: (
+    id: string,
+    patch: { entrata?: string; uscita?: string | null; pausa_minuti?: number },
+  ) => Promise<void>;
   notifications: AppNotification[];
   unreadCount: number;
   sendNotification: (
@@ -600,6 +625,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [projectComments, setProjectComments] = React.useState<ProjectComment[]>([]);
   const [snoozes, setSnoozes] = React.useState<Record<string, string>>({});
   const [savedViews, setSavedViews] = React.useState<SavedView[]>([]);
+  const [timbrature, setTimbrature] = React.useState<Giornata[]>([]);
   const [templates, setTemplates] = React.useState<WorkspaceTemplate[]>([]);
   const [events, setEvents] = React.useState<TaskEvent[]>([]);
   const [requests, setRequests] = React.useState<TaskRequest[]>([]);
@@ -737,6 +763,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           viewList,
           statoPersonale,
           collaboratori,
+          timbratureList,
         ] = await Promise.all([
           fetchProfiles(supabase),
           fetchProjects(supabase),
@@ -755,6 +782,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           fetchSavedViews(supabase),
           fetchUserTaskState(supabase),
           fetchCollaborators(supabase),
+          fetchTimbrature(supabase),
         ]);
 
         if (smontatoRef.current) return;
@@ -808,6 +836,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         setClosures(closureList);
         setTemplates(templateList);
         setSavedViews(viewList);
+        setTimbrature(timbratureList);
         setFocusIds(statoPersonale.focusIds);
         setSnoozes(statoPersonale.snoozes);
         if (userId) setCurrentUserId(userId);
@@ -2389,6 +2418,55 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       );
     },
 
+    timbrature,
+
+    /* Timbrare non passa dalla scrittura ottimista del resto dell'app.
+       Qui l'esito conta: se la scrittura fallisce e l'interfaccia ha già
+       detto «sei entrato», la persona se ne va convinta di aver timbrato e
+       scopre il contrario a fine mese. Si aspetta la risposta — è un gesto
+       che si fa due volte al giorno, non venti al minuto. */
+    async timbraEntrata() {
+      if (giornataAperta(timbrature)) return;
+      const adesso = new Date();
+      try {
+        const nata = await insertTimbratura(createClient(), {
+          profile_id: currentUser.id,
+          giorno: giornoLocale(adesso.toISOString()),
+          entrata: adesso.toISOString(),
+          pausa_minuti: PAUSA_PREDEFINITA_MINUTI,
+        });
+        setTimbrature((prev) => [nata, ...prev]);
+      } catch (e) {
+        setSyncError(messaggioErrore(e, "Entrata non registrata."));
+      }
+    },
+
+    async timbraUscita() {
+      const aperta = giornataAperta(timbrature);
+      if (!aperta) return;
+      try {
+        const chiusa = await updateTimbratura(createClient(), aperta.id, {
+          uscita: new Date().toISOString(),
+        });
+        setTimbrature((prev) =>
+          prev.map((g) => (g.id === chiusa.id ? chiusa : g)),
+        );
+      } catch (e) {
+        setSyncError(messaggioErrore(e, "Uscita non registrata."));
+      }
+    },
+
+    async correggiGiornata(id, patch) {
+      try {
+        const corretta = await updateTimbratura(createClient(), id, patch);
+        setTimbrature((prev) =>
+          prev.map((g) => (g.id === corretta.id ? corretta : g)),
+        );
+      } catch (e) {
+        setSyncError(messaggioErrore(e, "Correzione non salvata."));
+      }
+    },
+
     notifications: myNotifications,
     unreadCount,
 
@@ -2876,6 +2954,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     aggiornamentoRemoto,
     avatars,
     closures,
+    timbrature,
     loading,
     loadError,
     syncError,

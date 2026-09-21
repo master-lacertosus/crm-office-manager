@@ -9,7 +9,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(24);
+select plan(29);
 
 -- UUID degli utenti di test (supabase/seed.sql)
 -- alessia (admin):  00000000-0000-4000-8000-000000000001
@@ -288,6 +288,80 @@ select results_eq(
   'select count(*)::int from public.profiles',
   array[4],
   'un member vede tutti i profili, incluso il disattivato'
+);
+
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- Timbrature (M16): le proprie ore le vede solo chi le ha fatte.
+--
+-- È la policy più stretta del prodotto, insieme a quella degli avvisi: qui
+-- nemmeno un admin guarda dentro. Se un giorno qualcuno allentasse la select
+-- «tanto agli admin serve», questi test si accendono di rosso — ed è
+-- esattamente il momento in cui si vuole essere fermati e costretti a
+-- deciderlo di nuovo, invece di scoprirlo dopo.
+-- ---------------------------------------------------------------------------
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+
+insert into public.timbrature (profile_id, giorno, entrata, uscita)
+values (
+  '00000000-0000-4000-8000-000000000002',
+  current_date,
+  now() - interval '8 hours',
+  now()
+);
+
+select results_eq(
+  'select count(*)::int from public.timbrature',
+  array[1],
+  'marco vede la propria giornata'
+);
+
+select throws_ok(
+  $q$insert into public.timbrature (profile_id, giorno, entrata)
+     values ('00000000-0000-4000-8000-000000000003', current_date, now())$q$,
+  '42501',
+  null,
+  'marco non puo'' timbrare per giulia'
+);
+
+select throws_ok(
+  $q$update public.timbrature set giorno = current_date - 1$q$,
+  'P0001',
+  null,
+  'di una giornata non si cambia la data'
+);
+
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000003","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+
+select results_eq(
+  'select count(*)::int from public.timbrature',
+  array[0],
+  'giulia non vede le ore di marco'
+);
+
+-- E l'admin nemmeno: qui non c'è l'eccezione che hanno le altre tabelle.
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+
+select results_eq(
+  'select count(*)::int from public.timbrature',
+  array[0],
+  'nemmeno un admin vede le ore altrui'
 );
 
 reset role;
