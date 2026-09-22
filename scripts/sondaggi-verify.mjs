@@ -27,7 +27,8 @@ import { readFileSync } from "node:fs";
 import {
   chiManca,
   daInterrompere,
-  DURATA_PREDEFINITA,
+  scadenzaMinima,
+  scadenzaPredefinita,
   eAperto,
   hoVotato,
   inTesta,
@@ -179,7 +180,7 @@ console.log("\n# Non si annuncia cio' che non e' stato salvato\n");
 
 check(
   "Le tre scritture aspettano l'esito",
-  /async lanciaSondaggio[\s\S]{0,700}setSyncError[\s\S]{0,60}return null;/.test(
+  /async lanciaSondaggio[\s\S]{0,2400}setSyncError[\s\S]{0,60}return null;/.test(
     store,
   ) &&
     /async votaSondaggio[\s\S]{0,2200}setSyncError[\s\S]{0,60}return false;/.test(
@@ -196,11 +197,26 @@ check(
 );
 check(
   "Il toast del lancio arriva dopo il «se non e' andata, fermati»",
-  /if \(!id\) return;[\s\S]{0,260}onFatto\(\)/.test(pagina),
+  /if \(!id\) return;[\s\S]{0,500}onFatto\(id\)/.test(pagina),
 );
 check(
   "E il popup non annuncia prima di sapere",
   /if \(!fatto\) return;[\s\S]{0,80}setVotato\(true\)/.test(popup),
+);
+check(
+  "Chi lancia rilegge subito, senza aspettare un annuncio",
+  /const aggiornati = await fetchSondaggi\(createClient\(\)\);/.test(store),
+  "il battito di sicurezza dello store riparte SOLO se Realtime e spento: con il canale connesso e le tabelle fuori dalla publication non rilegge mai nessuno, e chi lanciava non vedeva il proprio sondaggio",
+);
+check(
+  "Il popup non si chiude nel momento in cui voti",
+  /idBloccato/.test(popup) && /setIdBloccato\(sondaggio\.id\)/.test(popup),
+  "daInterrompere() smette di restituirlo appena la firma entra nel registro, cioe nello stesso istante del voto: la scheda spariva mentre le barre stavano ancora crescendo",
+);
+check(
+  "Dopo il voto si vedono le percentuali, non solo i conteggi",
+  /\{percento\}%/.test(riga),
+  "prima la percentuale viveva solo nel testo per i lettori di schermo, cioe da nessuna parte per tutti gli altri",
 );
 check(
   "I sondaggi NON passano da useSincronizza",
@@ -398,18 +414,41 @@ check(
 console.log("\n# Il modulo dice di no prima di far scrivere\n");
 /* ------------------------------------------------------------------ */
 
-check("Serve la domanda", perche("", ["a", "b"]) === "Scrivi la domanda");
+const fraDueOre = new Date(ora.getTime() + 2 * 60 * 60_000).toISOString();
+check("Serve la domanda", perche("", ["a", "b"], fraDueOre, ora) === "Scrivi la domanda");
 check(
   "Servono due risposte",
-  perche("Che giorno?", ["a", ""]) === "Servono almeno due risposte",
+  perche("Che giorno?", ["a", ""], fraDueOre, ora) === "Servono almeno due risposte",
 );
 check(
   "Due risposte uguali non sono due risposte",
-  perche("Che giorno?", ["Martedi", " martedi "]) ===
+  perche("Che giorno?", ["Martedi", " martedi "], fraDueOre, ora) ===
     "Ci sono due risposte uguali",
 );
-check("E se e' tutto a posto, tace", perche("Che giorno?", ["a", "b"]) === null);
-check("La durata predefinita e' un giorno", DURATA_PREDEFINITA === 24);
+check(
+  "E se e' tutto a posto, tace",
+  perche("Che giorno?", ["a", "b"], fraDueOre, ora) === null,
+);
+check(
+  "Una scadenza fra cinque minuti non si accetta",
+  perche("Che giorno?", ["a", "b"], new Date(ora.getTime() + 5 * 60_000).toISOString(), ora) !== null,
+  "il database pretende un quarto d'ora: prima, nessuno fa in tempo a rispondere",
+);
+check(
+  "E nemmeno fra un mese",
+  perche("Che giorno?", ["a", "b"], new Date(ora.getTime() + 30 * 24 * 3600_000).toISOString(), ora) !== null,
+);
+check(
+  "La scadenza proposta e' domani a fine giornata",
+  scadenzaPredefinita(ora).endsWith("T17:30") &&
+    scadenzaPredefinita(ora).startsWith("2026-09-23"),
+  scadenzaPredefinita(ora) + " -- le 17:30 sono il momento in cui questo ufficio smette",
+);
+check(
+  "E il primo momento accettabile e' fra un quarto d'ora",
+  scadenzaMinima(ora) === "2026-09-22T10:15",
+  scadenzaMinima(ora),
+);
 
 /* ------------------------------------------------------------------ */
 console.log("\n# Il giro completo\n");

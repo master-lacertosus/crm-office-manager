@@ -105,8 +105,20 @@ export function RigaOpzione({
         ) : null}
       </span>
       {votato ? (
-        <span className="relative z-10 font-mono text-[12px] tabular-nums text-ink-secondary">
-          {opzione.voti}
+        /* La percentuale grande e il numero di voti accanto, piccolo.
+           Servono tutti e due e non sono ridondanti: fra sei persone «33%»
+           dice la proporzione e «2» dice quante teste sono davvero — e con
+           numeri così piccoli la seconda cosa è quella che si va a cercare.
+           Prima si vedeva solo il conteggio, e la percentuale viveva nel
+           testo per i lettori di schermo: cioè da nessuna parte, per tutti
+           gli altri. */
+        <span className="relative z-10 flex shrink-0 items-baseline gap-1">
+          <span className="font-mono text-[13px] font-bold tabular-nums text-ink">
+            {percento}%
+          </span>
+          <span className="font-mono text-[11px] tabular-nums text-ink-muted">
+            {opzione.voti}
+          </span>
         </span>
       ) : null}
     </>

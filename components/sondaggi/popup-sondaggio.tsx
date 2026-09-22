@@ -109,7 +109,24 @@ export function PopupSondaggio() {
     };
   }, [candidato, loading, currentUser.id]);
 
-  const sondaggio = candidato;
+  /*
+   * IL POPUP NON SI CHIUDE DA SOLO NEL MOMENTO IN CUI VOTI.
+   *
+   * `daInterrompere()` smette di restituire il sondaggio appena la propria
+   * firma compare nel registro — è la sua regola, ed è giusta: serve a non
+   * interrompere chi ha già risposto. Ma la firma arriva nello stesso istante
+   * del voto, quindi il popup spariva mentre le barre stavano ancora
+   * crescendo. Si premeva «Invia» e la scheda evaporava: il risultato non lo
+   * vedeva nessuno.
+   *
+   * Da qui in poi il popup guarda un id BLOCCATO, non il candidato. Lo
+   * aggancia quando si vota (un gesto, quindi si può scrivere di stato senza
+   * effetti a cascata) e lo lascia andare solo quando la persona chiude.
+   */
+  const [idBloccato, setIdBloccato] = React.useState<string | null>(null);
+  const sondaggio = idBloccato
+    ? (sondaggi.find((s) => s.id === idBloccato) ?? null)
+    : candidato;
   const aperto =
     Boolean(sondaggio) && !loading && Boolean(currentUser.id) && !altroDialogo;
 
@@ -131,9 +148,17 @@ export function PopupSondaggio() {
       ? "Il sondaggio è stato chiuso: ecco com'è andata."
       : "";
 
-  const piuTardi = React.useCallback(() => {
+  /* Senza `useCallback`: da quando mette via anche l'aggancio, le dipendenze
+     che servirebbero sono le stesse cose che questa funzione scrive, e il
+     compilatore di React non riesce più a dimostrare che la memoizzazione
+     scritta a mano sia corretta. La memoizza lui, che è il motivo per cui in
+     questo progetto è acceso. */
+  const piuTardi = () => {
     if (sondaggio) scartaSondaggio(sondaggio.id);
-  }, [sondaggio, scartaSondaggio]);
+    setIdBloccato(null);
+    setVotato(false);
+    setScelta(null);
+  };
 
   /* Esc mette via, non vota. In fase di CATTURA con
      `stopImmediatePropagation`, perché nel prodotto una ventina di dialoghi
@@ -144,11 +169,19 @@ export function PopupSondaggio() {
     const suTasto = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       e.stopImmediatePropagation();
-      piuTardi();
+      /* Il corpo è scritto qui e non chiama `piuTardi`: così le dipendenze
+         di questo effetto sono dati e non una funzione che cambia a ogni
+         disegno — altrimenti il listener si toglierebbe e rimetterebbe di
+         continuo, e su un listener in fase di cattura è il genere di cosa
+         che poi si paga. */
+      if (sondaggio) scartaSondaggio(sondaggio.id);
+      setIdBloccato(null);
+      setVotato(false);
+      setScelta(null);
     };
     window.addEventListener("keydown", suTasto, true);
     return () => window.removeEventListener("keydown", suTasto, true);
-  }, [aperto, piuTardi]);
+  }, [aperto, sondaggio, scartaSondaggio]);
 
   useTrappolaFuoco(scheda, aperto);
 
@@ -162,6 +195,9 @@ export function PopupSondaggio() {
   const invia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!scelta || !sondaggio) return;
+    /* Si aggancia PRIMA di votare: un istante dopo la firma è nel registro e
+       il candidato non c'è più. */
+    setIdBloccato(sondaggio.id);
     setInvio(true);
     const fatto = await votaSondaggio(sondaggio.id, scelta);
     setInvio(false);

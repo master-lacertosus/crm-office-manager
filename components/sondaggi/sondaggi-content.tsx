@@ -11,18 +11,18 @@ import { useToast } from "@/components/toaster";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NativeSelect } from "@/components/ui/native-select";
 import { formatDue, timeAgo } from "@/lib/format";
 import { rise } from "@/lib/motion";
 import { eResponsabile } from "@/lib/permessi";
 import {
   chiManca,
-  DURATA_PREDEFINITA,
-  DURATE,
   eAperto,
   hoVotato,
   inTesta,
   perche,
+  scadenzaMassima,
+  scadenzaMinima,
+  scadenzaPredefinita,
   sondaggioAperto,
   tempoRimasto,
   type Sondaggio,
@@ -46,6 +46,7 @@ export function SondaggiContent() {
     lanciaSondaggio,
     votaSondaggio,
     chiudiSondaggio,
+    scartaSondaggio,
   } = useAppStore();
   const toast = useToast();
 
@@ -73,18 +74,32 @@ export function SondaggiContent() {
         bloccatoDa={inCorso}
         adesso={adesso}
         onLancia={lanciaSondaggio}
-        onFatto={() => toast("Sondaggio lanciato: lo vedono tutti")}
+        onFatto={(id) => {
+          /* Chi lo ha appena lanciato lo sta già guardando: il popup gli
+             coprirebbe la scheda qui sopra per mostrargli la stessa cosa.
+             Votare lo può comunque, da lì. */
+          scartaSondaggio(id);
+          toast("Sondaggio lanciato: lo vedono tutti");
+        }}
       />
 
       <section>
         <h2 className="mb-2 text-[11px] font-bold tracking-[0.05em] text-ink-secondary uppercase">
-          Sondaggi chiusi
+          Storico
         </h2>
         {chiusi.length === 0 ? (
           <EmptyState
             icon={Vote}
-            title="Nessun sondaggio, per ora"
-            hint="Il primo lo lanci da qui: una domanda, due risposte, e lo vedono tutti."
+            title={
+              inCorso
+                ? "Nessun sondaggio chiuso, per ora"
+                : "Nessun sondaggio, per ora"
+            }
+            hint={
+              inCorso
+                ? "Qui finiranno i sondaggi finiti, con i loro risultati. Quello in corso sta qui sopra."
+                : "Il primo lo lanci da qui: una domanda, due risposte, e lo vedono tutti."
+            }
           />
         ) : (
           <ul className="space-y-2">
@@ -267,17 +282,19 @@ function ModuloLancio({
   onLancia: (
     domanda: string,
     opzioni: string[],
-    ore: number,
+    scadeAt: string,
   ) => Promise<string | null>;
-  onFatto: () => void;
+  onFatto: (id: string) => void;
 }) {
   const [domanda, setDomanda] = React.useState("");
   const [opzioni, setOpzioni] = React.useState(["", ""]);
-  const [ore, setOre] = React.useState(DURATA_PREDEFINITA);
+  const [scadeAt, setScadeAt] = React.useState(() =>
+    scadenzaPredefinita(new Date()),
+  );
   const [invio, setInvio] = React.useState(false);
   const idMotivo = React.useId();
 
-  const motivo = perche(domanda, opzioni);
+  const motivo = perche(domanda, opzioni, scadeAt, adesso);
   const bloccato = Boolean(bloccatoDa);
 
   const cambia = (i: number, valore: string) =>
@@ -290,7 +307,10 @@ function ModuloLancio({
     const id = await onLancia(
       domanda.trim(),
       opzioni.map((o) => o.trim()).filter(Boolean),
-      ore,
+      /* Il campo dà un'ora locale («2026-09-23T17:30»); il database vuole un
+         momento assoluto. `new Date()` su quella stringa la legge come locale,
+         che è esattamente ciò che ha scelto chi la sta guardando. */
+      new Date(scadeAt).toISOString(),
     );
     setInvio(false);
     /* Prima di annunciare. Se il database ha rifiutato — perché nel
@@ -299,8 +319,8 @@ function ModuloLancio({
     if (!id) return;
     setDomanda("");
     setOpzioni(["", ""]);
-    setOre(DURATA_PREDEFINITA);
-    onFatto();
+    setScadeAt(scadenzaPredefinita(new Date()));
+    onFatto(id);
   };
 
   return (
@@ -389,20 +409,24 @@ function ModuloLancio({
             )}
           </div>
 
-          <div className="max-w-52">
-            <Label htmlFor="durata">Resta aperto per</Label>
-            <NativeSelect
-              id="durata"
-              value={ore}
-              onChange={(e) => setOre(Number(e.target.value))}
+          <div className="max-w-64">
+            <Label htmlFor="scadenza">Si chiude il</Label>
+            {/* Un momento scelto, non un intervallo di ore: un sondaggio
+                scade quando serve la risposta — prima della riunione, entro
+                stasera — non dopo un numero tondo di ore. */}
+            <Input
+              id="scadenza"
+              type="datetime-local"
+              value={scadeAt}
+              min={scadenzaMinima(adesso)}
+              max={scadenzaMassima(adesso)}
+              onChange={(e) => setScadeAt(e.target.value)}
               className="mt-1"
-            >
-              {DURATE.map((d) => (
-                <option key={d.ore} value={d.ore}>
-                  {d.etichetta}
-                </option>
-              ))}
-            </NativeSelect>
+            />
+            <p className="mt-1 text-[12px] text-ink-faint">
+              Proposta: domani a fine giornata. Si chiude comunque da solo
+              appena hanno risposto tutti.
+            </p>
           </div>
         </fieldset>
 

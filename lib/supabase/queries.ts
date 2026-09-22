@@ -1376,12 +1376,16 @@ export async function lanciaSondaggio(
   supabase: SupabaseClient,
   domanda: string,
   opzioni: string[],
-  ore: number,
+  scadeAt: string,
 ): Promise<string> {
+  /* Si passa `p_scade_at` e non `p_ore` (M20): le due versioni della funzione
+     convivono sul database e PostgREST sceglie in base ai NOMI dei parametri
+     che arrivano. Quella a ore resta come scorciatoia e delega a questa, dove
+     vivono le regole. */
   const { data, error } = await supabase.rpc("lancia_sondaggio", {
     p_domanda: domanda,
     p_opzioni: opzioni,
-    p_ore: ore,
+    p_scade_at: scadeAt,
   });
   if (error) throw error;
   return data as string;
