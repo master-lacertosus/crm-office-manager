@@ -247,6 +247,35 @@ check(
   /const aggiornati = await fetchSondaggi\(/.test(store),
   "il battito di sicurezza dello store riparte SOLO se Realtime e spento: con il canale connesso e le tabelle fuori dalla publication non rilegge mai nessuno, e chi lanciava non vedeva il proprio sondaggio",
 );
+/*
+ * L'ORA NON SI DISEGNA SUL SERVER.
+ *
+ * Il 22/09/2026 la pagina Sondaggi ha smesso di aprirsi, e il ramo di errore
+ * diceva «ricaricare risolve» — che era falso. Il campo della scadenza
+ * emetteva `min` e `max` calcolati con l'ora LOCALE: il server di Vercel vive
+ * in UTC, chi guarda sta a Roma, e le due stringhe erano diverse di due ore.
+ * Next disegna la pagina due volte e pretende che coincidano: non
+ * coincidevano, l'idratazione falliva, e si portava via tutta la pagina.
+ *
+ * Una durata («3h 12m») se la cava, perche' e' la stessa in ogni fuso. Un
+ * orario, una data o un giorno locale no. Da qui in poi l'ora di questi
+ * componenti viene da `useAdesso()`, che sul server e al primo disegno del
+ * browser vale `null` — cosi' i due si assomigliano per costruzione.
+ */
+check(
+  "L'ora dei sondaggi viene da useAdesso, non da new Date()",
+  /useAdesso\(\)/.test(pagina) &&
+    /useAdesso\(\)/.test(popup) &&
+    !/new Date\(\)/.test(senzaCommenti("components/sondaggi/sondaggi-content.tsx")) &&
+    !/const \[adesso, setAdesso\]/.test(senzaCommenti("components/sondaggi/popup-sondaggio.tsx")),
+  "il server vive in UTC e chi guarda sta a Roma: un `min` calcolato con l'ora locale e' diverso di due ore, e l'idratazione si porta via la pagina",
+);
+check(
+  "E la scadenza proposta si ricava, non sta nello stato iniziale",
+  /const \[scelto, setScelto\] = React\.useState\(""\)/.test(pagina),
+  "uno stato iniziale calcolato sull'orologio lo calcolano in due: il server nel suo fuso e il browser nel suo",
+);
+
 check(
   "Il popup non si chiude nel momento in cui voti",
   /idBloccato/.test(popup) && /setIdBloccato\(sondaggio\.id\)/.test(popup),

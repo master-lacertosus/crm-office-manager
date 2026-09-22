@@ -19,6 +19,7 @@ import {
   inTesta,
   tempoRimasto,
 } from "@/lib/sondaggi";
+import { useAdesso } from "@/lib/adesso";
 import { useAppStore } from "@/lib/store";
 
 /*
@@ -57,23 +58,19 @@ export function PopupSondaggio() {
   const [invio, setInvio] = React.useState(false);
   const [votato, setVotato] = React.useState(false);
 
-  /* Un orologio al minuto. La scadenza va mostrata e va rispettata: fra il
-     momento in cui scade e il passaggio successivo del lavoro pianificato
-     passano fino a cinque minuti, e in quei minuti la riga dice ancora
-     «aperto». Al minuto e non al secondo — un contatore che scorre sarebbe
-     un secondo movimento che nessuno ha chiesto. */
-  const [adesso, setAdesso] = React.useState(() => new Date());
-  React.useEffect(() => {
-    const t = setInterval(() => setAdesso(new Date()), 60_000);
-    return () => clearInterval(t);
-  }, []);
+  /* Un orologio al minuto, e nullo finche il browser non ha idratato: vedi
+     lib/adesso.ts. La scadenza va mostrata e va rispettata -- fra il momento
+     in cui scade e il passaggio successivo del lavoro pianificato passano
+     fino a cinque minuti, e in quei minuti la riga direbbe ancora «aperto».
+     Al minuto e non al secondo: un contatore che scorre sarebbe un secondo
+     movimento che nessuno ha chiesto.
+     Finche e nullo il popup non compare, ed e giusto: un dialogo che si apre
+     durante l idratazione e un dialogo che si apre due volte. */
+  const adesso = useAdesso();
 
-  const candidato = daInterrompere(
-    sondaggi,
-    currentUser.id,
-    sondaggiScartati,
-    adesso,
-  );
+  const candidato = adesso
+    ? daInterrompere(sondaggi, currentUser.id, sondaggiScartati, adesso)
+    : null;
 
   /*
    * Non ci si apre sopra un altro dialogo.
@@ -136,7 +133,7 @@ export function PopupSondaggio() {
      ramo un voto in ritardo verrebbe respinto dalla policy e comparirebbe
      come «Risposta non registrata» — un guasto di rete travestito da esito
      normale. */
-  const ancoraAperto = sondaggio ? eAperto(sondaggio, adesso) : false;
+  const ancoraAperto = sondaggio && adesso ? eAperto(sondaggio, adesso) : false;
   const soloLettura = !ancoraAperto;
 
   /* L'avviso si ricava, non si conserva: sono tre frasi decise da due
@@ -315,7 +312,7 @@ export function PopupSondaggio() {
                 <span aria-hidden>·</span>
                 <span className="font-mono tabular-nums">
                   {ancoraAperto
-                    ? `si chiude fra ${tempoRimasto(sondaggio, adesso)}`
+                    ? `si chiude fra ${adesso ? tempoRimasto(sondaggio, adesso) : "poco"}`
                     : "chiuso"}
                 </span>
               </div>

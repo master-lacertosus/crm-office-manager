@@ -28,6 +28,7 @@ import {
   tempoRimasto,
   type Sondaggio,
 } from "@/lib/sondaggi";
+import { useAdesso } from "@/lib/adesso";
 import { useAppStore } from "@/lib/store";
 
 const MAX_OPZIONI = 8;
@@ -51,18 +52,17 @@ export function SondaggiContent() {
   } = useAppStore();
   const toast = useToast();
 
-  const [adesso, setAdesso] = React.useState(() => new Date());
-  React.useEffect(() => {
-    const t = setInterval(() => setAdesso(new Date()), 60_000);
-    return () => clearInterval(t);
-  }, []);
+  /* Nullo sul server e al primo disegno: vedi lib/adesso.ts. Finche non c e,
+     un sondaggio non si puo dire ne aperto ne chiuso -- e quindi non si
+     disegna niente che dipenda dall ora. */
+  const adesso = useAdesso();
 
-  const inCorso = sondaggioAperto(sondaggi, adesso);
-  const chiusi = sondaggi.filter((s) => !eAperto(s, adesso));
+  const inCorso = adesso ? sondaggioAperto(sondaggi, adesso) : null;
+  const chiusi = adesso ? sondaggi.filter((s) => !eAperto(s, adesso)) : [];
 
   return (
     <div className="flex-1 space-y-4 px-4 py-4 sm:px-6">
-      {inCorso ? (
+      {inCorso && adesso ? (
         <CardInCorso
           sondaggio={inCorso}
           adesso={adesso}
@@ -71,6 +71,7 @@ export function SondaggiContent() {
         />
       ) : null}
 
+      {adesso ? (
       <ModuloLancio
         bloccatoDa={inCorso}
         adesso={adesso}
@@ -83,6 +84,7 @@ export function SondaggiContent() {
           toast("Sondaggio lanciato: lo vedono tutti");
         }}
       />
+      ) : null}
 
       <section>
         <h2 className="mb-2 text-[11px] font-bold tracking-[0.05em] text-ink-secondary uppercase">
@@ -295,9 +297,11 @@ function ModuloLancio({
 }) {
   const [domanda, setDomanda] = React.useState("");
   const [opzioni, setOpzioni] = React.useState(["", ""]);
-  const [scadeAt, setScadeAt] = React.useState(() =>
-    scadenzaPredefinita(new Date()),
-  );
+  /* Lo stato tiene solo cio che una persona ha scelto. La proposta si ricava
+     da `adesso`, che al primo disegno non c e: se stesse nello stato
+     iniziale, il server e il browser la calcolerebbero in due fusi diversi. */
+  const [scelto, setScelto] = React.useState("");
+  const scadeAt = scelto || scadenzaPredefinita(adesso);
   /* Anonimo è il valore di serie, e resta tale. In un ufficio di sei persone
      dove il titolare vede i voti, la gente vota quello che si aspetta che il
      titolare voglia sentire — e un sondaggio che raccoglie risposte di
@@ -332,7 +336,7 @@ function ModuloLancio({
     if (!id) return;
     setDomanda("");
     setOpzioni(["", ""]);
-    setScadeAt(scadenzaPredefinita(new Date()));
+    setScelto("");
     setPalese(false);
     onFatto(id);
   };
@@ -434,7 +438,7 @@ function ModuloLancio({
               value={scadeAt}
               min={scadenzaMinima(adesso)}
               max={scadenzaMassima(adesso)}
-              onChange={(e) => setScadeAt(e.target.value)}
+              onChange={(e) => setScelto(e.target.value)}
               className="mt-1"
             />
             <p className="mt-1 text-[12px] text-ink-faint">
