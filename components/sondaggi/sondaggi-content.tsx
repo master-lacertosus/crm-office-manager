@@ -532,9 +532,10 @@ function RigaArchivio({
           </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-muted">
             <span className="font-mono tabular-nums">
-              {sondaggio.chiuso_at
-                ? formatDue(sondaggio.chiuso_at)
-                : formatDue(sondaggio.scade_at)}
+              {/* Sono timestamp, non date: `formatDue` li converte nel giorno
+                  locale. Passarglieli grezzi faceva cadere la pagina -- vedi
+                  il commento in lib/format.ts. */}
+              {formatDue(sondaggio.chiuso_at ?? sondaggio.scade_at)}
             </span>
             <span aria-hidden>·</span>
             <span className="tabular-nums">

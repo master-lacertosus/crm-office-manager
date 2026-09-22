@@ -37,6 +37,7 @@ import {
   sondaggioAperto,
   tempoRimasto,
 } from "@/lib/sondaggi.ts";
+import { formatDue } from "@/lib/format.ts";
 
 let falliti = 0;
 function check(nome, ok, dettaglio = "") {
@@ -516,6 +517,46 @@ check(
   "E il primo momento accettabile e' fra un quarto d'ora",
   scadenzaMinima(ora) === "2026-09-22T10:15",
   scadenzaMinima(ora),
+);
+
+/* ------------------------------------------------------------------ */
+console.log("\n# Una data che non si legge non butta giu' la pagina\n");
+/* ------------------------------------------------------------------ */
+
+/*
+ * IL DIFETTO PIU' CARO DI QUESTA FUNZIONALITA', e non stava nei sondaggi.
+ *
+ * `formatDue` faceva `iso.split("-")` aspettandosi «2026-09-22». Dandogli un
+ * timestamp completo il terzo pezzo diventa «22T13:58:40.472+00:00»,
+ * `Number()` lo legge NaN, e `Intl.format(Invalid Date)` LANCIA. La riga
+ * dello storico gli passava `chiuso_at` -- che e' un timestamp -- e il
+ * 22/09/2026 la pagina Sondaggi ha smesso di aprirsi nel momento esatto in
+ * cui il primo sondaggio si e' chiuso.
+ *
+ * Ogni altro chiamante del repo ricordava di scrivere `.slice(0, 10)`: una
+ * convenzione tenuta in piedi dalla sola disciplina di chi scrive, e basta
+ * dimenticarla una volta. Adesso la funzione regge tutte e due le forme, e
+ * una data illeggibile torna un trattino invece di uccidere chi la chiama.
+ */
+check(
+  "Una data normale si legge",
+  formatDue("2026-09-22") === "22 set",
+  formatDue("2026-09-22"),
+);
+check(
+  "Un timestamp completo NON fa cadere la pagina",
+  formatDue("2026-09-22T13:58:40.47208+00:00") === "22 set",
+  "e' il timestamp esatto che ha rotto la pagina in produzione",
+);
+check(
+  "E diventa il giorno LOCALE, non i primi dieci caratteri",
+  formatDue("2026-09-22T23:58:40Z") === "23 set",
+  "alle 01:58 di Roma un timestamp in UTC dice ancora ieri: tagliare la stringa mostrerebbe il giorno sbagliato a chi lavora la sera",
+);
+check(
+  "E una data illeggibile torna un trattino",
+  formatDue("non-una-data") === "—" && formatDue("") === "—",
+  "un formattatore usato in venti punti non deve poter uccidere chi lo chiama",
 );
 
 /* ------------------------------------------------------------------ */
