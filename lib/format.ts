@@ -96,9 +96,36 @@ export function diffIsoDays(a: string, b: string): number {
 }
 
 /** "2026-09-12" → "12 set" */
+/**
+ * `2026-09-22` → `22 set`.
+ *
+ * ACCETTA ANCHE UN TIMESTAMP COMPLETO, e non è indulgenza: è che la versione
+ * severa era una mina. Faceva `iso.split("-")` aspettandosi tre pezzi; con
+ * `2026-09-22T13:58:40.472+00:00` il terzo diventa `22T13:58:40.472+00:00`,
+ * `Number()` lo legge come NaN, e `Intl.format(Invalid Date)` LANCIA
+ * `RangeError: Invalid time value`.
+ *
+ * Non è teoria: il 22/09/2026 la pagina Sondaggi ha smesso di aprirsi appena
+ * il primo sondaggio si è chiuso, perché la riga dello storico passava
+ * `chiuso_at` — un timestamp — a questa funzione. Ogni altro chiamante del
+ * repo ricordava di scrivere `.slice(0, 10)`: una convenzione tenuta insieme
+ * dalla sola disciplina di chi scrive, e basta dimenticarla una volta per
+ * portare giù una pagina intera.
+ *
+ * Un timestamp diventa il giorno LOCALE, non i primi dieci caratteri: alle
+ * 01:30 di Roma un `chiuso_at` in UTC dice ancora ieri, e tagliare la stringa
+ * mostrerebbe il giorno sbagliato a chi lavora la sera.
+ *
+ * E una data che non si può leggere torna un trattino invece di far cadere
+ * la pagina: un formattatore usato in venti punti non deve poter uccidere
+ * ciò che lo chiama.
+ */
 export function formatDue(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return dueFormat.format(new Date(y, m - 1, d));
+  const giorno = iso.includes("T") ? giornoLocale(iso) : iso;
+  const [y, m, d] = giorno.split("-").map(Number);
+  const quando = new Date(y, m - 1, d);
+  if (Number.isNaN(quando.getTime())) return "—";
+  return dueFormat.format(quando);
 }
 
 export type DueTone = "overdue" | "today" | "future";
