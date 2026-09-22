@@ -401,6 +401,8 @@ interface AppStore {
     /** Il momento in cui si chiude, in ISO (M20). Non più un numero di ore:
      *  un sondaggio scade quando serve la risposta. */
     scadeAt: string,
+    /** Le risposte si firmano? (M21) Predefinito: no. */
+    palese: boolean,
   ) => Promise<string | null>;
   /** Vota, o cambia idea finché è aperto. `false` se il database rifiuta. */
   votaSondaggio: (sondaggioId: string, opzioneId: string) => Promise<boolean>;
@@ -841,7 +843,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           fetchUserTaskState(supabase),
           fetchCollaborators(supabase),
           fetchTimbrature(supabase),
-          fetchSondaggi(supabase),
+          fetchSondaggi(supabase, userId ?? ""),
         ]);
 
         if (smontatoRef.current) return;
@@ -2617,10 +2619,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
        apra bocca. Quella frase nomina chi ha il sondaggio aperto, quindi
        arriva all'utente così com'è: riformularla toglierebbe l'unica
        informazione che conteneva. */
-    async lanciaSondaggio(domanda, opzioni, scadeAt) {
+    async lanciaSondaggio(domanda, opzioni, scadeAt, palese) {
       try {
         const id = await inCoda(() =>
-          lanciaSondaggioSuDb(createClient(), domanda, opzioni, scadeAt),
+          lanciaSondaggioSuDb(createClient(), domanda, opzioni, scadeAt, palese),
         );
         /*
          * E ADESSO SI RILEGGE, subito.
@@ -2638,7 +2640,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
          * Il proprio gesto non si aspetta da un annuncio: si rilegge. Sono le
          * righe che si è appena creato, e sono poche.
          */
-        const aggiornati = await fetchSondaggi(createClient());
+        const aggiornati = await fetchSondaggi(createClient(), currentUser.id);
         setSondaggi(aggiornati);
         return id;
       } catch (e) {

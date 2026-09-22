@@ -15,6 +15,7 @@ import { formatDue, timeAgo } from "@/lib/format";
 import { rise } from "@/lib/motion";
 import { eResponsabile } from "@/lib/permessi";
 import {
+  chiHaScelto,
   chiManca,
   eAperto,
   hoVotato,
@@ -210,6 +211,9 @@ function CardInCorso({
                 scelta={votato ? sondaggio.miaScelta === o.id : scelta === o.id}
                 onScegli={votato ? undefined : setScelta}
                 nomeGruppo={`pagina-${sondaggio.id}`}
+                firmatari={chiHaScelto(sondaggio, o.id)
+                  .map((id) => profiles.find((p) => p.id === id))
+                  .filter((p) => p !== undefined)}
               />
             ))}
           </ul>
@@ -239,7 +243,9 @@ function CardInCorso({
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border-soft pt-3">
         <p className="text-[13px] text-ink-muted">
-          Voto anonimo: si vede chi ha votato, non cosa.
+          {sondaggio.palese
+            ? "Risposte firmate: accanto a ogni risposta si legge chi l’ha scelta."
+            : "Voto anonimo: si vede chi ha votato, non cosa."}
         </p>
         {puoChiudere ? (
           <Button
@@ -283,6 +289,7 @@ function ModuloLancio({
     domanda: string,
     opzioni: string[],
     scadeAt: string,
+    palese: boolean,
   ) => Promise<string | null>;
   onFatto: (id: string) => void;
 }) {
@@ -291,6 +298,11 @@ function ModuloLancio({
   const [scadeAt, setScadeAt] = React.useState(() =>
     scadenzaPredefinita(new Date()),
   );
+  /* Anonimo è il valore di serie, e resta tale. In un ufficio di sei persone
+     dove il titolare vede i voti, la gente vota quello che si aspetta che il
+     titolare voglia sentire — e un sondaggio che raccoglie risposte di
+     cortesia non serve a niente. Chi ha bisogno dei nomi lo dichiara. */
+  const [palese, setPalese] = React.useState(false);
   const [invio, setInvio] = React.useState(false);
   const idMotivo = React.useId();
 
@@ -311,6 +323,7 @@ function ModuloLancio({
          momento assoluto. `new Date()` su quella stringa la legge come locale,
          che è esattamente ciò che ha scelto chi la sta guardando. */
       new Date(scadeAt).toISOString(),
+      palese,
     );
     setInvio(false);
     /* Prima di annunciare. Se il database ha rifiutato — perché nel
@@ -320,6 +333,7 @@ function ModuloLancio({
     setDomanda("");
     setOpzioni(["", ""]);
     setScadeAt(scadenzaPredefinita(new Date()));
+    setPalese(false);
     onFatto(id);
   };
 
@@ -427,6 +441,30 @@ function ModuloLancio({
               Proposta: domani a fine giornata. Si chiude comunque da solo
               appena hanno risposto tutti.
             </p>
+          </div>
+
+          <div>
+            <label className="flex cursor-pointer items-start gap-2 select-none">
+              <input
+                type="checkbox"
+                checked={palese}
+                onChange={(e) => setPalese(e.target.checked)}
+                className="mt-0.5 size-3.5 shrink-0 accent-brand-500"
+              />
+              <span className="min-w-0">
+                <span className="block text-[13px] font-medium text-ink">
+                  Risposte firmate
+                </span>
+                {/* La conseguenza scritta accanto alla spunta, non in un
+                    fumetto: chi la accende sta togliendo una garanzia agli
+                    altri, e deve leggerlo prima, non scoprirlo dopo. */}
+                <span className="block text-[12px] text-ink-muted">
+                  {palese
+                    ? "Accanto a ogni risposta si leggerà il nome di chi l'ha scelta."
+                    : "Ora è anonimo: si vede chi ha votato, non cosa. Accendilo per le domande in cui la risposta è «chi» — un turno da coprire, una disponibilità."}
+                </span>
+              </span>
+            </label>
           </div>
         </fieldset>
 
@@ -537,6 +575,9 @@ function RigaArchivio({
                   votato
                   inTesta={testa.some((t) => t.id === o.id)}
                   scelta={sondaggio.miaScelta === o.id}
+                  firmatari={chiHaScelto(sondaggio, o.id)
+                    .map((id) => profili.find((p) => p.id === id))
+                    .filter((p) => p !== undefined)}
                 />
               ))}
             </ul>

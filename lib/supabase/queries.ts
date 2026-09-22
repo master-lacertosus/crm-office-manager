@@ -1312,10 +1312,10 @@ export async function deleteTimbratura(
 
 const SONDAGGIO_COLUMNS = `
   id, autore_id, domanda, aperto_at, scade_at, chiuso_at, chiuso_da,
-  aventi_diritto, voti_totali,
+  aventi_diritto, voti_totali, palese,
   sondaggio_opzioni ( id, testo, posizione, voti ),
   sondaggio_firme ( profile_id ),
-  sondaggio_schede ( opzione_id )
+  sondaggio_schede ( profile_id, opzione_id )
 `;
 
 interface SondaggioRow {
@@ -1328,6 +1328,7 @@ interface SondaggioRow {
   chiuso_da: string | null;
   aventi_diritto: number;
   voti_totali: number;
+  palese: boolean;
   sondaggio_opzioni: {
     id: string;
     testo: string;
@@ -1335,10 +1336,10 @@ interface SondaggioRow {
     voti: number;
   }[];
   sondaggio_firme: { profile_id: string }[];
-  sondaggio_schede: { opzione_id: string }[];
+  sondaggio_schede: { profile_id: string; opzione_id: string }[];
 }
 
-function toSondaggio(row: SondaggioRow): Sondaggio {
+function toSondaggio(row: SondaggioRow, ioId: string): Sondaggio {
   return {
     id: row.id,
     autore_id: row.autore_id,
@@ -1349,17 +1350,26 @@ function toSondaggio(row: SondaggioRow): Sondaggio {
     chiuso_da: row.chiuso_da,
     aventi_diritto: row.aventi_diritto,
     voti_totali: row.voti_totali,
+    palese: row.palese,
     opzioni: [...(row.sondaggio_opzioni ?? [])].sort(
       (a, b) => a.posizione - b.posizione,
     ),
     firme: (row.sondaggio_firme ?? []).map((f) => f.profile_id),
-    /* Al massimo una: la chiave primaria dell'urna e' (sondaggio, persona). */
-    miaScelta: row.sondaggio_schede?.[0]?.opzione_id ?? null,
+    /* In un sondaggio anonimo la propria e l'unica riga che arriva; in uno
+       firmato arrivano tutte, e la propria va cercata per id. Cercarla
+       sempre costa niente e vale in tutti e due i casi. */
+    miaScelta:
+      (row.sondaggio_schede ?? []).find((sc) => sc.profile_id === ioId)
+        ?.opzione_id ?? null,
+    scelte: row.sondaggio_schede ?? [],
   };
 }
 
 export async function fetchSondaggi(
   supabase: SupabaseClient,
+  /** Chi sta guardando: serve a riconoscere la propria scheda fra quelle che
+   *  arrivano in un sondaggio firmato. */
+  ioId: string,
 ): Promise<Sondaggio[]> {
   const { data, error } = await supabase
     .from("sondaggi")
@@ -1367,7 +1377,7 @@ export async function fetchSondaggi(
     .order("aperto_at", { ascending: false })
     .limit(60);
   if (error) throw error;
-  return (data as unknown as SondaggioRow[]).map(toSondaggio);
+  return (data as unknown as SondaggioRow[]).map((r) => toSondaggio(r, ioId));
 }
 
 /** Lancia un sondaggio. Ritorna l'id del nuovo, oppure alza: il messaggio
@@ -1377,6 +1387,7 @@ export async function lanciaSondaggio(
   domanda: string,
   opzioni: string[],
   scadeAt: string,
+  palese: boolean,
 ): Promise<string> {
   /* Si passa `p_scade_at` e non `p_ore` (M20): le due versioni della funzione
      convivono sul database e PostgREST sceglie in base ai NOMI dei parametri
@@ -1386,6 +1397,7 @@ export async function lanciaSondaggio(
     p_domanda: domanda,
     p_opzioni: opzioni,
     p_scade_at: scadeAt,
+    p_palese: palese,
   });
   if (error) throw error;
   return data as string;

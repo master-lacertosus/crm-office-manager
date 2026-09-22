@@ -57,6 +57,9 @@ const senzaCommenti = (p) =>
     .replace(/\{\/\*[\s\S]*?\*\/\}/g, " ");
 
 const m19 = leggi("supabase/migrations/20260921200000_m19_sondaggi.sql");
+const m21 = leggi(
+  "supabase/migrations/20260922160000_m21_sondaggi_firmati_e_risultato.sql",
+);
 const queries = leggi("lib/supabase/queries.ts");
 const store = leggi("lib/store.tsx");
 const popup = leggi("components/sondaggi/popup-sondaggio.tsx");
@@ -89,12 +92,48 @@ check(
   /sondaggio_firme_select_membri[\s\S]{0,260}is_active_member\(\)/.test(m19),
   "serve a sapere chi manca, che con sei persone e' la domanda vera",
 );
+/*
+ * DA M21 QUESTO CONTROLLO DICE UNA COSA DIVERSA, e vale la pena scriverlo.
+ *
+ * Prima pretendeva che la lettura non chiedesse MAI chi avesse messo quella
+ * scheda: l'anonimato era una proprieta' della tabella. Adesso e' una
+ * proprieta' del SONDAGGIO -- chi lancia decide -- quindi la lettura chiede
+ * sempre il proprietario, e a non consegnarlo e' la policy.
+ *
+ * Il che sposta il peso: la promessa non vive piu' nella query ma nella riga
+ * di SQL qui sotto. Se qualcuno la allarga, l'anonimato dichiarato
+ * nell'interfaccia diventa una bugia e tutto continua a funzionare.
+ */
 check(
-  "La lettura NON chiede mai chi ha messo quella scheda",
-  /sondaggio_schede \( opzione_id \)/.test(queries) &&
-    !/sondaggio_schede \([^)]*profile_id/.test(queries),
-  "basterebbe una colonna in piu' nella select per far arrivare al browser la coppia persona-risposta",
+  "A decidere se l'urna si apre e' il SONDAGGIO, non la tabella",
+  /sondaggio_e_palese\(sondaggio_id\)/.test(m21) &&
+    /profile_id = \(select auth\.uid\(\)\)\s*\n\s*or \(/.test(m21),
+  "la propria scheda si vede sempre; le altre solo dove e' stato dichiarato",
 );
+check(
+  "E la funzione che lo decide e' security definer e stable",
+  /create or replace function public\.sondaggio_e_palese[\s\S]{0,140}stable[\s\S]{0,60}security definer[\s\S]{0,60}set search_path = ''/.test(
+    m21,
+  ),
+  "una policy che interroga un'altra tabella con la RLS accesa e' il modo in cui su questo repo e' gia' nata una ricorsione (M11)",
+);
+check(
+  "Il valore di serie e' l'anonimato",
+  /add column if not exists palese boolean not null default false/.test(m21) &&
+    /React\.useState\(false\)/.test(pagina),
+  "un'impostazione che protegge le persone non si mette dietro una spunta da ricordarsi",
+);
+check(
+  "Chi vota sa PRIMA se la sua risposta sara' firmata",
+  /sondaggio\.palese/.test(popup) && /Risposte firmate/.test(popup),
+  "scoprirlo dopo aver votato sarebbe un inganno, non un dettaglio",
+);
+check(
+  "I nomi si leggono solo dove il sondaggio e' firmato",
+  /if \(!s\.palese\) return \[\];/.test(leggi("lib/sondaggi.ts")),
+  "e comunque in un sondaggio anonimo le righe degli altri non arrivano: questo e' solo il secondo lucchetto",
+);
+
 check(
   "E il tipo di dominio non ha un posto dove metterla",
   !/schede\s*:/.test(leggi("lib/sondaggi.ts")) &&
@@ -205,7 +244,7 @@ check(
 );
 check(
   "Chi lancia rilegge subito, senza aspettare un annuncio",
-  /const aggiornati = await fetchSondaggi\(createClient\(\)\);/.test(store),
+  /const aggiornati = await fetchSondaggi\(/.test(store),
   "il battito di sicurezza dello store riparte SOLO se Realtime e spento: con il canale connesso e le tabelle fuori dalla publication non rilegge mai nessuno, e chi lanciava non vedeva il proprio sondaggio",
 );
 check(

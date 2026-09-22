@@ -55,6 +55,7 @@ const DA_INCOLLARE = [
   "supabase/migrations/20260921180000_m18_rientro.sql",
   "supabase/migrations/20260921200000_m19_sondaggi.sql",
   "supabase/migrations/20260922120000_m20_scadenza_sondaggio.sql",
+  "supabase/migrations/20260922160000_m21_sondaggi_firmati_e_risultato.sql",
 ];
 
 /** Svuota le stringhe fra apici, lasciando spazi al loro posto: così le
