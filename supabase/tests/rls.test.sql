@@ -9,7 +9,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(36);
+select plan(40);
 
 -- UUID degli utenti di test (supabase/seed.sql)
 -- alessia (admin):  00000000-0000-4000-8000-000000000001
@@ -449,6 +449,80 @@ select results_eq(
   'select count(*)::int from public.sondaggio_schede',
   array[0],
   'nemmeno un admin apre l''urna'
+);
+
+-- ---------------------------------------------------------------------------
+-- Sondaggi a risposte FIRMATE (M21)
+--
+-- Da qui in poi l'anonimato non è più una proprietà della tabella ma una
+-- proprietà del SONDAGGIO. È il punto in cui questa migrazione vive o muore:
+-- se la policy si allargasse a tutte le schede, l'anonimato dichiarato
+-- nell'interfaccia diventerebbe una bugia — e nessuno se ne accorgerebbe,
+-- perché tutto continuerebbe a funzionare.
+--
+-- Questi quattro test sono la differenza fra «lo abbiamo scritto» e «è vero».
+-- ---------------------------------------------------------------------------
+select public.chiudi_sondaggio(
+  (select id from public.sondaggi where chiuso_at is null limit 1)
+);
+
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated"}',
+  true
+);
+
+select lives_ok(
+  $q$select public.lancia_sondaggio(
+       'Chi copre il turno di sabato?',
+       array['Io', 'Non posso'],
+       now() + interval '2 hours',
+       true)$q$,
+  'marco lancia un sondaggio a risposte firmate'
+);
+
+insert into public.sondaggio_schede (sondaggio_id, profile_id, opzione_id)
+select o.sondaggio_id, '00000000-0000-4000-8000-000000000002', o.id
+  from public.sondaggio_opzioni o
+  join public.sondaggi s on s.id = o.sondaggio_id
+ where s.palese and s.chiuso_at is null and o.posizione = 1;
+
+-- Giulia, che nel sondaggio anonimo non vedeva niente, qui vede.
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000003","role":"authenticated"}',
+  true
+);
+
+select results_eq(
+  $q$select count(*)::int from public.sondaggio_schede sc
+       join public.sondaggi s on s.id = sc.sondaggio_id
+      where s.palese$q$,
+  array[1],
+  'in un sondaggio firmato si vede cosa ha votato un altro'
+);
+
+-- E il sondaggio anonimo di prima resta chiuso a chiave, nella stessa
+-- sessione e nello stesso istante: è la prova che a decidere è il sondaggio.
+select results_eq(
+  $q$select count(*)::int from public.sondaggio_schede sc
+       join public.sondaggi s on s.id = sc.sondaggio_id
+      where not s.palese$q$,
+  array[0],
+  'mentre quello anonimo resta chiuso, nella stessa sessione'
+);
+
+-- Il risultato, quando si chiude, lo riceve tutto l'ufficio.
+select public.chiudi_sondaggio(
+  (select id from public.sondaggi where palese and chiuso_at is null limit 1)
+);
+
+select results_eq(
+  $q$select count(*)::int from public.notifications
+      where kind = 'sondaggio' and message like 'Sondaggio chiuso:%'
+        and to_user_id = '00000000-0000-4000-8000-000000000003'$q$,
+  array[1],
+  'chiudere un sondaggio avvisa del risultato'
 );
 
 reset role;

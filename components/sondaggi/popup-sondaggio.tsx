@@ -12,6 +12,7 @@ import { useTrappolaFuoco } from "@/lib/fuoco";
 import { dur, ease, pop, scrim } from "@/lib/motion";
 import { usePreferences } from "@/lib/preferences";
 import {
+  chiHaScelto,
   chiManca,
   daInterrompere,
   eAperto,
@@ -143,7 +144,9 @@ export function PopupSondaggio() {
      dire scriverla da dentro un effetto — cioè far ridisegnare a cascata per
      un dato che non è mai stato indipendente. */
   const avviso = votato
-    ? "Risposta registrata. Resta anonima."
+    ? sondaggio?.palese
+      ? "Risposta registrata, col tuo nome."
+      : "Risposta registrata. Resta anonima."
     : soloLettura
       ? "Il sondaggio è stato chiuso: ecco com'è andata."
       : "";
@@ -288,7 +291,9 @@ export function PopupSondaggio() {
                 {sondaggio.domanda}
               </h2>
               <p id={idNota} className="mt-1 text-sm text-ink-secondary">
-                Voto anonimo: si vede chi ha votato, non cosa.
+                {sondaggio.palese
+                  ? "Risposte firmate: accanto alla tua comparirà il tuo nome."
+                  : "Voto anonimo: si vede chi ha votato, non cosa."}
               </p>
 
               <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
@@ -333,6 +338,9 @@ export function PopupSondaggio() {
                       }
                       onScegli={mostraRisultati ? undefined : setScelta}
                       nomeGruppo={`sondaggio-${sondaggio.id}`}
+                      firmatari={chiHaScelto(sondaggio, o.id)
+                        .map((id) => profiles.find((p) => p.id === id))
+                        .filter((p) => p !== undefined)}
                     />
                   ))}
                 </ul>

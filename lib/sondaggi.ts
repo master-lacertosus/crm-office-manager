@@ -34,13 +34,30 @@ export interface Sondaggio {
   chiuso_da: string | null;
   /** Quante persone attive c'erano al lancio, congelate. */
   aventi_diritto: number;
+  /** Le risposte si firmano? (M21) Lo decide chi lancia, domanda per domanda:
+   *  «pizza o sushi» resta anonimo, «chi copre il turno di sabato» e inutile
+   *  se non si sa chi. Il valore di serie e false -- un impostazione che
+   *  protegge le persone non si mette dietro una spunta da ricordarsi. */
+  palese: boolean;
   voti_totali: number;
   opzioni: OpzioneSondaggio[];
   /** Chi ha votato. Non che cosa: quello non arriva proprio al browser. */
   firme: string[];
-  /** La propria scelta, se si è votato. La RLS consegna solo la propria
-   *  scheda, quindi questo campo è pieno solo per chi guarda. */
+  /** La propria scelta, se si è votato. */
   miaScelta: string | null;
+  /** Chi ha scelto cosa. Pieno SOLO nei sondaggi firmati: in quelli anonimi
+   *  la RLS consegna al massimo la propria riga — non è l'interfaccia a
+   *  nasconderlo, è il database a non mandarlo. */
+  scelte: { profile_id: string; opzione_id: string }[];
+}
+
+/** Chi ha scelto questa risposta, in un sondaggio firmato. Vuoto in uno
+ *  anonimo, perché lì le righe degli altri non arrivano. */
+export function chiHaScelto(s: Sondaggio, opzioneId: string): string[] {
+  if (!s.palese) return [];
+  return s.scelte
+    .filter((sc) => sc.opzione_id === opzioneId)
+    .map((sc) => sc.profile_id);
 }
 
 /*

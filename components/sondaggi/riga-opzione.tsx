@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 
+import { AvatarInitials } from "@/components/avatar-initials";
 import { dur, ease } from "@/lib/motion";
 import { usePreferences } from "@/lib/preferences";
 import type { OpzioneSondaggio } from "@/lib/sondaggi";
@@ -30,6 +31,7 @@ export function RigaOpzione({
   disabilitata,
   onScegli,
   nomeGruppo,
+  firmatari,
 }: {
   opzione: OpzioneSondaggio;
   totale: number;
@@ -42,6 +44,10 @@ export function RigaOpzione({
   /** Assente = sola lettura (l'archivio, o un sondaggio chiuso). */
   onScegli?: (id: string) => void;
   nomeGruppo?: string;
+  /** Chi ha scelto questa risposta. Pieno solo nei sondaggi a risposte
+   *  firmate: in quelli anonimi le righe degli altri non arrivano nemmeno al
+   *  browser, quindi qui è vuoto per costruzione e non per scelta grafica. */
+  firmatari?: { id: string; full_name: string; avatar_url?: string | null }[];
 }) {
   /* `useReducedMotion()` legge SOLO la media query di sistema. Ma questo
      prodotto ha anche un interruttore suo (Impostazioni › Aspetto), e chi
@@ -87,20 +93,44 @@ export function RigaOpzione({
       <span
         aria-hidden
         className={cn(
-          "gem relative z-10 size-3 shrink-0 rounded-full",
+          "gem relative z-10 mt-1 size-3 shrink-0 rounded-full",
           scelta ? "bg-brand-500" : "bg-muted",
         )}
       />
-      <span className="relative z-10 min-w-0 flex-1 text-sm text-ink">
-        {opzione.testo}
-        {votato && inTesta ? (
-          /* Il colore non è mai l'unico canale: filo verticale più parola.
-             «In testa» e non «più votata», perché `inTesta()` torna un
-             ARRAY — fra sei persone un pareggio 2-2-2 è la norma, e
-             incoronare la prima delle tre sarebbe una bugia decisa
-             dall'ordine di inserimento. */
-          <span className="ml-2 text-[11px] font-semibold tracking-[0.05em] text-ink-secondary uppercase">
-            in testa
+      <span className="relative z-10 flex min-w-0 flex-1 flex-col text-sm text-ink">
+        <span className="flex min-w-0 flex-wrap items-center">
+          {opzione.testo}
+          {votato && inTesta ? (
+            /* Il colore non è mai l'unico canale: filo verticale più parola.
+               «In testa» e non «più votata», perché `inTesta()` torna un
+               ARRAY — fra sei persone un pareggio 2-2-2 è la norma, e
+               incoronare la prima delle tre sarebbe una bugia decisa
+               dall'ordine di inserimento. */
+            <span className="ml-2 text-[11px] font-semibold tracking-[0.05em] text-ink-secondary uppercase">
+              in testa
+            </span>
+          ) : null}
+        </span>
+        {votato && firmatari && firmatari.length > 0 ? (
+          /* I nomi per esteso, non solo le faccine: in un sondaggio a
+             risposte firmate la domanda è «chi», e una fila di cerchi
+             colorati la risposta non la dà. Gli avatar stanno accanto perché
+             si riconoscono più in fretta di quanto si leggano i nomi. */
+          <span className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <span className="flex -space-x-1.5">
+              {firmatari.map((p) => (
+                <AvatarInitials
+                  key={p.id}
+                  name={p.full_name}
+                  src={p.avatar_url}
+                  size="sm"
+                  className="ring-2 ring-card"
+                />
+              ))}
+            </span>
+            <span className="text-[12px] text-ink-muted">
+              {firmatari.map((p) => p.full_name.split(" ")[0]).join(", ")}
+            </span>
           </span>
         ) : null}
       </span>
@@ -112,7 +142,7 @@ export function RigaOpzione({
            Prima si vedeva solo il conteggio, e la percentuale viveva nel
            testo per i lettori di schermo: cioè da nessuna parte, per tutti
            gli altri. */
-        <span className="relative z-10 flex shrink-0 items-baseline gap-1">
+        <span className="relative z-10 flex shrink-0 items-baseline gap-1 pt-px">
           <span className="font-mono text-[13px] font-bold tabular-nums text-ink">
             {percento}%
           </span>
@@ -125,7 +155,7 @@ export function RigaOpzione({
   );
 
   const classi =
-    "glass-chip relative flex w-full items-center gap-3 overflow-hidden rounded-xl px-3.5 py-3 text-left";
+    "glass-chip relative flex w-full items-start gap-3 overflow-hidden rounded-xl px-3.5 py-3 text-left";
 
   /* Dopo il voto NON è più un modulo, e non deve fingere di esserlo. Tenere
      i risultati dentro un `<fieldset disabled>` li farebbe leggere come una
@@ -140,6 +170,9 @@ export function RigaOpzione({
           {opzione.voti === 1 ? "1 voto" : `${opzione.voti} voti`} su {totale},{" "}
           {percento} per cento{inTesta ? ", in testa" : ""}
           {scelta ? ", è la tua risposta" : ""}
+          {firmatari && firmatari.length > 0
+            ? `. Scelta da ${firmatari.map((p) => p.full_name).join(", ")}`
+            : ""}
         </span>
       </li>
     );
