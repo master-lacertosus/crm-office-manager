@@ -3,7 +3,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CheckCheck, X } from "lucide-react";
+import { CheckCheck, ChevronDown, ChevronUp, X } from "lucide-react";
 
 import { buildAnalytics } from "@/lib/analytics";
 import { confrontaPerScadenza } from "@/lib/ordine";
@@ -62,6 +62,17 @@ export function StandupMode({
   const reduced = useReducedMotion();
   const weekAgo = addDaysIso(-6);
   const today = todayIso();
+
+  /* Chi ha la lista aperta per intero.
+     Le cinque righe sono la misura giusta per il colpo d'occhio della
+     riunione, ma «+10 altri» era testo e basta: la cosa più interessante
+     della scheda — chi ha dieci task che non si vedono — era anche l'unica
+     che non si poteva guardare. Adesso si apre, e si richiude.
+     Lo stato sta qui e non nella scheda perché le schede nascono da un
+     `.map()`: un hook là dentro non si può.
+     Non si azzera alla chiusura dello standup, e va bene così: se lo si
+     riapre a metà riunione, si ritrova com'era. */
+  const [espansi, setEspansi] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -255,7 +266,10 @@ export function StandupMode({
                         Nessun task aperto.
                       </li>
                     ) : (
-                      openTasks.slice(0, 5).map((task) => (
+                      (espansi.includes(profile.id)
+                        ? openTasks
+                        : openTasks.slice(0, 5)
+                      ).map((task) => (
                         <li key={task.id} className="flex items-center gap-2.5">
                           <StatusPip status={task.status} className="size-3.5" />
                           <span className="min-w-0 flex-1 truncate text-[14px]/5 font-medium text-ink">
@@ -269,8 +283,34 @@ export function StandupMode({
                       ))
                     )}
                     {openTasks.length > 5 ? (
-                      <li className="pl-6 text-[12px] font-semibold text-ink-muted">
-                        +{openTasks.length - 5} altri
+                      <li>
+                        <button
+                          type="button"
+                          aria-expanded={espansi.includes(profile.id)}
+                          onClick={() =>
+                            setEspansi((prev) =>
+                              prev.includes(profile.id)
+                                ? prev.filter((id) => id !== profile.id)
+                                : [...prev, profile.id],
+                            )
+                          }
+                          className="flex items-center gap-1 rounded-md pl-6 text-[12px] font-semibold text-ink-muted outline-none transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {espansi.includes(profile.id) ? (
+                            <>
+                              <ChevronUp aria-hidden className="size-3.5" />
+                              Mostra i primi cinque
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown aria-hidden className="size-3.5" />
+                              {/* «Vedi» e non solo il numero: un conteggio non
+                                  dice che si può premere, e questo si poteva
+                                  premere da oggi. */}
+                              Vedi gli altri {openTasks.length - 5}
+                            </>
+                          )}
+                        </button>
                       </li>
                     ) : null}
                   </ul>
