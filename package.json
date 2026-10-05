@@ -38,7 +38,8 @@
     "verify:ore": "node --import ./scripts/alias.mjs scripts/ore-e-meteo-verify.mjs",
     "verify:fantasma": "node --import ./scripts/alias.mjs scripts/richiesta-fantasma-verify.mjs",
     "verify:sondaggi": "node --import ./scripts/alias.mjs scripts/sondaggi-verify.mjs",
-    "verify:attesa": "node scripts/attesa-verify.mjs"
+    "verify:attesa": "node scripts/attesa-verify.mjs",
+    "verify:ferie": "node scripts/ferie-approvate-verify.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

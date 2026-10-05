@@ -7,6 +7,22 @@ diventa una **Release «Update»** su GitHub (regole in
 [Keep a Changelog](https://keepachangelog.com/it/), con date al posto delle
 versioni (fase pre-1.0).
 
+## 2026-10-05
+
+### Aggiunto
+- **Le ferie approvate si possono correggere o togliere.** Nella pagina
+  **Ferie & Permessi** i responsabili trovano una sezione nuova, *Assenze
+  approvate*, con tutte quelle in corso e in arrivo; su ognuna ci sono
+  **Modifica** (nuove date, o nuovo giorno e fascia oraria per un permesso) e
+  **Rimuovi**. Gli stessi due pulsanti compaiono anche in *Decise di recente*.
+  Il dipendente riceve un avviso con le date vecchie e nuove, o con il motivo
+  della rimozione — che è obbligatorio, come per un rifiuto. Gli altri
+  responsabili vengono avvisati anche loro.
+- Come per la decisione, **la propria assenza approvata la modifica un altro
+  responsabile**: allungarsi le ferie da soli sarebbe approvarsele.
+- Il messaggio di conferma arriva solo se il database ha davvero salvato. Non
+  serve nessuna migrazione: le regole del database lo permettevano già dalla M9.
+
 ## 2026-09-22 (sera)
 
 ### Aggiunto

@@ -39,6 +39,7 @@ const CONTROLLI = [
   ["verify:fantasma", "Non si annuncia cio che non e stato salvato", ["run", "verify:fantasma"]],
   ["verify:sondaggi", "Il voto resta anonimo, e uno per volta resta uno", ["run", "verify:sondaggi"]],
   ["verify:attesa", "Una pagina che lavora lo fa vedere", ["run", "verify:attesa"]],
+  ["verify:ferie", "Le ferie approvate si correggono, e il dipendente lo sa", ["run", "verify:ferie"]],
   ["verify:tema", "Il tema scuro si legge davvero", ["run", "verify:tema"]],
   ["verify:chiaro", "Il tema chiaro si legge davvero", ["run", "verify:chiaro"]],
   ["verify:build", "Il sito si costruisce da zero", ["run", "verify:build"]],

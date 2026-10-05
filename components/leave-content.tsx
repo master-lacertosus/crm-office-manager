@@ -9,8 +9,10 @@ import {
   ChevronRight,
   Clock,
   Inbox,
+  Pencil,
   Plus,
   Send,
+  Trash2,
   TreePalm,
   X,
 } from "lucide-react";
@@ -785,6 +787,15 @@ function LeaveRow({
   );
   const canWithdraw =
     leave.status === "pending" && leave.requester_id === currentUser.id;
+  /* Le stesse due condizioni della guardia: un responsabile, e non sulla
+     propria assenza. Fuori da qui il comando non si offre affatto. */
+  const canAmend =
+    leave.status === "approved" &&
+    currentUser.role === "admin" &&
+    leave.requester_id !== currentUser.id;
+  const [amending, setAmending] = React.useState<"modify" | "remove" | null>(
+    null,
+  );
 
   const withdraw = () => {
     const undo = withdrawLeave(leave.id);
@@ -796,41 +807,254 @@ function LeaveRow({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-accent/60">
-      {showRequester ? (
-        <AvatarInitials
-          name={requester?.full_name ?? "?"}
-          src={requester?.avatar_url}
-          size="sm"
+    <div className="rounded-lg transition-colors hover:bg-accent/60">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 px-2.5 py-2">
+        {showRequester ? (
+          <AvatarInitials
+            name={requester?.full_name ?? "?"}
+            src={requester?.avatar_url}
+            size="sm"
+          />
+        ) : null}
+        <TypeBadge type={leave.type} />
+        <span className="min-w-0 flex-1 basis-44">
+          <span className="block truncate text-sm font-medium text-ink">
+            {showRequester ? `${requester?.full_name.split(" ")[0]} · ` : ""}
+            {leaveDetail(leave, days)}
+          </span>
+          <span className="block truncate text-[11px] text-ink-muted">
+            {timeAgo(leave.created_at)}
+            {leave.decision_note
+              ? ` — «${leave.decision_note}»${decider ? ` (${decider.full_name.split(" ")[0]})` : ""}`
+              : leave.status !== "pending" && decider
+                ? ` — deciso da ${decider.full_name.split(" ")[0]}`
+                : ""}
+          </span>
+        </span>
+        <LeaveStatusChip status={leave.status} />
+        {canWithdraw ? (
+          <button
+            type="button"
+            onClick={withdraw}
+            aria-label="Ritira la richiesta"
+            title="Ritira la richiesta"
+            className="rounded-md p-1 text-ink-faint outline-none transition-colors hover:bg-danger-soft hover:text-danger-text focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X aria-hidden className="size-3.5" />
+          </button>
+        ) : null}
+        {canAmend && !amending ? (
+          <span className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setAmending("modify")}>
+              <Pencil data-icon="inline-start" />
+              Modifica
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setAmending("remove")}>
+              <Trash2 data-icon="inline-start" />
+              Rimuovi
+            </Button>
+          </span>
+        ) : showRequester &&
+          leave.status === "approved" &&
+          currentUser.role === "admin" &&
+          leave.requester_id === currentUser.id ? (
+          /* Senza comandi, ma detto: altrimenti sembra una dimenticanza. */
+          <span className="text-[12px] text-ink-muted">
+            È tua: la modifica un altro responsabile
+          </span>
+        ) : null}
+      </div>
+      {canAmend && amending ? (
+        <AmendLeave
+          leave={leave}
+          mode={amending}
+          onDone={() => setAmending(null)}
         />
       ) : null}
-      <TypeBadge type={leave.type} />
-      <span className="min-w-0 flex-1 basis-44">
-        <span className="block truncate text-sm font-medium text-ink">
-          {showRequester ? `${requester?.full_name.split(" ")[0]} · ` : ""}
-          {leaveDetail(leave, days)}
-        </span>
-        <span className="block truncate text-[11px] text-ink-muted">
-          {timeAgo(leave.created_at)}
-          {leave.decision_note
-            ? ` — «${leave.decision_note}»${decider ? ` (${decider.full_name.split(" ")[0]})` : ""}`
-            : leave.status !== "pending" && decider
-              ? ` — deciso da ${decider.full_name.split(" ")[0]}`
-              : ""}
-        </span>
-      </span>
-      <LeaveStatusChip status={leave.status} />
-      {canWithdraw ? (
-        <button
-          type="button"
-          onClick={withdraw}
-          aria-label="Ritira la richiesta"
-          title="Ritira la richiesta"
-          className="rounded-md p-1 text-ink-faint outline-none transition-colors hover:bg-danger-soft hover:text-danger-text focus-visible:ring-2 focus-visible:ring-ring"
+    </div>
+  );
+}
+
+/** Modifica o rimozione di un'assenza approvata, sotto la sua riga. */
+function AmendLeave({
+  leave,
+  mode,
+  onDone,
+}: {
+  leave: LeaveRequest;
+  mode: "modify" | "remove";
+  onDone: () => void;
+}) {
+  const { profiles, closures, leaves, modifyLeave, removeLeave } = useAppStore();
+  const toast = useToast();
+  const requester = profiles.find((p) => p.id === leave.requester_id);
+  const name = requester?.full_name.split(" ")[0] ?? "il collega";
+  const isPermesso = leave.type === "permesso";
+  const [start, setStart] = React.useState(leave.start_date);
+  const [end, setEnd] = React.useState(leave.end_date);
+  const [timeRange, setTimeRange] = React.useState(leave.time_range ?? "");
+  const [note, setNote] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+
+  const effEnd = isPermesso ? start : end < start ? start : end;
+  const days = workingDaysCount(
+    start,
+    effEnd,
+    closures,
+    lavoraNelWeekend(requester?.role ?? "member"),
+  );
+  // Le altre assenze vive della stessa persona: le nuove date non le toccano.
+  const overlap = leaves.find(
+    (l) =>
+      l.id !== leave.id &&
+      l.requester_id === leave.requester_id &&
+      l.status !== "rejected" &&
+      rangesOverlap(start, effEnd, l.start_date, l.end_date),
+  );
+  const unchanged =
+    start === leave.start_date &&
+    effEnd === leave.end_date &&
+    (timeRange.trim() || null) === (leave.time_range ?? null);
+
+  const modifyBlocked = !start || unchanged || !!overlap || days === 0;
+  const removeBlocked = !note.trim();
+  const blocked = busy || (mode === "modify" ? modifyBlocked : removeBlocked);
+
+  const confirm = async () => {
+    if (blocked) return;
+    setBusy(true);
+    const fatto =
+      mode === "modify"
+        ? await modifyLeave(
+            leave.id,
+            { start_date: start, end_date: effEnd, time_range: timeRange },
+            note,
+          )
+        : await removeLeave(leave.id, note);
+    setBusy(false);
+    // Si annuncia solo ciò che il database ha accettato.
+    if (!fatto) return;
+    toast(
+      mode === "modify"
+        ? `Assenza modificata: avviso inviato a ${name}.`
+        : `Assenza rimossa: ${name} ha ricevuto il motivo.`,
+    );
+    onDone();
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      confirm();
+    }
+    if (e.key === "Escape") onDone();
+  };
+
+  return (
+    <div className="space-y-2 border-t border-border-soft px-2.5 pt-2.5 pb-3">
+      {mode === "modify" ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <label className="flex items-center gap-1.5 text-[13px] text-ink-secondary">
+            {isPermesso ? "Giorno" : "Dal"}
+            <Input
+              type="date"
+              value={start}
+              onChange={(e) => {
+                setStart(e.target.value);
+                if (end < e.target.value) setEnd(e.target.value);
+              }}
+              onKeyDown={onKeyDown}
+              aria-label={isPermesso ? "Nuovo giorno del permesso" : "Nuovo primo giorno"}
+              className="h-9 w-36 shrink-0"
+              autoFocus
+            />
+          </label>
+          {isPermesso ? (
+            <label className="flex items-center gap-1.5 text-[13px] text-ink-secondary">
+              <Clock aria-hidden className="size-3.5 text-ink-muted" />
+              <Input
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value)}
+                onKeyDown={onKeyDown}
+                placeholder="es. 9:00–13:00"
+                aria-label="Nuova fascia oraria (facoltativa)"
+                className="h-9 w-32 shrink-0"
+                maxLength={20}
+              />
+            </label>
+          ) : (
+            <label className="flex items-center gap-1.5 text-[13px] text-ink-secondary">
+              Al
+              <Input
+                type="date"
+                value={effEnd}
+                min={start}
+                onChange={(e) => setEnd(e.target.value)}
+                onKeyDown={onKeyDown}
+                aria-label="Nuovo ultimo giorno"
+                className="h-9 w-36 shrink-0"
+              />
+            </label>
+          )}
+          <p className="text-[12px] text-ink-muted" role="status">
+            {overlap ? (
+              <span className="font-medium text-danger-text">
+                Si sovrappone a un&apos;altra assenza di {name} (
+                {formatRange(overlap.start_date, overlap.end_date)}).
+              </span>
+            ) : days === 0 ? (
+              <span className="font-medium text-warning-text">
+                Solo weekend o giorni di chiusura.
+              </span>
+            ) : unchanged ? (
+              "Cambia le date per salvare."
+            ) : (
+              `${days} giorn${days === 1 ? "o" : "i"} lavorativ${days === 1 ? "o" : "i"}`
+            )}
+          </p>
+        </div>
+      ) : (
+        <p className="text-[13px] text-ink-secondary">
+          L&apos;assenza sparisce dal calendario e {name} riceve un avviso con
+          il motivo.
+        </p>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={
+            mode === "modify"
+              ? `Nota per ${name} (facoltativa)`
+              : `Motivo (obbligatorio, lo riceve ${name})`
+          }
+          aria-label={mode === "modify" ? "Nota della modifica" : "Motivo della rimozione"}
+          className="h-9 min-w-52 flex-1"
+          autoFocus={mode === "remove"}
+          maxLength={200}
+        />
+        <Button
+          variant={mode === "modify" ? "default" : "destructive"}
+          size="sm"
+          onClick={confirm}
+          disabled={blocked}
         >
-          <X aria-hidden className="size-3.5" />
-        </button>
-      ) : null}
+          {busy
+            ? "Salvataggio…"
+            : mode === "modify"
+              ? "Salva modifica"
+              : "Conferma rimozione"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onDone}
+          aria-label="Lascia com'era"
+        >
+          <X />
+        </Button>
+      </div>
     </div>
   );
 }
@@ -989,6 +1213,12 @@ export function LeaveContent() {
   const decided = leaves
     .filter((l) => l.status !== "pending")
     .sort((a, b) => (b.decided_at ?? "").localeCompare(a.decided_at ?? ""));
+  /* Tutte, non le ultime otto: un'assenza approvata a luglio per agosto
+     esce presto da «Decise di recente», ed è proprio quella che può
+     servire correggere. */
+  const approvedAhead = leaves
+    .filter((l) => l.status === "approved" && l.end_date >= todayIso())
+    .sort((a, b) => a.start_date.localeCompare(b.start_date));
 
   // Saldo informale: giorni di ferie approvati nell'anno corrente.
   const mineApprovedDays = mine
@@ -1029,6 +1259,28 @@ export function LeaveContent() {
             <div className="space-y-3">
               {pending.map((l) => (
                 <PendingLeaveCard key={l.id} leave={l} />
+              ))}
+            </div>
+          )}
+        </Section>
+      ) : null}
+
+      {isAdmin ? (
+        <Section
+          title="Assenze approvate"
+          count={approvedAhead.length}
+          hint="In corso e in arrivo: si possono modificare o rimuovere"
+        >
+          {approvedAhead.length === 0 ? (
+            <EmptyState
+              icon={TreePalm}
+              title="Nessuna assenza approvata in arrivo"
+              className="py-6"
+            />
+          ) : (
+            <div className="-mx-1 flex flex-col">
+              {approvedAhead.map((l) => (
+                <LeaveRow key={l.id} leave={l} showRequester />
               ))}
             </div>
           )}
