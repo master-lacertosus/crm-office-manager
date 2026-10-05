@@ -817,6 +817,38 @@ export async function deleteLeaveRequest(
   if (error) throw error;
 }
 
+/** Un responsabile corregge le date di un'assenza già decisa. La RLS, quando
+ *  nega, non dà errore: restituisce zero righe. Per questo si chiede la riga
+ *  indietro, e se non torna si dice che non è stata salvata. */
+export async function updateLeaveRange(
+  supabase: SupabaseClient,
+  id: string,
+  range: { start_date: string; end_date: string; time_range: string | null },
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("leave_requests")
+    .update(range)
+    .eq("id", id)
+    .select("id");
+  if (error) throw error;
+  if (!data?.length) throw new Error("Solo un responsabile può modificare un'assenza approvata.");
+}
+
+/** Stessa cura della modifica: una cancellazione che non ha cancellato
+ *  niente non deve passare per fatta. */
+export async function removeLeaveRequest(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("leave_requests")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) throw error;
+  if (!data?.length) throw new Error("Solo un responsabile può annullare un'assenza approvata.");
+}
+
 export async function fetchClosures(
   supabase: SupabaseClient,
 ): Promise<CompanyClosure[]> {

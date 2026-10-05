@@ -78,17 +78,19 @@ import {
   insertTask,
   markNotificationsRead,
   removeAvatarByUrl,
+  removeLeaveRequest,
   setChecklistItemDone,
   setDecision,
   setUserTaskState,
   toggleReactionRow,
+  updateLeaveRange,
   updateProfileAccess,
   updateProfileRow,
   updateTaskRow,
   uploadAvatar,
   upsertTemplate,
 } from "@/lib/supabase/queries";
-import { formatRange, workingDaysCount } from "@/lib/leave";
+import { formatRange, rangesOverlap, workingDaysCount } from "@/lib/leave";
 import type {
   AppNotification,
   CompanyClosure,
@@ -470,6 +472,16 @@ interface AppStore {
     decision: "approved" | "rejected",
     note: string,
   ) => Promise<boolean>;
+  /** Corregge le date di un'assenza approvata (solo admin, non sulla
+   *  propria): avvisa il dipendente. `false` se non è stata salvata. */
+  modifyLeave: (
+    id: string,
+    range: { start_date: string; end_date: string; time_range: string | null },
+    note: string,
+  ) => Promise<boolean>;
+  /** Annulla un'assenza approvata (solo admin, non sulla propria), con un
+   *  motivo che il dipendente riceve. `false` se non è stata cancellata. */
+  removeLeave: (id: string, reason: string) => Promise<boolean>;
   /** Chiusure aziendali (solo admin): compaiono sul calendario di tutti. */
   closures: CompanyClosure[];
   addClosure: (input: {
@@ -1349,6 +1361,44 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     /** Gli avvisi miei, non letti, che soddisfano il filtro. */
     const mieiNonLetti = (tiene: (n: AppNotification) => boolean): string[] =>
       myNotifications.filter((n) => !n.read_at && tiene(n)).map((n) => n.id);
+
+    /** Un'assenza approvata è cambiata: lo sa il dipendente, e lo sanno gli
+     *  altri responsabili, che l'avevano vista sul calendario com'era. */
+    const avvisaSullAssenza = (
+      leave: LeaveRequest,
+      alDipendente: string,
+      agliAltri: (chi: string, di: string) => string,
+    ) => {
+      const nowIso = new Date().toISOString();
+      const chi = currentUser.full_name.split(" ")[0];
+      const di =
+        profilesResolved
+          .find((p) => p.id === leave.requester_id)
+          ?.full_name.split(" ")[0] ?? "un collega";
+      const altri = profilesResolved.filter(
+        (p) =>
+          p.is_active &&
+          p.role === "admin" &&
+          p.id !== currentUser.id &&
+          p.id !== leave.requester_id,
+      );
+      const avviso = (to: string, message: string): AppNotification => ({
+        id: crypto.randomUUID(),
+        to_user_id: to,
+        from_user_id: currentUser.id,
+        message,
+        task_id: null,
+        link: "/leave",
+        kind: "sistema",
+        created_at: nowIso,
+        read_at: null,
+      });
+      setNotifications((prev) => [
+        ...prev,
+        avviso(leave.requester_id, alDipendente),
+        ...altri.map((p) => avviso(p.id, agliAltri(chi, di))),
+      ]);
+    };
 
     /** Spunta subito, scrive in blocco, torna indietro se il database dice
      *  di no. Vale per un avviso solo come per venti. */
@@ -3217,6 +3267,96 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           read_at: null,
         })),
       ]);
+      return true;
+    },
+
+    async modifyLeave(id, range, note) {
+      const leave = leaves.find((l) => l.id === id);
+      if (!leave || leave.status !== "approved") return false;
+      /* Stessa regola della decisione: un responsabile non ritocca la
+         propria assenza approvata, altrimenti allungarla sarebbe un modo
+         di approvarsela da solo. */
+      if (currentUser.role !== "admin" || leave.requester_id === currentUser.id) {
+        setSyncError("Un'assenza approvata la modifica un altro responsabile.");
+        return false;
+      }
+      const end_date =
+        leave.type === "permesso" ? range.start_date : range.end_date;
+      if (end_date < range.start_date) {
+        setSyncError("L'ultimo giorno viene prima del primo.");
+        return false;
+      }
+      const sovrapposta = leaves.find(
+        (l) =>
+          l.id !== id &&
+          l.requester_id === leave.requester_id &&
+          l.status !== "rejected" &&
+          rangesOverlap(range.start_date, end_date, l.start_date, l.end_date),
+      );
+      if (sovrapposta) {
+        setSyncError(
+          `Le nuove date si sovrappongono a un'altra assenza (${formatRange(sovrapposta.start_date, sovrapposta.end_date)}).`,
+        );
+        return false;
+      }
+      const time_range =
+        leave.type === "permesso" ? range.time_range?.trim() || null : null;
+      const nuova = { start_date: range.start_date, end_date, time_range };
+      try {
+        await updateLeaveRange(createClient(), id, nuova);
+      } catch (e) {
+        setSyncError(messaggioErrore(e, "Modifica dell'assenza non salvata."));
+        return false;
+      }
+      setLeaves((prev) => prev.map((l) => (l.id === id ? { ...l, ...nuova } : l)));
+
+      const trimmed = note.trim();
+      const descrivi = (l: { start_date: string; end_date: string; time_range?: string | null }) =>
+        `${formatRange(l.start_date, l.end_date)}${l.time_range ? ` · ${l.time_range}` : ""}`;
+      const label = leave.type === "ferie" ? "Le tue ferie" : "Il tuo permesso";
+      avvisaSullAssenza(
+        leave,
+        `✏️ ${label} ${leave.type === "ferie" ? "sono state modificate" : "è stato modificato"}: ora ${descrivi(nuova)} (prima ${descrivi(leave)})${trimmed ? ` — ${trimmed}` : ""}`,
+        (chi, di) =>
+          `✏️ ${chi} ha modificato ${leave.type === "ferie" ? "le ferie" : "il permesso"} di ${di}: ora ${descrivi(nuova)}`,
+      );
+      return true;
+    },
+
+    async removeLeave(id, reason) {
+      const leave = leaves.find((l) => l.id === id);
+      if (!leave || leave.status !== "approved") return false;
+      if (currentUser.role !== "admin" || leave.requester_id === currentUser.id) {
+        setSyncError("Un'assenza approvata la annulla un altro responsabile.");
+        return false;
+      }
+      const trimmed = reason.trim();
+      /* Come per il rifiuto: chi si vede togliere ferie già concesse deve
+         sapere perché. */
+      if (!trimmed) {
+        setSyncError("Annullare un'assenza approvata va motivato.");
+        return false;
+      }
+      /* Si cancella PRIMA di toglierla dallo stato: il sincronizzatore
+         riproverà la stessa cancellazione, che a quel punto non trova
+         niente e non fa danni. Al contrario, togliendola prima, un rifiuto
+         del database lascerebbe il calendario senza un'assenza che esiste. */
+      try {
+        await removeLeaveRequest(createClient(), id);
+      } catch (e) {
+        setSyncError(messaggioErrore(e, "Assenza non annullata."));
+        return false;
+      }
+      setLeaves((prev) => prev.filter((l) => l.id !== id));
+
+      const range = formatRange(leave.start_date, leave.end_date);
+      const isFerie = leave.type === "ferie";
+      avvisaSullAssenza(
+        leave,
+        `🗑️ ${isFerie ? "Le tue ferie" : "Il tuo permesso"} del ${range} ${isFerie ? "sono state annullate" : "è stato annullato"} — ${trimmed}`,
+        (chi, di) =>
+          `🗑️ ${chi} ha annullato ${isFerie ? "le ferie" : "il permesso"} di ${di} (${range}) — ${trimmed}`,
+      );
       return true;
     },
 
