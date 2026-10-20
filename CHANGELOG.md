@@ -7,6 +7,18 @@ diventa una **Release «Update»** su GitHub (regole in
 [Keep a Changelog](https://keepachangelog.com/it/), con date al posto delle
 versioni (fase pre-1.0).
 
+## 2026-10-20 (strumenti)
+
+### Cambiato
+- **Strumenti di sviluppo aggiornati di versione maggiore:** ESLint 10,
+  TypeScript 6.0, motion 14 per le animazioni, tipi di Node allineati alla
+  versione 24, quella su cui gira il sito. Chi usa l'app non vede differenze:
+  i 28 controlli passano e un giro su tutte le pagine non mostra errori.
+- **TypeScript 7 aspetta.** Non ha ancora l'interfaccia che il controllo delle
+  regole (`typescript-eslint`) usa per leggere il codice, quindi adottarlo
+  oggi vorrebbe dire spegnere quel controllo. La 6.0 è il ponte ufficiale verso
+  la 7.
+
 ## 2026-10-20
 
 ### Sicurezza
