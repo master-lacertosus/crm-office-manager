@@ -7,6 +7,18 @@ diventa una **Release «Update»** su GitHub (regole in
 [Keep a Changelog](https://keepachangelog.com/it/), con date al posto delle
 versioni (fase pre-1.0).
 
+## 2026-10-20
+
+### Sicurezza
+- **Next.js da 16.3.0 a 16.4.2.** La versione in uso aveva vulnerabilità
+  gravi già pubblicate: esecuzione di codice da remoto attraverso
+  l'ottimizzazione delle immagini e `next/og`, contenuti di un utente serviti
+  a un altro per avvelenamento della cache. Sono chiuse nella 16.4.2.
+- Aggiornate dentro le stesse versioni maggiori anche le librerie di Supabase,
+  Radix, le icone e `sharp`. Il controllo delle dipendenze che finiscono in
+  produzione non trova più nessuna vulnerabilità. Nessuna migrazione, nessun
+  cambiamento visibile: i 28 controlli di `npm run verify` passano tutti.
+
 ## 2026-10-05
 
 ### Aggiunto
